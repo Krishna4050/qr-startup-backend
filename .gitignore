@@ -1,0 +1,13 @@
+# Environment variables (NEVER COMMIT THIS)
+.env
+
+# Go build artifacts (Compiled binaries)
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# macOS system files
+.DS_Store
