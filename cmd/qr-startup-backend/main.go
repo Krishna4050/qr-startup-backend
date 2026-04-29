@@ -4,9 +4,27 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os" //Built-in package to read environment variable
+
+	"github.com/Krishna4050/qr-startup-backend/database"
+	"github.com/joho/godotenv"
 )
 
 func main(){
+	// Loading the env file first
+	err := godotenv.Load()
+	if err != nil{
+		log.Println("Warning: No .env file found. Relying on system variables")
+	}
+
+	//Connect to database
+	database.ConnectDB()
+
+	//Fetch the port from .env file
+	port := os.Getenv("PORT")
+	if port == "" {
+			port = "8080" // Fallback just in case
+	}
 	// create a new router (The traffic cop)
 	mux := http.NewServeMux()
 
@@ -18,11 +36,10 @@ func main(){
 	})
 
 	//start the server
-	port := ":8080"
 	fmt.Printf("Server is starting on http://localhost%s\n", port)
 
 	//ListenAndServe pauses the program here and listens for web traffic
-	err := http.ListenAndServe(port, mux)
+	err = http.ListenAndServe(":"+port, mux)
 	if err != nil{
 		log.Fatalf("Server Crashed: %v", err)
 	}
