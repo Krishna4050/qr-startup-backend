@@ -7,6 +7,7 @@ import (
 	"os" //Built-in package to read environment variable
 
 	"github.com/Krishna4050/qr-startup-backend/database"
+	"github.com/Krishna4050/qr-startup-backend/handlers"
 	"github.com/joho/godotenv"
 )
 
@@ -34,6 +35,10 @@ func main(){
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status": "success", "message": "Finnish QR Startup Backend is running perfectly!"}`))
 	})
+
+	// Route to our Twilio
+	mux.HandleFunc("GET /api/send-sms", handlers.SendVerificationSMS)
+	mux.HandleFunc("POST /api/call-owner", handlers.ProxyCallWebhook)
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost%s\n", port)
