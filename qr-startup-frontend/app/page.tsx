@@ -3,14 +3,25 @@
 import { useState, useEffect } from 'react';
 import { Phone, MessageCircle, ShieldCheck, Backpack, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
+
+// We pass onClick and disabled as props so it can still interact with the main page.
+const BackButton = ({ onClick, disabled }: { onClick: () => void, disabled?: boolean }) => (
+  <button 
+    onClick={onClick}
+    className="flex items-center text-gray-500 hover:text-gray-800 mb-4 transition-colors text-sm font-medium"
+    disabled={disabled}
+  >
+    <ArrowLeft size={16} className="mr-1" />
+    Back
+  </button>
+);
+
 export default function FinderPage() {
   const [step, setStep] = useState('initial'); 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [messageText, setMessageText] = useState(''); 
   const [resendTimer, setResendTimer] = useState(30);
-  
-  // New state to handle loading spinners while waiting for the backend
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -23,7 +34,6 @@ export default function FinderPage() {
     return () => clearInterval(interval);
   }, [step, resendTimer]);
 
-  // The REAL Send OTP Function
   const handleSendOTP = async () => {
     if (!phoneNumber) return alert("Please enter a valid phone number.");
     
@@ -34,7 +44,7 @@ export default function FinderPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone_number: phoneNumber,
-          turnstile_token: 'dummy-token-for-testing' // In production, this comes from the real Cloudflare widget
+          turnstile_token: 'dummy-token-for-testing' 
         }),
       });
 
@@ -50,7 +60,6 @@ export default function FinderPage() {
     }
   };
 
-  //Verify & Call Function
   const handleVerifyAndCall = async () => {
     if (otpCode.length !== 6) return alert("Please enter the 6-digit code.");
     
@@ -62,7 +71,7 @@ export default function FinderPage() {
         body: JSON.stringify({
           phone_number: phoneNumber,
           code: otpCode,
-          tag_id: 'fake-tag-123' // In production, we read this from the website URL!
+          tag_id: 'fake-tag-123' 
         }),
       });
 
@@ -80,17 +89,6 @@ export default function FinderPage() {
   const handleSendMessage = () => {
     setStep('success');
   };
-
-  const BackButton = () => (
-    <button 
-      onClick={() => setStep('initial')}
-      className="flex items-center text-gray-500 hover:text-gray-800 mb-4 transition-colors text-sm font-medium"
-      disabled={isLoading}
-    >
-      <ArrowLeft size={16} className="mr-1" />
-      Back
-    </button>
-  );
 
   return (
     <div className="min-h-screen bg-[#F5F7FB] flex flex-col items-center py-12 px-4 font-sans text-slate-800">
@@ -149,9 +147,11 @@ export default function FinderPage() {
 
           {step === 'phone' && (
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-bottom-4">
-              <BackButton />
+              {/* Usage updated to pass the props in */}
+              <BackButton onClick={() => setStep('initial')} disabled={isLoading} />
+              
               <h3 className="font-bold text-lg mb-2">Verify your device</h3>
-              <p className="text-sm text-gray-500 mb-4">We'll text you a code to prevent spam calls.</p>
+              <p className="text-sm text-gray-500 mb-4">We&aposll text you a code to prevent spam calls.</p>
               
               <input 
                 type="tel" 
@@ -223,7 +223,7 @@ export default function FinderPage() {
                     disabled={isLoading}
                     className="text-sm text-[#2563EB] font-semibold hover:underline"
                   >
-                    Didn't receive it? Resend Code
+                    Didn&apost receive it? Resend Code
                   </button>
                 )}
               </div>
@@ -232,7 +232,9 @@ export default function FinderPage() {
 
           {step === 'message' && (
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-bottom-4">
-              <BackButton />
+              {/* Reused here! */}
+              <BackButton onClick={() => setStep('initial')} disabled={isLoading} />
+              
               <h3 className="font-bold text-lg mb-2">Send a Message</h3>
               <p className="text-sm text-gray-500 mb-4">Your message will be securely forwarded to the owner.</p>
               
@@ -272,7 +274,7 @@ export default function FinderPage() {
       </div>
 
       <p className="mt-12 text-sm text-gray-400 font-medium">
-        Powered by Krishna
+        Powered by SecureFind
       </p>
     </div>
   );

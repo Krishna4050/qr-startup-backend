@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
-	"os"
+	//"net/url"
+	//"os"
 
 	//"github.com/twilio/twilio-go"
 	verify "github.com/twilio/twilio-go/rest/verify/v2"
@@ -29,6 +29,8 @@ func StartVerification(w http.ResponseWriter, r *http.Request){
 	json.NewDecoder(r.Body).Decode(&req)
 
 	// Verify the cloudflare turnstile
+	// we will comment this for now because for now we are using dummy verification so our localhost verifyes it but cloutflare block it as an garbage token
+	/*
 	cfSecret := os.Getenv("CLOUDFLARE_SECRET_KEY")
 	cfResp, _ := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify", url.Values{"secret": {cfSecret}, "response": {req.TurnstileToken}})
 	
@@ -36,6 +38,8 @@ func StartVerification(w http.ResponseWriter, r *http.Request){
 		http.Error(w, "Bot detected", http.StatusForbidden)
 		return
 	}
+	*/
+	fmt.Println("[MOCK] Bypassed cloudflare for local testing")
 
 	// Send Twilio Verify OTP
 	// client := twilio.NewRestClient()

@@ -12,6 +12,23 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// enableCORS tells the browser that it is safe to talk to our server
+func enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3001") //trust Next.js
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
+
+		// if it is a preflight check, just say OK and return early
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return 
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main(){
 	// Loading the env file first
 	err := godotenv.Load()
@@ -45,10 +62,10 @@ func main(){
 	mux.HandleFunc("POST /api/verify/check", handlers.CheckVerificationAndCall)
 
 	//start the server
-	fmt.Printf("Server is starting on http://localhost%s\n", port)
+	fmt.Printf("Server is starting on http://localhost:%s\n", port)
 
 	//ListenAndServe pauses the program here and listens for web traffic
-	err = http.ListenAndServe(":"+port, mux)
+	err = http.ListenAndServe(":"+port, enableCORS(mux))
 	if err != nil{
 		log.Fatalf("Server Crashed: %v", err)
 	}
