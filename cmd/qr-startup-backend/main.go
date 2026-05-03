@@ -8,6 +8,7 @@ import (
 
 	"github.com/Krishna4050/qr-startup-backend/database"
 	"github.com/Krishna4050/qr-startup-backend/handlers"
+	"github.com/Krishna4050/qr-startup-backend/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -39,6 +40,9 @@ func main(){
 	// Route to our Twilio
 	mux.HandleFunc("GET /api/send-sms", handlers.SendVerificationSMS)
 	mux.HandleFunc("POST /api/call-owner", handlers.ProxyCallWebhook)
+	mux.HandleFunc("POST /api/tags/claim", middleware.RequireAuth(handlers.ClaimTagHandler))
+	mux.HandleFunc("POST /api/verify/start", handlers.StartVerification)
+	mux.HandleFunc("POST /api/verify/check", handlers.CheckVerificationAndCall)
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost%s\n", port)

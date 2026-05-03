@@ -28,3 +28,31 @@ func GetOwnerPhone(tagID string) (string, error){
 	}
 	return phoneNumber, nil
 }
+
+// ClaimTag assigns a blan QR tags to a specific user
+func ClaimTag(tagID string, userID string) error {
+	query := `
+			UPDATE qr_tags
+			SET user_id = $1
+			WHERE id = $2 AND user_id IS NULL
+	`
+
+	// Execute the update
+	result, err := DB.Exec(query, userID, tagID)
+	if err != nil {
+		return err // something went wrong with the database connection
+	}
+
+	//Check how many rows were actually updated
+	rowsAffected, err := result.RowsAffected()
+	if err !=nil {
+		return err
+	}
+
+	// IF 0 rows were updated, it means the tag either doesn't exits or someone else has already claimed it
+	if rowsAffected == 0 {
+		return fmt.Errorf("Invalied tag or tag is already claimed by another user")
+	}
+
+	return nil
+}
