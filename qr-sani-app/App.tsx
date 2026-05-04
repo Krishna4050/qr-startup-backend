@@ -1,8 +1,13 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import LoginScreen from './screens/LoginScreen';
-import DashboardScreen from './screens/DashboardScreen';
+// Context Provider
+import { ContentProvider } from './src/context/ContentContext';
+
+// Separated Screens
+import LoginScreen from './src/screens/LoginScreen';
+import DashboardScreen from './src/screens/DashboardScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -17,22 +22,35 @@ export default function App() {
   };
 
   return (
-    <NavigationContainer onReady={handleNavigationReady}>
-      <Stack.Navigator initialRouteName="Login">
-        
-        <Stack.Screen 
-          name="Login" 
-          component={LoginScreen} 
-          options={{ headerShown: false }} 
-        />
+    <ContentProvider>
+      <NavigationContainer onReady={handleNavigationReady}>
+        <Stack.Navigator 
+          initialRouteName="Login"
+          
+        >
+          
+          <Stack.Screen 
+            name="Login" 
+            component={LoginScreen} 
+            options={{ headerShown: false }} 
+          />
 
-        <Stack.Screen 
-          name="Dashboard" 
-          component={DashboardScreen} 
-          options={{ title: 'My Tags' }} 
-        />
+          {/* Hidden Header for the Custom UI */}
+          <Stack.Screen 
+            name="Dashboard" 
+            component={DashboardScreen} 
+            options={{ headerShown: false }} 
+          />
 
-      </Stack.Navigator>
-    </NavigationContainer>
+          {/* Deep Settings with automatic Native Back Button */}
+          <Stack.Screen 
+            name="Settings" 
+            component={SettingsScreen} 
+            options={{ title: 'Settings' }} 
+          />
+
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ContentProvider>
   );
 }
