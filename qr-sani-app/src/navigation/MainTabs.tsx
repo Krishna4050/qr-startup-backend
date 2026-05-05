@@ -1,4 +1,5 @@
 import React from 'react';
+import ScanScreen from '../screens/ScanScreen';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, LayoutGrid, Plus, User, ShoppingBag } from 'lucide-react-native';
@@ -49,14 +50,14 @@ export default function MainTabs() {
       />
       <Tab.Screen 
         name="Services" 
-        component={DummyScreen} 
+        component={ScanScreen} 
         options={{ tabBarIcon: ({ color }) => <LayoutGrid color={color} size={24} /> }} 
       />
       
       {/* THE MIDDLE SCAN BUTTON */}
       <Tab.Screen 
         name="Scan" 
-        component={DummyScreen} // Later we will make this open a Camera Modal
+        component={ScanScreen} // Later we will make this open a Camera Modal
         options={{ 
           tabBarIcon: () => <Plus color="#FFFFFF" size={32} />,
           tabBarButton: (props) => <CustomTabBarButton {...props} />
