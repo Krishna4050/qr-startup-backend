@@ -1,56 +1,54 @@
+import 'react-native-url-polyfill/auto';
+import MainTabs from './src/navigation/MainTabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-// Context Provider
+// Providers
 import { ContentProvider } from './src/context/ContentContext';
+import { AuthProvider } from './src/context/AuthContext'; 
 
-// Separated Screens
+// Screens
 import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
+import ProfileSetupScreen from './src/screens/ProfileSetupScreen';
+import VerificationWaitingScreen from './src/screens/VerificationWaitingScreen'; // NEW!
+import OtpVerificationScreen from './src/screens/OtpVerificationScreen';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  
-  // ---MNSKB Routing Log ---
   const handleNavigationReady = () => {
-    // "MNSKB Routing Initialized."
     const routeMsg = [77, 78, 83, 75, 66, 32, 82, 111, 117, 116, 105, 110, 103, 32, 73, 110, 105, 116, 105, 97, 108, 105, 122, 101, 100, 46];
     const decode = (arr: number[]) => arr.map(c => String.fromCharCode(c)).join('');
     console.log(`[Core] ${decode(routeMsg)}`);
   };
 
   return (
-    <ContentProvider>
-      <NavigationContainer onReady={handleNavigationReady}>
-        <Stack.Navigator 
-          initialRouteName="Login"
-          
-        >
-          
-          <Stack.Screen 
-            name="Login" 
-            component={LoginScreen} 
-            options={{ headerShown: false }} 
-          />
+    <AuthProvider>
+      <ContentProvider>
+        <NavigationContainer onReady={handleNavigationReady}>
+          <Stack.Navigator initialRouteName="Login">
+            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+            
+            {/* THE LOCKDOWN SCREEN - gestureEnabled: false kills the iOS swipe back! */}
+            <Stack.Screen 
+              name="VerificationWaiting" 
+              component={VerificationWaitingScreen} 
+              options={{ headerShown: false, gestureEnabled: false }} 
+            />
 
-          {/* Hidden Header for the Custom UI */}
-          <Stack.Screen 
-            name="Dashboard" 
-            component={DashboardScreen} 
-            options={{ headerShown: false }} 
-          />
-
-          {/* Deep Settings with automatic Native Back Button */}
-          <Stack.Screen 
-            name="Settings" 
-            component={SettingsScreen} 
-            options={{ title: 'Settings' }} 
-          />
-
-        </Stack.Navigator>
-      </NavigationContainer>
-    </ContentProvider>
+            {/* ONBOARDING IS ALSO LOCKED DOWN */}
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ headerShown: false, gestureEnabled: false }} />
+            
+            <Stack.Screen name="Dashboard" component={MainTabs} options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+            <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} options={{ headerShown: false, gestureEnabled: false }} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </ContentProvider>
+    </AuthProvider>
   );
 }

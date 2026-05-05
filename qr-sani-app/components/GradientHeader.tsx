@@ -30,7 +30,7 @@ export default function GradientHeader() {
   };
 
   return (
-    <LinearGradient colors={['#4F46E5', '#2563EB']} style={styles.headerContainer}>
+    <LinearGradient colors={['#2563EB', '#b51a2b']} style={styles.headerContainer}>
       <View style={styles.iconContainer}>
         <Shield color="#FFFFFF" size={32} />
       </View>
