@@ -52,16 +52,19 @@ export default function ScanScreen() {
     <View style={styles.container}>
       {/* Only render camera if the tab is focused, saves battery! */}
       {isFocused && (
-        <CameraView 
-          style={StyleSheet.absoluteFillObject}
-          facing="back"
-          onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-          barcodeScannerSettings={{
-            barcodeTypes: ["qr"],
-          }}
-        >
-          {/* THE DARK OVERLAY & TARGETING RETICLE */}
-          <View style={styles.overlay}>
+        <>
+          {/* 1. The CameraView now sits completely by itself (No children!) */}
+          <CameraView 
+            style={StyleSheet.absoluteFillObject}
+            facing="back"
+            onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+            barcodeScannerSettings={{
+              barcodeTypes: ["qr"],
+            }}
+          />
+
+          {/* 2. THE DARK OVERLAY sits OUTSIDE the camera, floating on top */}
+          <View style={[styles.overlay, StyleSheet.absoluteFillObject]}>
             <View style={styles.topOverlay} />
             
             <View style={styles.middleRow}>
@@ -69,7 +72,6 @@ export default function ScanScreen() {
               
               {/* The Clear Cutout Box */}
               <View style={styles.scanArea}>
-                {/* Glowing Corner Accents */}
                 <View style={[styles.corner, styles.topLeft]} />
                 <View style={[styles.corner, styles.topRight]} />
                 <View style={[styles.corner, styles.bottomLeft]} />
@@ -83,7 +85,7 @@ export default function ScanScreen() {
               <Text style={styles.scanText}>Position the QR code inside the frame</Text>
             </View>
           </View>
-        </CameraView>
+        </>
       )}
 
       {/* CLOSE BUTTON (Goes back to dashboard) */}

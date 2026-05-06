@@ -24,7 +24,7 @@ export default function TagRegistrationScreen() {
     setLoading(true);
 
     try {
-      // Get the current logged-in user
+      // 1. Get the current logged-in user
       const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       
       if (!user) {
@@ -33,7 +33,32 @@ export default function TagRegistrationScreen() {
         return;
       }
 
-      // Insert the new tag into the database
+      // 2. THE GATEKEEPER: Fetch their profile to check for mandatory fields
+      const { data: profile } = await supabase_lucifer_core
+        .from('profiles')
+        .select('first_name, last_name, phone_number, gender')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      // Check if any mandatory fields are missing
+      if (!profile?.first_name || !profile?.last_name || !profile?.phone_number) {
+        Alert.alert(
+          "Action Required",
+          "You must complete your profile (First Name, Last Name, and Phone Number) before activating a tag. This ensures finders can contact you!",
+          [
+            { text: "I'll do it later", style: "cancel" },
+            { 
+              text: "Update Profile", 
+              // Navigate them directly to the Profile tab
+              onPress: () => navigation.navigate('Profile') 
+            }
+          ]
+        );
+        setLoading(false);
+        return; // Stop the registration process!
+      }
+
+      // 3. If they pass the Gatekeeper, insert the new tag
       const { error } = await supabase_lucifer_core
         .from('qr_tags')
         .insert({
@@ -44,14 +69,12 @@ export default function TagRegistrationScreen() {
         });
 
       if (error) {
-        // Handle the specific error if a tag is already claimed (Unique Constraint Violation)
         if (error.code === '23505') {
           Alert.alert("Already Registered", "This QR tag has already been claimed by someone!");
         } else {
           Alert.alert("Registration Failed", error.message);
         }
       } else {
-        // Success! Send them back to the Dashboard so they can see their new tag.
         Alert.alert("Success!", "Your tag is now protected and active.");
         navigation.navigate('Home'); 
       }

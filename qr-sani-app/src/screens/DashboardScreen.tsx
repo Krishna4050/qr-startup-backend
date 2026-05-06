@@ -1,24 +1,27 @@
-import RefreshableScroll from '../components/RefreshableScroll';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions, Platform, ActivityIndicator } from 'react-native';
-import { Settings, ShieldCheck, Bell, Key, Briefcase, AlertTriangle, BatteryMedium, Tag } from 'lucide-react-native';
+import { decode } from 'base64-arraybuffer';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions, Platform, ActivityIndicator, Alert, Image } from 'react-native';
+import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase_lucifer_core } from '../utils/supabase';
+import RefreshableScroll from '../components/RefreshableScroll';
 
 const { width } = Dimensions.get('window');
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
-  const [displayName, setDisplayName] = useState('User'); // State for our name
+  const [uploading, setUploading] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
   const [tags, setTags] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
 
-  // Calculate Overview Stats
+  // Overview Stats
   const totalTags = tags.length;
   const foundItems = tags.filter(t => t.status === 'found').length;
   const pendingAlerts = alerts.filter(a => !a.is_read).length;
+  const totalContacts = 0; // Hardcoded until we build the contacts database
 
-  // --- NEW: Dynamic Greeting Engine ---
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return 'Good Morning!';
@@ -36,42 +39,110 @@ export default function DashboardScreen() {
       const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) return;
 
-      // 1. Grab the username from the hidden Auth Metadata as a bulletproof fallback
-      const fallbackName = user.user_metadata?.username;
-
-      // 2. Try to fetch from the Profiles table
-      const { data: profileData, error: profileError } = await supabase_lucifer_core
+      const { data: profileData } = await supabase_lucifer_core
         .from('profiles')
-        .select('display_name, username')
+        .select('display_name, username, avatar_url')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
       
-      // Set the best available name! (Display Name -> DB Username -> Auth Username -> 'User')
-      setDisplayName(profileData?.display_name || profileData?.username || fallbackName || 'User');
+      setProfile(profileData || { display_name: user.user_metadata?.username });
 
-      // 3. Fetch Active Tags
       const { data: tagsData } = await supabase_lucifer_core
         .from('qr_tags')
         .select('*')
         .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
-      
       if (tagsData) setTags(tagsData);
 
-      // 4. Fetch Recent Alerts
       const { data: alertsData } = await supabase_lucifer_core
         .from('alerts')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(5);
-
       if (alertsData) setAlerts(alertsData);
 
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      console.error("Error fetching dashboard:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAvatarPress = () => {
+    Alert.alert("Profile Picture", "Would you like to take a new photo or choose from your gallery?", [
+        { text: "Camera", onPress: () => pickImage(true) },
+        { text: "Gallery", onPress: () => pickImage(false) },
+        { text: "Cancel", style: "cancel" }
+    ]);
+  };
+
+  const pickImage = async (useCamera: boolean) => {
+    try {
+      let result;
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      };
+
+      if (useCamera) {
+        await ImagePicker.requestCameraPermissionsAsync();
+        result = await ImagePicker.launchCameraAsync(options);
+      } else {
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+        result = await ImagePicker.launchImageLibraryAsync(options);
+      }
+
+      if (!result.canceled && result.assets[0].base64) {
+        await uploadAvatar(result.assets[0].base64); 
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not open camera/gallery.");
+    }
+  };
+
+  const uploadAvatar = async (base64Image: string) => {
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      const filePath = `${user.id}/avatar.jpg`;
+      
+      // <-- NEW: We use 'decode' to translate the base64 text into a real image!
+      const { error: uploadError } = await supabase_lucifer_core.storage
+        .from('avatars')
+        .upload(filePath, decode(base64Image), { 
+          upsert: true, 
+          contentType: 'image/jpeg' 
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase_lucifer_core.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const newAvatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+
+      const { error: updateError } = await supabase_lucifer_core
+        .from('profiles')
+        .update({ avatar_url: newAvatarUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile((prev: any) => ({ ...prev, avatar_url: newAvatarUrl }));
+      Alert.alert("Success", "Profile picture updated!");
+
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert("Upload Failed", error.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -83,31 +154,28 @@ export default function DashboardScreen() {
     );
   }
 
+  const displayName = profile?.display_name || profile?.username || 'User';
+
   return (
     <View style={styles.container}>
-      {/* HEADER SECTION */}
       <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.headerGradient}>
         <SafeAreaView>
           <View style={styles.headerContent}>
-            <View>
-              {/* --- NEW: Inject Dynamic Greeting --- */}
+            <View style={{ flex: 1 }}>
               <Text style={styles.greetingText}>{getGreeting()}</Text>
-              
-              {/* --- NEW: Inject Bulletproof Username --- */}
               <Text style={styles.userNameText}>{displayName}</Text>
             </View>
-            <TouchableOpacity style={styles.settingsIcon}>
-              <Settings color="#F2F3F4" size={24} />
+            <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress} disabled={uploading}>
+              {uploading ? <ActivityIndicator color="#0F2D4D" /> : profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} /> : <User color="#0F2D4D" size={24} />}
+              <View style={styles.avatarBadge}><Text style={styles.avatarBadgeText}>+</Text></View>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
       </LinearGradient>
 
-     <RefreshableScroll style={styles.scrollContainer} showsVerticalScrollIndicator={false} onRefreshAction={fetchDashboardData}>
-  
-  {/* ACTIVE TAGS SECTION ... */}
+      <RefreshableScroll onRefreshAction={fetchDashboardData} style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         
-        {/* ACTIVE TAGS SECTION */}
+        {/* ACTIVE TAGS */}
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.sectionTitle}>Active Tags</Text>
@@ -118,9 +186,7 @@ export default function DashboardScreen() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
           {tags.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyCardText}>No tags added yet. Tap the + button to add one!</Text>
-            </View>
+            <View style={styles.emptyCard}><Text style={styles.emptyCardText}>No tags added yet. Tap + to add!</Text></View>
           ) : (
             tags.map((tag) => (
               <View key={tag.id} style={styles.tagCard}>
@@ -128,9 +194,7 @@ export default function DashboardScreen() {
                 <Text style={styles.tagTitle} numberOfLines={2}>{tag.item_name || 'Unnamed Item'}</Text>
                 <View style={styles.tagStatus}>
                   <ShieldCheck color={tag.status === 'active' ? "#10B981" : "#F59E0B"} size={14} />
-                  <Text style={[styles.tagStatusText, { color: tag.status === 'active' ? '#10B981' : '#F59E0B' }]}>
-                    {tag.status === 'active' ? 'Protected & Active' : 'Reported Lost'}
-                  </Text>
+                  <Text style={[styles.tagStatusText, { color: tag.status === 'active' ? '#10B981' : '#F59E0B' }]}>{tag.status === 'active' ? 'Protected & Active' : 'Reported Lost'}</Text>
                 </View>
                 <View style={styles.tagIconWrapper}><Tag color="#0F2D4D" size={20} /></View>
               </View>
@@ -138,7 +202,7 @@ export default function DashboardScreen() {
           )}
         </ScrollView>
 
-        {/* RECENT ALERTS SECTION */}
+        {/* RECENT ALERTS (Restored!) */}
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.sectionTitle}>Recent Alerts</Text>
@@ -149,9 +213,7 @@ export default function DashboardScreen() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
           {alerts.length === 0 ? (
-             <View style={styles.emptyCard}>
-               <Text style={styles.emptyCardText}>No new alerts.</Text>
-             </View>
+             <View style={styles.emptyCard}><Text style={styles.emptyCardText}>No new alerts.</Text></View>
           ) : (
             alerts.map((alert) => (
               <View key={alert.id} style={[styles.alertCard, { borderLeftColor: alert.alert_type === 'low_battery' ? '#EF4444' : '#F59E0B' }]}>
@@ -160,13 +222,31 @@ export default function DashboardScreen() {
                   {alert.alert_type === 'low_battery' ? <BatteryMedium color="#EF4444" size={16} /> : <AlertTriangle color="#F59E0B" size={16} />}
                 </View>
                 <Text style={styles.alertTitle}>{alert.title}</Text>
-                <Text style={[styles.alertDetail, alert.alert_type === 'low_battery' && { color: '#EF4444', fontWeight: 'bold' }]}>
-                  {alert.description}
-                </Text>
+                <Text style={[styles.alertDetail, alert.alert_type === 'low_battery' && { color: '#EF4444', fontWeight: 'bold' }]}>{alert.description}</Text>
               </View>
             ))
           )}
         </ScrollView>
+
+        {/* EMERGENCY CONTACTS (New addition based on Profile!) */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Emergency Contacts</Text>
+        </View>
+        <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
+          <View style={styles.contactCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={styles.contactIconBg}><Users color="#0F2D4D" size={24} /></View>
+              <View style={{ marginLeft: 16 }}>
+                <Text style={styles.contactCardTitle}>Contacts Added</Text>
+                <Text style={styles.contactCardNumber}>{totalContacts} / 5</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.addContactBtn} onPress={() => Alert.alert("Contacts", "Open Contact Manager")}>
+              <PlusCircle color="#3B82F6" size={20} />
+              <Text style={styles.addContactText}>Add Contact</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* OVERVIEW SECTION */}
         <View style={styles.sectionHeader}>
@@ -174,18 +254,14 @@ export default function DashboardScreen() {
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.horizontalScroll, { paddingBottom: 40 }]} snapToInterval={width * 0.75 + 16} decelerationRate="fast">
-          <View style={[styles.overviewCard, { backgroundColor: '#6366F1' }]}>
+          <TouchableOpacity style={[styles.overviewCard, { backgroundColor: '#6366F1' }]} activeOpacity={0.8}>
             <Text style={styles.overviewCardTitle}>Total Tags</Text>
             <Text style={styles.overviewCardNumber}>{totalTags}</Text>
-          </View>
-          <View style={[styles.overviewCard, { backgroundColor: '#06B6D4' }]}>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.overviewCard, { backgroundColor: '#06B6D4' }]} activeOpacity={0.8}>
             <Text style={styles.overviewCardTitle}>Found Items</Text>
             <Text style={styles.overviewCardNumber}>{foundItems}</Text>
-          </View>
-          <View style={[styles.overviewCard, { backgroundColor: '#F59E0B' }]}>
-            <Text style={styles.overviewCardTitle}>Pending Alerts</Text>
-            <Text style={styles.overviewCardNumber}>{pendingAlerts}</Text>
-          </View>
+          </TouchableOpacity>
         </ScrollView>
 
       </RefreshableScroll>
@@ -199,7 +275,12 @@ const styles = StyleSheet.create({
   headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: Platform.OS === 'android' ? 40 : 10 },
   greetingText: { fontSize: 14, color: '#DED1C6', marginBottom: 4 },
   userNameText: { fontSize: 24, fontWeight: 'bold', color: '#F2F3F4' },
-  settingsIcon: { width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  
+  avatarContainer: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#E0E7FF', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
+  avatarImage: { width: 46, height: 46, borderRadius: 23 },
+  avatarBadge: { position: 'absolute', bottom: -4, right: -4, backgroundColor: '#10B981', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#0F2D4D' },
+  avatarBadgeText: { color: '#FFF', fontSize: 12, fontWeight: 'bold', lineHeight: 14 },
+
   scrollContainer: { flex: 1, paddingTop: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 16, marginTop: 8 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
@@ -223,7 +304,15 @@ const styles = StyleSheet.create({
   alertTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
   alertDetail: { fontSize: 12, color: '#6B7280' },
 
-  overviewCard: { width: width * 0.75, height: width * 0.6, borderRadius: 24, padding: 24, justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  // New Contacts Card Styles
+  contactCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  contactIconBg: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#E0E7FF', justifyContent: 'center', alignItems: 'center' },
+  contactCardTitle: { fontSize: 14, color: '#6B7280', fontWeight: '600' },
+  contactCardNumber: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginTop: 2 },
+  addContactBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
+  addContactText: { color: '#3B82F6', fontWeight: 'bold', marginLeft: 6, fontSize: 14 },
+
+  overviewCard: { width: width * 0.65, height: width * 0.5, borderRadius: 24, padding: 24, justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
   overviewCardTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', opacity: 0.9 },
-  overviewCardNumber: { fontSize: 64, fontWeight: '900', color: '#FFFFFF' },
+  overviewCardNumber: { fontSize: 56, fontWeight: '900', color: '#FFFFFF' },
 });

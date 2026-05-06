@@ -1,4 +1,5 @@
 import TagRegistrationScreen from './src/screens/TagRegistrationScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
 import 'react-native-url-polyfill/auto';
 import MainTabs from './src/navigation/MainTabs';
 import { NavigationContainer } from '@react-navigation/native';
@@ -46,6 +47,7 @@ export default function App() {
             
             <Stack.Screen name="Dashboard" component={MainTabs} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="TagRegistration" component={TagRegistrationScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
             <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} options={{ headerShown: false, gestureEnabled: false }} />
           </Stack.Navigator>
