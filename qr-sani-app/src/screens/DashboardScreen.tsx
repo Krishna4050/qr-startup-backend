@@ -1,26 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { decode } from 'base64-arraybuffer';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions, Platform, ActivityIndicator, Alert, Image } from 'react-native';
-import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle } from 'lucide-react-native';
+import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
 import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 export default function DashboardScreen() {
+  const navigation = useNavigation<any>(); // <--- Fixed Navigation Types!
+
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  
   const [tags, setTags] = useState<any[]>([]);
+  const [pausedTagsCount, setPausedTagsCount] = useState(0); // <--- New State for Paused Count!
   const [alerts, setAlerts] = useState<any[]>([]);
 
   // Overview Stats
   const totalTags = tags.length;
   const foundItems = tags.filter(t => t.status === 'found').length;
   const pendingAlerts = alerts.filter(a => !a.is_read).length;
-  const totalContacts = 0; // Hardcoded until we build the contacts database
+  const totalContacts = 0; 
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -47,12 +52,22 @@ export default function DashboardScreen() {
       
       setProfile(profileData || { display_name: user.user_metadata?.username });
 
+      // --- SMART FILTERING ADDED HERE ---
       const { data: tagsData } = await supabase_lucifer_core
         .from('qr_tags')
         .select('*')
         .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
-      if (tagsData) setTags(tagsData);
+      
+      if (tagsData) {
+        // 1. Only show active or lost tags in the main horizontal list
+        const visibleTags = tagsData.filter(t => t.status === 'active' || t.status === 'lost');
+        setTags(visibleTags);
+        
+        // 2. Count the paused tags for the Overview Card
+        const pausedCount = tagsData.filter(t => t.status === 'paused').length;
+        setPausedTagsCount(pausedCount);
+      }
 
       const { data: alertsData } = await supabase_lucifer_core
         .from('alerts')
@@ -97,7 +112,7 @@ export default function DashboardScreen() {
       }
 
       if (!result.canceled && result.assets[0].base64) {
-        await uploadAvatar(result.assets[0].base64); 
+        await uploadAvatar(result.assets[0].base64);
       }
     } catch (error) {
       Alert.alert("Error", "Could not open camera/gallery.");
@@ -112,13 +127,9 @@ export default function DashboardScreen() {
 
       const filePath = `${user.id}/avatar.jpg`;
       
-      // <-- NEW: We use 'decode' to translate the base64 text into a real image!
       const { error: uploadError } = await supabase_lucifer_core.storage
         .from('avatars')
-        .upload(filePath, decode(base64Image), { 
-          upsert: true, 
-          contentType: 'image/jpeg' 
-        });
+        .upload(filePath, decode(base64Image), { upsert: true, contentType: 'image/jpeg' });
 
       if (uploadError) throw uploadError;
 
@@ -189,7 +200,11 @@ export default function DashboardScreen() {
             <View style={styles.emptyCard}><Text style={styles.emptyCardText}>No tags added yet. Tap + to add!</Text></View>
           ) : (
             tags.map((tag) => (
-              <View key={tag.id} style={styles.tagCard}>
+              <TouchableOpacity 
+                key={tag.id} 
+                style={styles.tagCard}
+                onPress={() => navigation.navigate('TagManage', { tagId: tag.id })}
+              >
                 <Text style={styles.tagCategory}>ITEM TAG</Text>
                 <Text style={styles.tagTitle} numberOfLines={2}>{tag.item_name || 'Unnamed Item'}</Text>
                 <View style={styles.tagStatus}>
@@ -197,12 +212,12 @@ export default function DashboardScreen() {
                   <Text style={[styles.tagStatusText, { color: tag.status === 'active' ? '#10B981' : '#F59E0B' }]}>{tag.status === 'active' ? 'Protected & Active' : 'Reported Lost'}</Text>
                 </View>
                 <View style={styles.tagIconWrapper}><Tag color="#0F2D4D" size={20} /></View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </ScrollView>
 
-        {/* RECENT ALERTS (Restored!) */}
+        {/* RECENT ALERTS */}
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.sectionTitle}>Recent Alerts</Text>
@@ -228,7 +243,7 @@ export default function DashboardScreen() {
           )}
         </ScrollView>
 
-        {/* EMERGENCY CONTACTS (New addition based on Profile!) */}
+        {/* EMERGENCY CONTACTS */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Emergency Contacts</Text>
         </View>
@@ -254,14 +269,29 @@ export default function DashboardScreen() {
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.horizontalScroll, { paddingBottom: 40 }]} snapToInterval={width * 0.75 + 16} decelerationRate="fast">
-          <TouchableOpacity style={[styles.overviewCard, { backgroundColor: '#6366F1' }]} activeOpacity={0.8}>
+          <View style={[styles.overviewCard, { backgroundColor: '#6366F1' }]}>
             <Text style={styles.overviewCardTitle}>Total Tags</Text>
             <Text style={styles.overviewCardNumber}>{totalTags}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.overviewCard, { backgroundColor: '#06B6D4' }]} activeOpacity={0.8}>
+          </View>
+          
+          <View style={[styles.overviewCard, { backgroundColor: '#06B6D4' }]}>
             <Text style={styles.overviewCardTitle}>Found Items</Text>
             <Text style={styles.overviewCardNumber}>{foundItems}</Text>
+          </View>
+
+          {/* --- NEW PAUSED TAGS CARD ADDED HERE --- */}
+          <TouchableOpacity 
+            style={[styles.overviewCard, { backgroundColor: '#F59E0B' }]} 
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('FilteredTags', { filterType: 'paused' })}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={styles.overviewCardTitle}>Paused Tags</Text>
+              <PauseCircle color="#FFFFFF" size={24} style={{ opacity: 0.8 }} />
+            </View>
+            <Text style={styles.overviewCardNumber}>{pausedTagsCount}</Text>
           </TouchableOpacity>
+
         </ScrollView>
 
       </RefreshableScroll>
@@ -304,7 +334,6 @@ const styles = StyleSheet.create({
   alertTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
   alertDetail: { fontSize: 12, color: '#6B7280' },
 
-  // New Contacts Card Styles
   contactCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   contactIconBg: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#E0E7FF', justifyContent: 'center', alignItems: 'center' },
   contactCardTitle: { fontSize: 14, color: '#6B7280', fontWeight: '600' },
