@@ -66,25 +66,39 @@ export default function AuthForm() {
         setErrors(prev => ({ ...prev, auth: error.message }));
       }
     } else {
-      // ---  NEW PUSH NOTIFICATION TOKEN LOGIC  ---
+      // --- PUSH NOTIFICATION & SECURITY LOGIC ---
       if (data?.user) {
         try {
           console.log("Fetching Push Token...");
           const token = await registerForPushNotificationsAsync();
           
           if (token) {
-            // Save the token directly to their profile in Supabase
+            //  Save token to Supabase
             await supabase_lucifer_core
               .from('profiles')
               .update({ expo_push_token: token })
               .eq('id', data.user.id);
-            console.log("Token saved successfully!");
+            
+            // Ping Go Server for the Security Geofence Check!
+            const backendUrl = 'http://192.168.1.75:8080'; // <-- Use your actual device IP!
+            
+            // We do not 'await' this fetch because we want it to run in the 
+            // background without slowing down the user's login experience!
+            fetch(`${backendUrl}/api/security/login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                push_token: token,
+                device: Platform.OS === 'ios' ? 'iPhone' : 'Android',
+                client_ip: '192.168.1.1' // Expo handles IPs weirdly, so we simulate the pass-through
+              })
+            }).catch(err => console.log("Security ping silently failed:", err));
           }
         } catch (pushError) {
-          console.error("Failed to get push token, but continuing login:", pushError);
-          // Notice we don't stop the login process if they deny notifications!
+          console.error("Failed to get push token:", pushError);
         }
       }
+      
       // ---  END OF NEW PUSH LOGIC  ---
 
       // Finally, send them to the Dashboard!
