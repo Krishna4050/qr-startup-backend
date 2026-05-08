@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions, Platform, ActivityIndicator, Alert, Image } from 'react-native';
-import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle } from 'lucide-react-native';
+import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle, ShieldAlert } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
@@ -11,6 +11,28 @@ import { useNavigation } from '@react-navigation/native';
 const { width } = Dimensions.get('window');
 
 export default function DashboardScreen() {
+  // --- NEW: Toggle Lost Mode ---
+  const toggleLostMode = async (tagId: string, currentStatus: string, itemName: string) => {
+    const newStatus = currentStatus === 'active' ? 'lost' : 'active';
+    const actionText = newStatus === 'lost' ? 'Marked as Lost' : 'Marked as Active';
+
+    try {
+      // Update Supabase directly
+      const { error } = await supabase_lucifer_core
+        .from('qr_tags')
+        .update({ status: newStatus })
+        .eq('id', tagId);
+
+      if (error) throw error;
+
+      Alert.alert(actionText, `${itemName} is now ${newStatus}.`);
+      
+      // Refresh the dashboard to show the new status
+      fetchDashboardData(); 
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    }
+  };
   const navigation = useNavigation<any>(); // <--- Fixed Navigation Types!
 
   const [loading, setLoading] = useState(true);
@@ -176,10 +198,22 @@ export default function DashboardScreen() {
               <Text style={styles.greetingText}>{getGreeting()}</Text>
               <Text style={styles.userNameText}>{displayName}</Text>
             </View>
-            <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress} disabled={uploading}>
-              {uploading ? <ActivityIndicator color="#0F2D4D" /> : profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} /> : <User color="#0F2D4D" size={24} />}
-              <View style={styles.avatarBadge}><Text style={styles.avatarBadgeText}>+</Text></View>
-            </TouchableOpacity>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              {/* --- NEW: NOTIFICATION BELL --- */}
+              <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+                <Bell color="#F2F3F4" size={26} />
+                {/* Optional: Add a red dot here if pendingAlerts > 0 */}
+                {pendingAlerts > 0 && (
+                  <View style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, backgroundColor: '#EF4444', borderRadius: 5, borderWidth: 2, borderColor: '#0F2D4D' }} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress} disabled={uploading}>
+                {uploading ? <ActivityIndicator color="#0F2D4D" /> : profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} /> : <User color="#0F2D4D" size={24} />}
+                <View style={styles.avatarBadge}><Text style={styles.avatarBadgeText}>+</Text></View>
+              </TouchableOpacity>
+            </View>
           </View>
         </SafeAreaView>
       </LinearGradient>
@@ -212,6 +246,26 @@ export default function DashboardScreen() {
                   <Text style={[styles.tagStatusText, { color: tag.status === 'active' ? '#10B981' : '#F59E0B' }]}>{tag.status === 'active' ? 'Protected & Active' : 'Reported Lost'}</Text>
                 </View>
                 <View style={styles.tagIconWrapper}><Tag color="#0F2D4D" size={20} /></View>
+
+                <TouchableOpacity 
+                  style={[
+                    styles.lostModeBtn, 
+                    { backgroundColor: tag.status === 'lost' ? '#FEF2F2' : '#F3F4F6' }
+                  ]}
+                  onPress={() => toggleLostMode(tag.id, tag.status, tag.item_name)}
+                >
+                  <ShieldAlert 
+                    color={tag.status === 'lost' ? '#EF4444' : '#9CA3AF'} 
+                    size={18} 
+                  />
+                  <Text style={[
+                    styles.lostModeText, 
+                    { color: tag.status === 'lost' ? '#EF4444' : '#6B7280' }
+                  ]}>
+                    {tag.status === 'lost' ? 'Lost Mode: ON' : 'Mark as Lost'}
+                  </Text>
+                </TouchableOpacity>
+                
               </TouchableOpacity>
             ))
           )}
@@ -243,22 +297,27 @@ export default function DashboardScreen() {
           )}
         </ScrollView>
 
-        {/* EMERGENCY CONTACTS */}
+        {/* FRIENDS & FAMILY NETWORK */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Emergency Contacts</Text>
+          <Text style={styles.sectionTitle}>Friends & Family</Text>
         </View>
         <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
           <View style={styles.contactCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={styles.contactIconBg}><Users color="#0F2D4D" size={24} /></View>
+              <View style={[styles.contactIconBg, { backgroundColor: '#FCE7F3' }]}>
+                <Users color="#DB2777" size={24} />
+              </View>
               <View style={{ marginLeft: 16 }}>
-                <Text style={styles.contactCardTitle}>Contacts Added</Text>
-                <Text style={styles.contactCardNumber}>{totalContacts} / 5</Text>
+                <Text style={styles.contactCardTitle}>Trusted Network</Text>
+                <Text style={styles.contactCardNumber}>0 Members</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.addContactBtn} onPress={() => Alert.alert("Contacts", "Open Contact Manager")}>
-              <PlusCircle color="#3B82F6" size={20} />
-              <Text style={styles.addContactText}>Add Contact</Text>
+            <TouchableOpacity 
+              style={[styles.addContactBtn, { backgroundColor: '#FDF2F8' }]} 
+              onPress={() => navigation.navigate('TrustedNetwork')}
+            >
+              <PlusCircle color="#DB2777" size={20} />
+              <Text style={[styles.addContactText, { color: '#DB2000' }]}>Invite</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -344,4 +403,6 @@ const styles = StyleSheet.create({
   overviewCard: { width: width * 0.65, height: width * 0.5, borderRadius: 24, padding: 24, justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
   overviewCardTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', opacity: 0.9 },
   overviewCardNumber: { fontSize: 56, fontWeight: '900', color: '#FFFFFF' },
+  lostModeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 12, alignSelf: 'flex-start', zIndex: 10 },
+  lostModeText: { fontSize: 13, fontWeight: 'bold', marginLeft: 6 },
 });

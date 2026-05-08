@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Alert } from 'react-native';
-import { User, Shield, CreditCard, Moon, Bell, Clock, Globe, HelpCircle, Info, ChevronRight, LogOut, ArrowRight } from 'lucide-react-native';
+import { User, Shield, CreditCard, Moon, Bell, Clock, Globe, HelpCircle, Info, ChevronRight, LogOut, ArrowRight, Phone} from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Archive /* ...other icons */ } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
@@ -125,12 +125,25 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* SECTION 1: Account Settings */}
+       {/* SECTION 1: Account Settings */}
         <View style={[styles.cardGroup, { backgroundColor: theme.card }]}>
           <MenuRow icon={User} title="Profile Information" onPress={() => navigation.navigate('EditProfile')} />
           <MenuRow icon={Shield} title="Privacy & Security" onPress={() => Alert.alert("Navigate", "Go to Security Screen")} />
-          <MenuRow icon={CreditCard} title="Subscription & Billing" isLast={true} onPress={() => {}} />
-          <MenuRow icon={Archive} title="Archived Tags" isLast={true} onPress={() => navigation.navigate('FilteredTags', { filterType: 'archived' })} />
+          <MenuRow icon={CreditCard} title="Subscription & Billing" onPress={() => {}} />
+          
+          {/* --- NEW: Contact Manager --- */}
+          <MenuRow 
+            icon={Phone} 
+            title="Contact Details & Emergency" 
+            onPress={() => navigation.navigate('ContactManager')} 
+          />
+
+          <MenuRow 
+            icon={Archive} 
+            title="Archived Tags" 
+            isLast={true} 
+            onPress={() => navigation.navigate('FilteredTags', { filterType: 'archived' })} 
+          />
         </View>
 
         {/* SECTION 2: App Preferences */}

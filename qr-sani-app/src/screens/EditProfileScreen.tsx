@@ -270,7 +270,7 @@ export default function EditProfileScreen() {
         </View>
 
         {/* --- CONTACT INFO SECTION --- */}
-        <Text style={styles.sectionHeading}>Contact Details</Text>
+       { /* <Text style={styles.sectionHeading}>Contact Details</Text>
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Phone Number</Text>
@@ -279,7 +279,7 @@ export default function EditProfileScreen() {
             <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="+1 234 567 8900" keyboardType="phone-pad" value={formData.phone_number} onChangeText={(t) => updateField('phone_number', t)} />
           </View>
           {errors.phone_number && <Text style={styles.errorText}>{errors.phone_number}</Text>}
-        </View>
+        </View> */}
 
         {/* --- ADDRESS SECTION --- */}
         <Text style={styles.sectionHeading}>Address</Text>

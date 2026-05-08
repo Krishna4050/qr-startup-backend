@@ -5,6 +5,9 @@ import { Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator, Keyb
 import { Mail, Lock, AtSign, Eye, EyeOff, AlertCircle } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
 import { authStyles as styles } from '../styles/authStyles';
+import { registerForPushNotificationsAsync } from '../src/utils/notifications';
+
+
 
 export default function AuthForm() {
   const navigation = useNavigation<any>();
@@ -63,6 +66,28 @@ export default function AuthForm() {
         setErrors(prev => ({ ...prev, auth: error.message }));
       }
     } else {
+      // ---  NEW PUSH NOTIFICATION TOKEN LOGIC  ---
+      if (data?.user) {
+        try {
+          console.log("Fetching Push Token...");
+          const token = await registerForPushNotificationsAsync();
+          
+          if (token) {
+            // Save the token directly to their profile in Supabase
+            await supabase_lucifer_core
+              .from('profiles')
+              .update({ expo_push_token: token })
+              .eq('id', data.user.id);
+            console.log("Token saved successfully!");
+          }
+        } catch (pushError) {
+          console.error("Failed to get push token, but continuing login:", pushError);
+          // Notice we don't stop the login process if they deny notifications!
+        }
+      }
+      // ---  END OF NEW PUSH LOGIC  ---
+
+      // Finally, send them to the Dashboard!
       navigation.replace('Dashboard'); 
     }
     setLoading(false);

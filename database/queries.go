@@ -5,6 +5,32 @@ import (
 	"fmt"
 )
 
+// GetTagDetails fetches the public-facing details for a scanned tag
+func GetTagDetails(tagCode string) (map[string]interface{}, error) {
+	var itemName sql.NullString 
+	var status string
+	var isClaimed bool
+
+	
+	query := `
+		SELECT item_name, status, owner_id IS NOT NULL as is_claimed
+		FROM qr_tags
+		WHERE tag_code = $1
+	`
+	
+	err := DB.QueryRow(query, tagCode).Scan(&itemName, &status, &isClaimed)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"tag_code":   tagCode,
+		"item_name":  itemName.String,
+		"status":     status,
+		"is_claimed": isClaimed,
+	}, nil
+}
+
 //GetOwnerPhone looks up a tag by its ID and finds the owners verified phone Number
 func GetOwnerPhone(tagID string) (string, error){
 	var phoneNumber string
@@ -33,7 +59,7 @@ func GetOwnerPhone(tagID string) (string, error){
 func ClaimTag(tagID string, userID string) error {
 	query := `
 			UPDATE qr_tags
-			SET user_id = $1
+			SET owner_id = $1
 			WHERE id = $2 AND user_id IS NULL
 	`
 

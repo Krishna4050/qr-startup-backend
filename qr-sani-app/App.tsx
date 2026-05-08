@@ -1,6 +1,9 @@
 import TagRegistrationScreen from './src/screens/TagRegistrationScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
+import TrustedNetworkScreen from './src/screens/TrustedNetworkScreen';
 import FilteredTagsScreen from './src/screens/FilteredTagsScreen';
+import ContactManagerScreen from './src/screens/ContactManagerScreen';
 import TagManageScreen from './src/screens/TagManageScreen';
 import 'react-native-url-polyfill/auto';
 import MainTabs from './src/navigation/MainTabs';
@@ -46,13 +49,15 @@ export default function App() {
             {/* ONBOARDING IS ALSO LOCKED DOWN */}
             <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ headerShown: false, gestureEnabled: false }} />
-            
+            <Stack.Screen name="TrustedNetwork" component={TrustedNetworkScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Dashboard" component={MainTabs} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="TagRegistration" component={TagRegistrationScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
             <Stack.Screen name="FilteredTags" component={FilteredTagsScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="TagManage" component={TagManageScreen} options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="ContactManager" component={ContactManagerScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} options={{ headerShown: false, gestureEnabled: false }} />
           </Stack.Navigator>
         </NavigationContainer>

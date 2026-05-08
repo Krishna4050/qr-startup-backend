@@ -1,6 +1,8 @@
 import { StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import GradientHeader from '../../components/GradientHeader';
 import AuthForm from '../../components/AuthForm';
+// import { registerForPushNotificationsAsync } from '../utils/notifications';
+// import { supabase_lucifer_core } from '../utils/supabase';
 
 // Notice we added "{ navigation }" here so we can tell it to go to the Dashboard later!
 export default function LoginScreen({ navigation }: any) {

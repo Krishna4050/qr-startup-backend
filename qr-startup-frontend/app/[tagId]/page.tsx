@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Phone, MessageCircle, ShieldCheck, Backpack, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { Phone, MessageCircle, ShieldCheck, Backpack, ArrowRight, ArrowLeft, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
 
-
-// We pass onClick and disabled as props so it can still interact with the main page.
 const BackButton = ({ onClick, disabled }: { onClick: () => void, disabled?: boolean }) => (
   <button 
     onClick={onClick}
@@ -16,7 +15,22 @@ const BackButton = ({ onClick, disabled }: { onClick: () => void, disabled?: boo
   </button>
 );
 
+interface TagData {
+  tag_code: string;
+  item_name: string;
+  status: string;
+  is_claimed: boolean;
+}
+
 export default function FinderPage() {
+  const params = useParams();
+  const tagId = params.tagId as string; // Grabs the ID straight from the URL!
+
+  // --- Tag Data State ---
+  const [tagData, setTagData] = useState<TagData | null>(null);
+  const [isLoadingTag, setIsLoadingTag] = useState(true);
+  const [tagError, setTagError] = useState(false);
+
   const [step, setStep] = useState('initial'); 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -24,6 +38,30 @@ export default function FinderPage() {
   const [resendTimer, setResendTimer] = useState(30);
   const [isLoading, setIsLoading] = useState(false);
 
+  // --- Fetch Tag Details from Go Backend on Load ---
+  useEffect(() => {
+    if (!tagId) return;
+
+    const fetchTagDetails = async () => {
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+        const res = await fetch(`${backendUrl}/api/tags/${tagId}`);
+        if (!res.ok) throw new Error("Tag not found");
+        
+        const data = await res.json();
+        setTagData(data);
+      } catch (err) {
+        console.error("Error fetching tag:", err);
+        setTagError(true);
+      } finally {
+        setIsLoadingTag(false);
+      }
+    };
+
+    fetchTagDetails();
+  }, [tagId]);
+
+  // --- OTP Timers ---
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (step === 'otp' && resendTimer > 0) {
@@ -39,7 +77,8 @@ export default function FinderPage() {
     
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/verify/start`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/verify/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -65,13 +104,14 @@ export default function FinderPage() {
     
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/verify/check`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/verify/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone_number: phoneNumber,
           code: otpCode,
-          tag_id: 'fake-tag-123' 
+          tag_id: tagId // Passes the real URL tag ID to your Go server
         }),
       });
 
@@ -90,6 +130,28 @@ export default function FinderPage() {
     setStep('success');
   };
 
+  // --- LOADING & ERROR STATES ---
+  if (isLoadingTag) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FB] flex flex-col items-center justify-center">
+        <Loader2 className="animate-spin text-blue-600 mb-4" size={48} />
+        <p className="text-gray-500 font-medium">Looking up tag details...</p>
+      </div>
+    );
+  }
+
+  if (tagError || !tagData) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FB] flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-red-100 text-center max-w-md w-full">
+          <AlertTriangle className="text-red-500 mx-auto mb-4" size={48} />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Tag Not Found</h2>
+          <p className="text-gray-500">This QR code doesn&apost match any registered items in our system.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F7FB] flex flex-col items-center py-12 px-4 font-sans text-slate-800">
       
@@ -99,15 +161,18 @@ export default function FinderPage() {
 
       <div className="w-full max-w-md space-y-4">
         
-        {/* ITEM CARD */}
+        {/* DYNAMIC ITEM CARD */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="bg-blue-100 p-4 rounded-xl text-red-500">
+          <div className="bg-blue-100 p-4 rounded-xl text-blue-600">
             <Backpack size={32} />
           </div>
           <div>
-            <h2 className="text-xl font-bold">Lost Backpack</h2>
-            <p className="text-gray-500 text-sm font-medium mt-1">Reported missing</p>
-            <p className="text-gray-400 text-xs mt-1">Tag ID: #QR-4829</p>
+            {/* THIS IS THE MAGIC: Displaying real data from Go! */}
+            <h2 className="text-xl font-bold">{tagData.item_name || 'Unknown Item'}</h2>
+            <p className={`text-sm font-medium mt-1 ${tagData.status === 'lost' ? 'text-red-500' : 'text-green-600'}`}>
+  {tagData.status === 'lost' ? '🔴 Reported missing' : '🟢 Active & Secure'}
+</p>
+            <p className="text-gray-400 text-xs mt-1">Tag ID: #{tagId}</p>
           </div>
         </div>
 
@@ -147,7 +212,6 @@ export default function FinderPage() {
 
           {step === 'phone' && (
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-bottom-4">
-              {/* Usage updated to pass the props in */}
               <BackButton onClick={() => setStep('initial')} disabled={isLoading} />
               
               <h3 className="font-bold text-lg mb-2">Verify your device</h3>
@@ -162,14 +226,6 @@ export default function FinderPage() {
                 disabled={isLoading}
               />
 
-              <div className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl mb-4 flex items-center justify-between text-sm text-gray-500">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" className="w-4 h-4" disabled checked /> 
-                  Verify you are human
-                </div>
-                <span className="font-bold text-xs">Cloudflare</span>
-              </div>
-
               <button 
                 onClick={handleSendOTP}
                 disabled={isLoading}
@@ -182,14 +238,7 @@ export default function FinderPage() {
 
           {step === 'otp' && (
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-right-4">
-              <button 
-                onClick={() => setStep('phone')}
-                className="flex items-center text-gray-500 hover:text-gray-800 mb-4 transition-colors text-sm font-medium"
-                disabled={isLoading}
-              >
-                <ArrowLeft size={16} className="mr-1" />
-                Change Number
-              </button>
+              <BackButton onClick={() => setStep('phone')} disabled={isLoading} />
 
               <h3 className="font-bold text-lg mb-2">Enter Verification Code</h3>
               <p className="text-sm text-gray-500 mb-4">Sent to {phoneNumber}</p>
@@ -211,28 +260,11 @@ export default function FinderPage() {
               >
                 {isLoading ? 'Verifying...' : 'Verify & Connect Call'}
               </button>
-
-              <div className="text-center">
-                {resendTimer > 0 ? (
-                  <p className="text-sm text-gray-500">
-                    Resend code in <span className="font-semibold">{resendTimer}s</span>
-                  </p>
-                ) : (
-                  <button 
-                    onClick={handleSendOTP}
-                    disabled={isLoading}
-                    className="text-sm text-[#2563EB] font-semibold hover:underline"
-                  >
-                    Didn&apost receive it? Resend Code
-                  </button>
-                )}
-              </div>
             </div>
           )}
 
           {step === 'message' && (
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-bottom-4">
-              {/* Reused here! */}
               <BackButton onClick={() => setStep('initial')} disabled={isLoading} />
               
               <h3 className="font-bold text-lg mb-2">Send a Message</h3>
@@ -272,10 +304,6 @@ export default function FinderPage() {
 
         </div>
       </div>
-
-      <p className="mt-12 text-sm text-gray-400 font-medium">
-        Powered by SecureFind
-      </p>
     </div>
   );
 }

@@ -60,6 +60,8 @@ func main(){
 	mux.HandleFunc("POST /api/tags/claim", middleware.RequireAuth(handlers.ClaimTagHandler))
 	mux.HandleFunc("POST /api/verify/start", handlers.StartVerification)
 	mux.HandleFunc("POST /api/verify/check", handlers.CheckVerificationAndCall)
+	mux.HandleFunc("GET /api/tags/{id}", handlers.GetTagHandler)
+	mux.HandleFunc("POST /api/invite", handlers.SendInviteEmail)
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost:%s\n", port)
