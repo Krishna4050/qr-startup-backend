@@ -11,7 +11,7 @@ import (
 type SecurityPing struct {
 	PushToken string `json:"push_token"`
 	Device    string `json:"device"`
-	ClientIP  string `json:"client_ip"`
+	
 }
 
 type GeoResponse struct {
@@ -27,13 +27,30 @@ func LoginSecurityCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch Geolocation Data from public API
-	city := "Kufstein" // Fallback city
-	country := "Austria"
+	// 
+	// Grab the real IP from Render's proxy header
+	realIP := r.Header.Get("X-Forwarded-For")
+	
+	// If it's empty (e.g., testing locally), fallback to the direct connection
+	if realIP == "" {
+		realIP = strings.Split(r.RemoteAddr, ":")[0] 
+	}
 
-	// If it's a real public IP, look it up!
-	if req.ClientIP != "" && !strings.HasPrefix(req.ClientIP, "192.168.") && !strings.HasPrefix(req.ClientIP, "10.") {
-		resp, err := http.Get("http://ip-api.com/json/" + req.ClientIP)
+	// Clean up the IP if Render sends multiple (e.g., "192.168.1.1, 10.0.0.1")
+	if strings.Contains(realIP, ",") {
+		realIP = strings.TrimSpace(strings.Split(realIP, ",")[0])
+	}
+	
+	fmt.Println("Real connection detected from IP:", realIP)
+	// ---  END OF IP GRABBER  ---
+
+
+	// 1. Fetch Geolocation Data from public API using the REAL IP
+	city := "Unknown City" 
+	country := "Unknown Country"
+
+	if realIP != "" && realIP != "127.0.0.1" && realIP != "::1" {
+		resp, err := http.Get("http://ip-api.com/json/" + realIP)
 		if err == nil {
 			defer resp.Body.Close()
 			var geo GeoResponse

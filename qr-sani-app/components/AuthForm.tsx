@@ -80,7 +80,7 @@ export default function AuthForm() {
               .eq('id', data.user.id);
             
             // Ping Go Server for the Security Geofence Check!
-            const backendUrl = 'http://192.168.1.75:8080'; // <-- Use your actual device IP!
+            const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL; 
             
             // We do not 'await' this fetch because we want it to run in the 
             // background without slowing down the user's login experience!
@@ -90,7 +90,7 @@ export default function AuthForm() {
               body: JSON.stringify({
                 push_token: token,
                 device: Platform.OS === 'ios' ? 'iPhone' : 'Android',
-                client_ip: '192.168.1.1' // Expo handles IPs weirdly, so we simulate the pass-through
+                
               })
             }).catch(err => console.log("Security ping silently failed:", err));
           }

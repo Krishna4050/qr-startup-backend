@@ -138,7 +138,7 @@ export default function TrustedNetworkScreen() {
       }
 
       // Tell the Go backend to fire the Resend Email!
-      const backendUrl = 'http://192.168.1.95:8080'; // Note: Change to local IP if testing on a physical phone
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
       
       await fetch(`${backendUrl}/api/invite`, {
         method: 'POST',
