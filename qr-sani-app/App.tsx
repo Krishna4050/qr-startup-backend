@@ -9,6 +9,7 @@ import 'react-native-url-polyfill/auto';
 import MainTabs from './src/navigation/MainTabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import SharedTagsScreen from './src/screens/SharedTagsScreen';
 
 // Providers
 import { ContentProvider } from './src/context/ContentContext';
@@ -58,6 +59,7 @@ export default function App() {
             <Stack.Screen name="TagManage" component={TagManageScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="ContactManager" component={ContactManagerScreen} options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="SharedTags" component={SharedTagsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} options={{ headerShown: false, gestureEnabled: false }} />
           </Stack.Navigator>
         </NavigationContainer>

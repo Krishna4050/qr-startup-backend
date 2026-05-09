@@ -6,48 +6,27 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 export default function DashboardScreen() {
-  // --- NEW: Toggle Lost Mode ---
-  const toggleLostMode = async (tagId: string, currentStatus: string, itemName: string) => {
-    const newStatus = currentStatus === 'active' ? 'lost' : 'active';
-    const actionText = newStatus === 'lost' ? 'Marked as Lost' : 'Marked as Active';
-
-    try {
-      // Update Supabase directly
-      const { error } = await supabase_lucifer_core
-        .from('qr_tags')
-        .update({ status: newStatus })
-        .eq('id', tagId);
-
-      if (error) throw error;
-
-      Alert.alert(actionText, `${itemName} is now ${newStatus}.`);
-      
-      // Refresh the dashboard to show the new status
-      fetchDashboardData(); 
-    } catch (error: any) {
-      Alert.alert("Error", error.message);
-    }
-  };
-  const navigation = useNavigation<any>(); // <--- Fixed Navigation Types!
+  const navigation = useNavigation<any>();
+  const isFocused = useIsFocused(); 
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   
   const [tags, setTags] = useState<any[]>([]);
-  const [pausedTagsCount, setPausedTagsCount] = useState(0); // <--- New State for Paused Count!
+  const [pausedTagsCount, setPausedTagsCount] = useState(0);
   const [alerts, setAlerts] = useState<any[]>([]);
+  
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [networkMembers, setNetworkMembers] = useState(0);
 
-  // Overview Stats
   const totalTags = tags.length;
   const foundItems = tags.filter(t => t.status === 'found').length;
-  const pendingAlerts = alerts.filter(a => !a.is_read).length;
-  const totalContacts = 0; 
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -57,9 +36,36 @@ export default function DashboardScreen() {
     return 'Good Night!';
   };
 
+  // --- THE FIX: REALTIME AUTO-REFRESH ENGINE ---
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (isFocused) {
+      fetchDashboardData();
+    }
+
+    // 1. Listen for ANY changes to the Notifications table
+    const notifSubscription = supabase_lucifer_core
+      .channel('public:notifications')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
+        console.log("Realtime: Notification change detected!");
+        fetchDashboardData(); // Instantly refresh the badge count!
+      })
+      .subscribe();
+
+    // 2. Listen for ANY changes to the Trusted Network table (Invites)
+    const networkSubscription = supabase_lucifer_core
+      .channel('public:trusted_network')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trusted_network' }, (payload) => {
+        console.log("Realtime: Network change detected!");
+        fetchDashboardData(); // Instantly refresh the member count!
+      })
+      .subscribe();
+
+    // Cleanup listeners when you leave the screen
+    return () => {
+      supabase_lucifer_core.removeChannel(notifSubscription);
+      supabase_lucifer_core.removeChannel(networkSubscription);
+    };
+  }, [isFocused]);
 
   const fetchDashboardData = async () => {
     try {
@@ -74,7 +80,6 @@ export default function DashboardScreen() {
       
       setProfile(profileData || { display_name: user.user_metadata?.username });
 
-      // --- SMART FILTERING ADDED HERE ---
       const { data: tagsData } = await supabase_lucifer_core
         .from('qr_tags')
         .select('*')
@@ -82,11 +87,8 @@ export default function DashboardScreen() {
         .order('created_at', { ascending: false });
       
       if (tagsData) {
-        // 1. Only show active or lost tags in the main horizontal list
         const visibleTags = tagsData.filter(t => t.status === 'active' || t.status === 'lost');
         setTags(visibleTags);
-        
-        // 2. Count the paused tags for the Overview Card
         const pausedCount = tagsData.filter(t => t.status === 'paused').length;
         setPausedTagsCount(pausedCount);
       }
@@ -99,10 +101,42 @@ export default function DashboardScreen() {
         .limit(5);
       if (alertsData) setAlerts(alertsData);
 
+      // Get Unread Notifications
+      const { count: notifCount } = await supabase_lucifer_core
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+      setUnreadNotifications(notifCount || 0);
+
+      // --- THE FIX: COUNT BOTH WAYS (Owner AND Invitee) ---
+      const { count: memberCount } = await supabase_lucifer_core
+        .from('trusted_network')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'accepted')
+        .or(`owner_id.eq.${user.id},member_email.eq.${user.email}`); 
+        // ^ "Count it if I am the owner OR if I am the email being invited"
+        
+      setNetworkMembers(memberCount || 0);
+
     } catch (error) {
       console.error("Error fetching dashboard:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleLostMode = async (tagId: string, currentStatus: string, itemName: string) => {
+    const newStatus = currentStatus === 'active' ? 'lost' : 'active';
+    const actionText = newStatus === 'lost' ? 'Marked as Lost' : 'Marked as Active';
+
+    try {
+      const { error } = await supabase_lucifer_core.from('qr_tags').update({ status: newStatus }).eq('id', tagId);
+      if (error) throw error;
+      Alert.alert(actionText, `${itemName} is now ${newStatus}.`);
+      fetchDashboardData(); 
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
     }
   };
 
@@ -117,14 +151,7 @@ export default function DashboardScreen() {
   const pickImage = async (useCamera: boolean) => {
     try {
       let result;
-      const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-        base64: true,
-      };
-
+      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.5, base64: true };
       if (useCamera) {
         await ImagePicker.requestCameraPermissionsAsync();
         result = await ImagePicker.launchCameraAsync(options);
@@ -132,7 +159,6 @@ export default function DashboardScreen() {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
         result = await ImagePicker.launchImageLibraryAsync(options);
       }
-
       if (!result.canceled && result.assets[0].base64) {
         await uploadAvatar(result.assets[0].base64);
       }
@@ -146,46 +172,22 @@ export default function DashboardScreen() {
     try {
       const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) throw new Error("No user found");
-
       const filePath = `${user.id}/avatar.jpg`;
-      
-      const { error: uploadError } = await supabase_lucifer_core.storage
-        .from('avatars')
-        .upload(filePath, decode(base64Image), { upsert: true, contentType: 'image/jpeg' });
-
+      const { error: uploadError } = await supabase_lucifer_core.storage.from('avatars').upload(filePath, decode(base64Image), { upsert: true, contentType: 'image/jpeg' });
       if (uploadError) throw uploadError;
-
-      const { data: publicUrlData } = supabase_lucifer_core.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
+      const { data: publicUrlData } = supabase_lucifer_core.storage.from('avatars').getPublicUrl(filePath);
       const newAvatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
-
-      const { error: updateError } = await supabase_lucifer_core
-        .from('profiles')
-        .update({ avatar_url: newAvatarUrl })
-        .eq('id', user.id);
-
+      const { error: updateError } = await supabase_lucifer_core.from('profiles').update({ avatar_url: newAvatarUrl }).eq('id', user.id);
       if (updateError) throw updateError;
-
       setProfile((prev: any) => ({ ...prev, avatar_url: newAvatarUrl }));
-      Alert.alert("Success", "Profile picture updated!");
-
     } catch (error: any) {
-      console.error(error);
       Alert.alert("Upload Failed", error.message);
     } finally {
       setUploading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#0F2D4D" />
-      </View>
-    );
-  }
+  if (loading) return <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}><ActivityIndicator size="large" color="#0F2D4D" /></View>;
 
   const displayName = profile?.display_name || profile?.username || 'User';
 
@@ -200,12 +202,14 @@ export default function DashboardScreen() {
             </View>
             
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              {/* --- NEW: NOTIFICATION BELL --- */}
               <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
                 <Bell color="#F2F3F4" size={26} />
-                {/* Optional: Add a red dot here if pendingAlerts > 0 */}
-                {pendingAlerts > 0 && (
-                  <View style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, backgroundColor: '#EF4444', borderRadius: 5, borderWidth: 2, borderColor: '#0F2D4D' }} />
+                {unreadNotifications > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                    </Text>
+                  </View>
                 )}
               </TouchableOpacity>
 
@@ -234,11 +238,7 @@ export default function DashboardScreen() {
             <View style={styles.emptyCard}><Text style={styles.emptyCardText}>No tags added yet. Tap + to add!</Text></View>
           ) : (
             tags.map((tag) => (
-              <TouchableOpacity 
-                key={tag.id} 
-                style={styles.tagCard}
-                onPress={() => navigation.navigate('TagManage', { tagId: tag.id })}
-              >
+              <TouchableOpacity key={tag.id} style={styles.tagCard} onPress={() => navigation.navigate('TagManage', { tagId: tag.id })}>
                 <Text style={styles.tagCategory}>ITEM TAG</Text>
                 <Text style={styles.tagTitle} numberOfLines={2}>{tag.item_name || 'Unnamed Item'}</Text>
                 <View style={styles.tagStatus}>
@@ -246,26 +246,10 @@ export default function DashboardScreen() {
                   <Text style={[styles.tagStatusText, { color: tag.status === 'active' ? '#10B981' : '#F59E0B' }]}>{tag.status === 'active' ? 'Protected & Active' : 'Reported Lost'}</Text>
                 </View>
                 <View style={styles.tagIconWrapper}><Tag color="#0F2D4D" size={20} /></View>
-
-                <TouchableOpacity 
-                  style={[
-                    styles.lostModeBtn, 
-                    { backgroundColor: tag.status === 'lost' ? '#FEF2F2' : '#F3F4F6' }
-                  ]}
-                  onPress={() => toggleLostMode(tag.id, tag.status, tag.item_name)}
-                >
-                  <ShieldAlert 
-                    color={tag.status === 'lost' ? '#EF4444' : '#9CA3AF'} 
-                    size={18} 
-                  />
-                  <Text style={[
-                    styles.lostModeText, 
-                    { color: tag.status === 'lost' ? '#EF4444' : '#6B7280' }
-                  ]}>
-                    {tag.status === 'lost' ? 'Lost Mode: ON' : 'Mark as Lost'}
-                  </Text>
+                <TouchableOpacity style={[styles.lostModeBtn, { backgroundColor: tag.status === 'lost' ? '#FEF2F2' : '#F3F4F6' }]} onPress={() => toggleLostMode(tag.id, tag.status, tag.item_name)}>
+                  <ShieldAlert color={tag.status === 'lost' ? '#EF4444' : '#9CA3AF'} size={18} />
+                  <Text style={[styles.lostModeText, { color: tag.status === 'lost' ? '#EF4444' : '#6B7280' }]}>{tag.status === 'lost' ? 'Lost Mode: ON' : 'Mark as Lost'}</Text>
                 </TouchableOpacity>
-                
               </TouchableOpacity>
             ))
           )}
@@ -275,7 +259,6 @@ export default function DashboardScreen() {
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.sectionTitle}>Recent Alerts</Text>
-            <View style={[styles.badge, { backgroundColor: '#DBEAFE' }]}><Text style={[styles.badgeText, { color: '#2563EB' }]}>{pendingAlerts < 10 ? `0${pendingAlerts}` : pendingAlerts}</Text></View>
           </View>
           <TouchableOpacity><Text style={styles.seeAllText}>SEE ALL</Text></TouchableOpacity>
         </View>
@@ -302,24 +285,26 @@ export default function DashboardScreen() {
           <Text style={styles.sectionTitle}>Friends & Family</Text>
         </View>
         <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
-          <View style={styles.contactCard}>
+          
+          {/* THE FIX: ENTIRE CARD IS NOW TOUCHABLE */}
+          <TouchableOpacity 
+            style={styles.contactCard} 
+            activeOpacity={0.7} 
+            onPress={() => navigation.navigate('TrustedNetwork')}
+          >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={[styles.contactIconBg, { backgroundColor: '#FCE7F3' }]}>
-                <Users color="#DB2777" size={24} />
-              </View>
+              <View style={[styles.contactIconBg, { backgroundColor: '#FCE7F3' }]}><Users color="#DB2777" size={24} /></View>
               <View style={{ marginLeft: 16 }}>
                 <Text style={styles.contactCardTitle}>Trusted Network</Text>
-                <Text style={styles.contactCardNumber}>0 Members</Text>
+                <Text style={styles.contactCardNumber}>{networkMembers} Members</Text>
               </View>
             </View>
-            <TouchableOpacity 
-              style={[styles.addContactBtn, { backgroundColor: '#FDF2F8' }]} 
-              onPress={() => navigation.navigate('TrustedNetwork')}
-            >
+            <View style={[styles.addContactBtn, { backgroundColor: '#FDF2F8' }]}>
               <PlusCircle color="#DB2777" size={20} />
-              <Text style={[styles.addContactText, { color: '#DB2000' }]}>Invite</Text>
-            </TouchableOpacity>
-          </View>
+              <Text style={[styles.addContactText, { color: '#DB2000' }]}>Manage</Text>
+            </View>
+          </TouchableOpacity>
+
         </View>
 
         {/* OVERVIEW SECTION */}
@@ -332,25 +317,17 @@ export default function DashboardScreen() {
             <Text style={styles.overviewCardTitle}>Total Tags</Text>
             <Text style={styles.overviewCardNumber}>{totalTags}</Text>
           </View>
-          
           <View style={[styles.overviewCard, { backgroundColor: '#06B6D4' }]}>
             <Text style={styles.overviewCardTitle}>Found Items</Text>
             <Text style={styles.overviewCardNumber}>{foundItems}</Text>
           </View>
-
-          {/* --- NEW PAUSED TAGS CARD ADDED HERE --- */}
-          <TouchableOpacity 
-            style={[styles.overviewCard, { backgroundColor: '#F59E0B' }]} 
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('FilteredTags', { filterType: 'paused' })}
-          >
+          <TouchableOpacity style={[styles.overviewCard, { backgroundColor: '#F59E0B' }]} activeOpacity={0.8} onPress={() => navigation.navigate('FilteredTags', { filterType: 'paused' })}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={styles.overviewCardTitle}>Paused Tags</Text>
               <PauseCircle color="#FFFFFF" size={24} style={{ opacity: 0.8 }} />
             </View>
             <Text style={styles.overviewCardNumber}>{pausedTagsCount}</Text>
           </TouchableOpacity>
-
         </ScrollView>
 
       </RefreshableScroll>
@@ -365,6 +342,9 @@ const styles = StyleSheet.create({
   greetingText: { fontSize: 14, color: '#DED1C6', marginBottom: 4 },
   userNameText: { fontSize: 24, fontWeight: 'bold', color: '#F2F3F4' },
   
+  notificationBadge: { position: 'absolute', top: -6, right: -6, backgroundColor: '#EF4444', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: '#0F2D4D' },
+  notificationBadgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
+
   avatarContainer: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#E0E7FF', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
   avatarImage: { width: 46, height: 46, borderRadius: 23 },
   avatarBadge: { position: 'absolute', bottom: -4, right: -4, backgroundColor: '#10B981', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#0F2D4D' },

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView, Platform } from 'react-native';
-import { ArrowLeft, ShieldAlert, Bell, Info, Megaphone, Trash2 } from 'lucide-react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView, Platform, Alert } from 'react-native';
+import { ArrowLeft, ShieldAlert, Bell, Info, Megaphone, Trash2, Check, X } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase_lucifer_core } from '../utils/supabase';
 
@@ -50,7 +50,37 @@ export default function NotificationsScreen() {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Helper to pick the right icon and color based on Category & Priority
+  // --- NEW: Handle Accept / Decline ---
+  const handleInviteResponse = async (notificationId: string, inviteId: string, action: 'accepted' | 'declined') => {
+    try {
+      if (action === 'accepted') {
+        // Update the trusted network status to accepted
+        const { error } = await supabase_lucifer_core
+          .from('trusted_network')
+          .update({ status: 'accepted' })
+          .eq('id', inviteId);
+
+        if (error) throw error;
+        Alert.alert("Network Joined!", "You are now part of their trusted network.");
+      } else {
+        // If declined, delete the pending invite entirely
+        const { error } = await supabase_lucifer_core
+          .from('trusted_network')
+          .delete()
+          .eq('id', inviteId);
+          
+        if (error) throw error;
+      }
+
+      // Once handled, remove the notification
+      await deleteNotification(notificationId);
+
+    } catch (error: any) {
+      Alert.alert("Error", "Could not process the invite right now.");
+      console.error(error);
+    }
+  };
+
   const getNotificationStyle = (category: string, priority: string) => {
     if (priority === 'urgent' || category === 'security') {
       return { icon: <ShieldAlert color="#EF4444" size={24} />, bg: '#FEF2F2', border: '#F87171' };
@@ -66,23 +96,53 @@ export default function NotificationsScreen() {
 
   const renderItem = ({ item }: { item: any }) => {
     const style = getNotificationStyle(item.category, item.priority);
+    // Check if this notification has invite data attached to it!
+    const inviteId = item.action_data?.invite_id;
 
     return (
       <View style={[styles.card, { borderLeftColor: style.border, borderLeftWidth: 4 }]}>
-        <View style={[styles.iconBox, { backgroundColor: style.bg }]}>
-          {style.icon}
-        </View>
-        <View style={styles.content}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <Text style={styles.title}>{item.title}</Text>
-            {item.priority === 'urgent' && <Text style={styles.urgentBadge}>URGENT</Text>}
+        
+        {/* Main Content Area */}
+        <View style={{ flexDirection: 'row', flex: 1 }}>
+          <View style={[styles.iconBox, { backgroundColor: style.bg }]}>
+            {style.icon}
           </View>
-          <Text style={styles.body}>{item.body}</Text>
-          <Text style={styles.time}>{new Date(item.created_at).toLocaleDateString()} at {new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+          
+          <View style={styles.content}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Text style={styles.title}>{item.title}</Text>
+              {item.priority === 'urgent' && <Text style={styles.urgentBadge}>URGENT</Text>}
+            </View>
+            <Text style={styles.body}>{item.body}</Text>
+            <Text style={styles.time}>{new Date(item.created_at).toLocaleDateString()} at {new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+          </View>
+          
+          <TouchableOpacity onPress={() => deleteNotification(item.id)} style={styles.deleteBtn}>
+            <Trash2 color="#9CA3AF" size={20} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => deleteNotification(item.id)} style={styles.deleteBtn}>
-          <Trash2 color="#9CA3AF" size={20} />
-        </TouchableOpacity>
+
+        {/* --- NEW: Interactive Invite Action Buttons --- */}
+        {item.category === 'invite' && inviteId && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity 
+              style={[styles.actionBtn, { backgroundColor: '#FEE2E2' }]} 
+              onPress={() => handleInviteResponse(item.id, inviteId, 'declined')}
+            >
+              <X color="#DC2626" size={16} />
+              <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Decline</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.actionBtn, { backgroundColor: '#10B981', flex: 2 }]} 
+              onPress={() => handleInviteResponse(item.id, inviteId, 'accepted')}
+            >
+              <Check color="#FFFFFF" size={16} />
+              <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Accept Invite</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
       </View>
     );
   };
@@ -123,7 +183,10 @@ const styles = StyleSheet.create({
   backBtn: { padding: 8 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
   list: { padding: 16 },
-  card: { flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
+  
+  // Card Container updated to column to hold the buttons underneath
+  card: { flexDirection: 'column', backgroundColor: '#FFF', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
+  
   iconBox: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
   content: { flex: 1, justifyContent: 'center' },
   title: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
@@ -132,5 +195,10 @@ const styles = StyleSheet.create({
   time: { fontSize: 12, color: '#9CA3AF' },
   deleteBtn: { paddingLeft: 12, justifyContent: 'center' },
   empty: { alignItems: 'center', marginTop: 100 },
-  emptyText: { marginTop: 16, fontSize: 16, color: '#6B7280' }
+  emptyText: { marginTop: 16, fontSize: 16, color: '#6B7280' },
+
+  // New styles for the Invite Buttons
+  actionRow: { flexDirection: 'row', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', gap: 12 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8 },
+  actionBtnText: { fontWeight: 'bold', fontSize: 14, marginLeft: 6 }
 });
