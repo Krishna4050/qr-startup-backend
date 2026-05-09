@@ -17,7 +17,11 @@ export const AuthProvider = ({ children }: any) => {
 
   useEffect(() => {
     // Standard Startup Check
-    supabase_lucifer_core.auth.getSession().then(({ data: { session } }) => {
+    supabase_lucifer_core.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.log("Normal auth background check failed, user needs to log in.");
+        // We just log it instead of letting it throw a red screen
+      }
       set_mayalu_session(session);
       set_is_sani_loading(false);
     });
