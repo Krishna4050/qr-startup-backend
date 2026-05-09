@@ -55,15 +55,15 @@ export default function TrustedNetworkScreen() {
         return;
       }
 
-      // --- 1. THE ACCOUNT CHECK ---
-      // Call our secure Postgres function to see if the user exists
-      const { data: userExists, error: rpcError } = await supabase_lucifer_core
-        .rpc('check_email_exists', { lookup_email: emailToInvite });
+      // --- THE FIX: Use our new secure RPC ---
+      const { data: targetUserId, error: rpcError } = await supabase_lucifer_core
+        .rpc('get_user_id_by_email', { lookup_email: emailToInvite });
 
       if (rpcError) throw rpcError;
 
+      const userExists = !!targetUserId; // true if we found an ID!
+
       if (!userExists) {
-        // --- 2. PATH B: USER DOES NOT EXIST ---
         setIsInviting(false);
         Alert.alert(
           "Account Not Found",
@@ -72,14 +72,13 @@ export default function TrustedNetworkScreen() {
             { text: "Cancel", style: "cancel" },
             { 
               text: "Send Anyway", 
-              onPress: () => finalizeInvite(emailToInvite, user.id, false) 
+              onPress: () => finalizeInvite(emailToInvite, user.id, false, null) 
             }
           ]
         );
         return;
       } else {
-        // --- 3. PATH A: USER EXISTS ---
-        await finalizeInvite(emailToInvite, user.id, true);
+        await finalizeInvite(emailToInvite, user.id, true, targetUserId);
       }
 
     } catch (err: any) {
@@ -88,12 +87,10 @@ export default function TrustedNetworkScreen() {
     }
   };
 
- 
-  // The helper function that actually saves the invite
-  const finalizeInvite = async (email: string, ownerId: string, userExists: boolean) => {
+  // --- THE FIX: Accept the targetUserId so we don't have to query for it again ---
+  const finalizeInvite = async (email: string, ownerId: string, userExists: boolean, targetUserId: string | null) => {
     setIsInviting(true);
     try {
-      // Create the pending connection in the database
       const { data: inviteData, error: inviteError } = await supabase_lucifer_core
         .from('trusted_network')
         .insert({
@@ -109,7 +106,6 @@ export default function TrustedNetworkScreen() {
         throw inviteError;
       }
 
-      // Fetch YOUR name so we can put it in the email
       const { data: profile } = await supabase_lucifer_core
         .from('profiles')
         .select('display_name, username')
@@ -118,26 +114,17 @@ export default function TrustedNetworkScreen() {
         
       const inviterName = profile?.display_name || profile?.username || 'A friend';
 
-      // If they exist, send them an In-App Notification!
-      if (userExists) {
-        const { data: targetProfile } = await supabase_lucifer_core
-          .from('profiles') 
-          .select('id')
-          .eq('username', email) 
-          .maybeSingle();
-
-        if (targetProfile) {
+      // --- THE FIX: Send the notification using the ID we already found! ---
+      if (userExists && targetUserId) {
           await supabase_lucifer_core.from('notifications').insert({
-            user_id: targetProfile.id,
+            user_id: targetUserId,
             title: "New Network Invite",
             body: `${inviterName} added you to their network!`,
-            type: "invite",
+            category: "invite", // Make sure this matches your notification types
             action_data: { invite_id: inviteData.id }
           });
-        }
       }
 
-      // Tell the Go backend to fire the Resend Email!
       const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
       
       await fetch(`${backendUrl}/api/invite`, {
@@ -150,7 +137,6 @@ export default function TrustedNetworkScreen() {
         })
       });
 
-      // Show the correct success message
       if (userExists) {
         Alert.alert("Network Updated!", `An email and in-app notification were sent to ${email}.`);
       } else {

@@ -88,6 +88,7 @@ export default function AuthForm() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
+                user_id: data.user.id,
                 push_token: token,
                 device: Platform.OS === 'ios' ? 'iPhone' : 'Android',
                 

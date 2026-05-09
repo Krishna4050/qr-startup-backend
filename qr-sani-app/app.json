@@ -22,10 +22,21 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.krishna4050.qrsaniapp",
+      "permissions": [
+        "NOTIFICATIONS",
+        "INTERNET"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "aa9ca581-b033-4d20-b7e6-86bf73bfa041"
+      }
+    },
+    "owner": "krishna4050"
   }
 }
