@@ -10,6 +10,8 @@ import MainTabs from './src/navigation/MainTabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SharedTagsScreen from './src/screens/SharedTagsScreen';
+import VehicleRepairDirectory from './src/screens/VehicleRepairDirectory';
+import ShopDetailsScreen from './src/screens/ShopDetailsScreen';
 
 // Providers
 import { ContentProvider } from './src/context/ContentContext';
@@ -60,7 +62,9 @@ export default function App() {
             <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="ContactManager" component={ContactManagerScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="SharedTags" component={SharedTagsScreen} options={{ headerShown: false, presentation: 'modal'}} />
+            <Stack.Screen name="VehicleRepairDirectory" component={VehicleRepairDirectory} />
             <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </ContentProvider>

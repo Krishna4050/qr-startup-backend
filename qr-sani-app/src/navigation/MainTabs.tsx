@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 're
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, LayoutGrid, Plus, User, ShoppingBag } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import ServicesScreen from '../screens/ServicesScreen';
 import { supabase_lucifer_core } from '../utils/supabase';
 
 // Import our screens
@@ -99,7 +100,7 @@ export default function MainTabs() {
       />
       <Tab.Screen 
         name="Services" 
-        component={DummyScreen} 
+        component={ServicesScreen} 
         options={{ tabBarIcon: ({ color }) => <LayoutGrid color={color} size={24} /> }} 
       />
       
