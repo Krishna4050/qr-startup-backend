@@ -19,12 +19,7 @@ export default function NotificationsScreen() {
       const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase_lucifer_core
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await supabase_lucifer_core.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
       if (error) throw error;
       setNotifications(data || []);
     } catch (err) {
@@ -37,12 +32,7 @@ export default function NotificationsScreen() {
   const markAllAsRead = async () => {
     const { data: { user } } = await supabase_lucifer_core.auth.getUser();
     if (!user) return;
-
-    await supabase_lucifer_core
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', user.id)
-      .eq('is_read', false);
+    await supabase_lucifer_core.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
   };
 
   const deleteNotification = async (id: string) => {
@@ -50,64 +40,76 @@ export default function NotificationsScreen() {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // --- NEW: Handle Accept / Decline ---
+  // --- THE FIX: SEND FEEDBACK FOR INVITES ---
   const handleInviteResponse = async (notificationId: string, inviteId: string, action: 'accepted' | 'declined') => {
     try {
-      if (action === 'accepted') {
-        // Update the trusted network status to accepted
-        const { error } = await supabase_lucifer_core
-          .from('trusted_network')
-          .update({ status: 'accepted' })
-          .eq('id', inviteId);
+      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
+      const { data: invite } = await supabase_lucifer_core.from('trusted_network').select('owner_id').eq('id', inviteId).single();
 
-        if (error) throw error;
+      if (action === 'accepted') {
+        await supabase_lucifer_core.from('trusted_network').update({ status: 'accepted' }).eq('id', inviteId);
         Alert.alert("Network Joined!", "You are now part of their trusted network.");
       } else {
-        // If declined, delete the pending invite entirely
-        const { error } = await supabase_lucifer_core
-          .from('trusted_network')
-          .delete()
-          .eq('id', inviteId);
-          
-        if (error) throw error;
+        await supabase_lucifer_core.from('trusted_network').delete().eq('id', inviteId);
       }
 
-      // Once handled, remove the notification
-      await deleteNotification(notificationId);
+      if (invite?.owner_id && user) {
+        await supabase_lucifer_core.from('notifications').insert({
+          user_id: invite.owner_id,
+          title: action === 'accepted' ? "Invite Accepted" : "Invite Declined",
+          body: `${user.email} has ${action} your network invitation.`,
+          category: "info"
+        });
+      }
 
+      await deleteNotification(notificationId);
     } catch (error: any) {
       Alert.alert("Error", "Could not process the invite right now.");
-      console.error(error);
+    }
+  };
+
+  // --- THE FIX: SEND FEEDBACK FOR TAG REQUESTS ---
+  const handleTagActionRequest = async (notificationId: string, tagId: string, requestedStatus: string, requesterId: string, action: 'approved' | 'denied') => {
+    try {
+      if (action === 'approved') {
+        await supabase_lucifer_core.from('qr_tags').update({ status: requestedStatus }).eq('id', tagId);
+        Alert.alert("Request Approved", `The tag has been updated to ${requestedStatus.toUpperCase()}.`);
+      }
+      
+      if (requesterId) {
+        await supabase_lucifer_core.from('notifications').insert({
+          user_id: requesterId,
+          title: action === 'approved' ? "Request Approved" : "Request Denied",
+          body: `Your request to mark the tag as ${requestedStatus.toUpperCase()} was ${action}.`,
+          category: "info"
+        });
+      }
+
+      await deleteNotification(notificationId);
+    } catch (error: any) {
+      Alert.alert("Error", "Could not process request.");
     }
   };
 
   const getNotificationStyle = (category: string, priority: string) => {
-    if (priority === 'urgent' || category === 'security') {
-      return { icon: <ShieldAlert color="#EF4444" size={24} />, bg: '#FEF2F2', border: '#F87171' };
-    }
-    if (category === 'marketing') {
-      return { icon: <Megaphone color="#8B5CF6" size={24} />, bg: '#F5F3FF', border: '#C4B5FD' };
-    }
-    if (category === 'invite') {
-      return { icon: <Bell color="#10B981" size={24} />, bg: '#ECFDF5', border: '#6EE7B7' };
-    }
+    if (priority === 'urgent' || category === 'security') return { icon: <ShieldAlert color="#EF4444" size={24} />, bg: '#FEF2F2', border: '#F87171' };
+    if (category === 'marketing') return { icon: <Megaphone color="#8B5CF6" size={24} />, bg: '#F5F3FF', border: '#C4B5FD' };
+    if (category === 'invite') return { icon: <Bell color="#10B981" size={24} />, bg: '#ECFDF5', border: '#6EE7B7' };
     return { icon: <Info color="#3B82F6" size={24} />, bg: '#EFF6FF', border: '#93C5FD' };
   };
 
   const renderItem = ({ item }: { item: any }) => {
     const style = getNotificationStyle(item.category, item.priority);
-    // Check if this notification has invite data attached to it!
     const inviteId = item.action_data?.invite_id;
+    const isTagRequest = item.action_data?.request_type === 'tag_status';
+    const requestTagId = item.action_data?.tag_id;
+    const requestedStatus = item.action_data?.requested_status;
+    const requesterId = item.action_data?.requester_id;
 
     return (
       <View style={[styles.card, { borderLeftColor: style.border, borderLeftWidth: 4 }]}>
-        
-        {/* Main Content Area */}
         <View style={{ flexDirection: 'row', flex: 1 }}>
-          <View style={[styles.iconBox, { backgroundColor: style.bg }]}>
-            {style.icon}
-          </View>
-          
+          <View style={[styles.iconBox, { backgroundColor: style.bg }]}>{style.icon}</View>
           <View style={styles.content}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <Text style={styles.title}>{item.title}</Text>
@@ -116,29 +118,33 @@ export default function NotificationsScreen() {
             <Text style={styles.body}>{item.body}</Text>
             <Text style={styles.time}>{new Date(item.created_at).toLocaleDateString()} at {new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
           </View>
-          
           <TouchableOpacity onPress={() => deleteNotification(item.id)} style={styles.deleteBtn}>
             <Trash2 color="#9CA3AF" size={20} />
           </TouchableOpacity>
         </View>
 
-        {/* --- NEW: Interactive Invite Action Buttons --- */}
         {item.category === 'invite' && inviteId && (
           <View style={styles.actionRow}>
-            <TouchableOpacity 
-              style={[styles.actionBtn, { backgroundColor: '#FEE2E2' }]} 
-              onPress={() => handleInviteResponse(item.id, inviteId, 'declined')}
-            >
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#FEE2E2' }]} onPress={() => handleInviteResponse(item.id, inviteId, 'declined')}>
               <X color="#DC2626" size={16} />
               <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Decline</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.actionBtn, { backgroundColor: '#10B981', flex: 2 }]} 
-              onPress={() => handleInviteResponse(item.id, inviteId, 'accepted')}
-            >
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10B981', flex: 2 }]} onPress={() => handleInviteResponse(item.id, inviteId, 'accepted')}>
               <Check color="#FFFFFF" size={16} />
               <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Accept Invite</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isTagRequest && requestTagId && requestedStatus && requesterId && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#FEE2E2' }]} onPress={() => handleTagActionRequest(item.id, requestTagId, requestedStatus, requesterId, 'denied')}>
+              <X color="#DC2626" size={16} />
+              <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Deny</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#EF4444', flex: 2 }]} onPress={() => handleTagActionRequest(item.id, requestTagId, requestedStatus, requesterId, 'approved')}>
+              <Check color="#FFFFFF" size={16} />
+              <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Approve {requestedStatus.toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -150,28 +156,12 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft color="#111827" size={24} />
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}><ArrowLeft color="#111827" size={24} /></TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
         <View style={{ width: 40 }} />
       </View>
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#0F2D4D" style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={notifications}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Bell color="#D1D5DB" size={48} />
-              <Text style={styles.emptyText}>You're all caught up!</Text>
-            </View>
-          }
-        />
+      {loading ? <ActivityIndicator size="large" color="#0F2D4D" style={{ marginTop: 40 }} /> : (
+        <FlatList data={notifications} keyExtractor={(item) => item.id} renderItem={renderItem} contentContainerStyle={styles.list} ListEmptyComponent={<View style={styles.empty}><Bell color="#D1D5DB" size={48} /><Text style={styles.emptyText}>You're all caught up!</Text></View>} />
       )}
     </SafeAreaView>
   );
@@ -183,10 +173,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 8 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
   list: { padding: 16 },
-  
-  // Card Container updated to column to hold the buttons underneath
   card: { flexDirection: 'column', backgroundColor: '#FFF', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
-  
   iconBox: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
   content: { flex: 1, justifyContent: 'center' },
   title: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
@@ -196,8 +183,6 @@ const styles = StyleSheet.create({
   deleteBtn: { paddingLeft: 12, justifyContent: 'center' },
   empty: { alignItems: 'center', marginTop: 100 },
   emptyText: { marginTop: 16, fontSize: 16, color: '#6B7280' },
-
-  // New styles for the Invite Buttons
   actionRow: { flexDirection: 'row', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', gap: 12 },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8 },
   actionBtnText: { fontWeight: 'bold', fontSize: 14, marginLeft: 6 }

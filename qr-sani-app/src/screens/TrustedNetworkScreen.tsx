@@ -24,43 +24,21 @@ export default function TrustedNetworkScreen() {
       if (!user) return;
       setCurrentUser(user);
 
-      const { data, error } = await supabase_lucifer_core
-        .from('trusted_network')
-        .select('*')
-        .or(`owner_id.eq.${user.id},member_email.ilike.${user.email}`) // ilike makes it case-insensitive!
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await supabase_lucifer_core.from('trusted_network').select('*').or(`owner_id.eq.${user.id},member_email.ilike.${user.email}`).order('created_at', { ascending: false });
       if (error) throw error;
 
       const enrichedData = await Promise.all((data || []).map(async (member) => {
         if (member.owner_id !== user.id) {
-          // I received this invite. Fetch the owner's exact email.
           const { data: ownerEmail } = await supabase_lucifer_core.rpc('get_email_by_user_id', { target_id: member.owner_id });
-          return { 
-            ...member, 
-            friend_id: member.owner_id,
-            friend_name: ownerEmail || 'Connected Friend' 
-          };
+          return { ...member, friend_id: member.owner_id, friend_name: ownerEmail || 'Connected Friend' };
         } else {
-          // I sent this invite. Safely fetch their ID using case-insensitive profile lookup
-          const { data: profile } = await supabase_lucifer_core
-            .from('profiles')
-            .select('id')
-            .ilike('username', member.member_email)
-            .maybeSingle();
-
-          // Fallback to our RPC if profile isn't found
+          const { data: profile } = await supabase_lucifer_core.from('profiles').select('id').ilike('username', member.member_email).maybeSingle();
           let targetId = profile?.id;
           if (!targetId) {
             const { data: rpcId } = await supabase_lucifer_core.rpc('get_user_id_by_email', { lookup_email: member.member_email });
             targetId = rpcId;
           }
-
-          return {
-            ...member,
-            friend_id: targetId || null, 
-            friend_name: member.member_email
-          }
+          return { ...member, friend_id: targetId || null, friend_name: member.member_email };
         }
       }));
 
@@ -74,56 +52,30 @@ export default function TrustedNetworkScreen() {
 
   const handleInvite = async () => {
     const emailToInvite = inviteEmail.toLowerCase().trim();
-    if (!emailToInvite || !emailToInvite.includes('@')) {
-      Alert.alert("Invalid Email", "Please enter a valid email address.");
-      return;
-    }
-
+    if (!emailToInvite || !emailToInvite.includes('@')) { Alert.alert("Invalid Email", "Please enter a valid email address."); return; }
     setIsInviting(true);
     try {
       if (!currentUser) throw new Error("Not logged in");
+      if (emailToInvite === currentUser.email?.toLowerCase()) { Alert.alert("Error", "You cannot invite yourself."); setIsInviting(false); return; }
 
-      if (emailToInvite === currentUser.email?.toLowerCase()) {
-        Alert.alert("Error", "You cannot invite yourself.");
-        setIsInviting(false);
-        return;
-      }
-
-      // 1. Check if the user exists in the database
       const { data: targetUserId, error: rpcError } = await supabase_lucifer_core.rpc('get_user_id_by_email', { lookup_email: emailToInvite });
       if (rpcError) throw rpcError;
       const userExists = !!targetUserId; 
 
-      // --- THE FIX: PREVENT DUPLICATE/RECIPROCAL INVITES ---
-      // We check if I already invited them, OR if they already invited me!
       let orQuery = `and(owner_id.eq.${currentUser.id},member_email.ilike.${emailToInvite})`;
       if (userExists && targetUserId) {
           orQuery += `,and(member_email.ilike.${currentUser.email},owner_id.eq.${targetUserId})`;
       }
 
-      const { data: existingConnection } = await supabase_lucifer_core
-        .from('trusted_network')
-        .select('status')
-        .or(orQuery)
-        .maybeSingle();
-
-      if (existingConnection) {
-        Alert.alert("Already Connected", `You already have a ${existingConnection.status} connection with this person.`);
-        setIsInviting(false);
-        return;
-      }
-      // --------------------------------------------------
+      const { data: existingConnection } = await supabase_lucifer_core.from('trusted_network').select('status').or(orQuery).maybeSingle();
+      if (existingConnection) { Alert.alert("Already Connected", `You already have a ${existingConnection.status} connection with this person.`); setIsInviting(false); return; }
 
       if (!userExists) {
         setIsInviting(false);
-        Alert.alert(
-          "Account Not Found",
-          `${emailToInvite} does not have an account yet. Send invite anyway?`,
-          [
+        Alert.alert("Account Not Found", `${emailToInvite} does not have an account yet. Send invite anyway?`, [
             { text: "Cancel", style: "cancel" },
             { text: "Send", onPress: () => finalizeInvite(emailToInvite, currentUser.id, false, null) }
-          ]
-        );
+        ]);
         return;
       } else {
         await finalizeInvite(emailToInvite, currentUser.id, true, targetUserId);
@@ -156,45 +108,49 @@ export default function TrustedNetworkScreen() {
           });
       }
 
+      // --- RESTORED: SEND THE ACTUAL EMAIL ---
       const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-      await fetch(`${backendUrl}/api/invite`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, inviter_name: inviterName, is_registered: userExists }) });
+      if (backendUrl) {
+        await fetch(`${backendUrl}/api/invite`, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ email: email, inviter_name: inviterName, is_registered: userExists }) 
+        });
+      }
 
       Alert.alert("Invite Sent!", `An invitation was sent to ${email}.`);
       setInviteEmail('');
       fetchNetwork();
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Could not send the email invite right now.");
+      Alert.alert("Error", err.message || "Could not send the invite right now.");
     } finally {
       setIsInviting(false);
     }
   };
 
-  const removeMember = (id: string) => {
-    Alert.alert("Remove Connection", "Are you sure you want to remove this person?", [
+  const removeMember = (id: string, friendId: string | null) => {
+    Alert.alert("Remove Connection", "Are you sure you want to remove this person? All tags shared between you will be unshared.", [
       { text: "Cancel", style: "cancel" },
       { text: "Remove", style: "destructive", onPress: async () => {
-          await supabase_lucifer_core.from('trusted_network').delete().eq('id', id);
-          fetchNetwork();
+          try {
+            await supabase_lucifer_core.from('trusted_network').delete().eq('id', id);
+            if (friendId && currentUser) {
+              await supabase_lucifer_core.from('shared_tags').delete().match({ owner_id: currentUser.id, shared_with_id: friendId });
+              await supabase_lucifer_core.from('shared_tags').delete().match({ owner_id: friendId, shared_with_id: currentUser.id });
+            }
+            fetchNetwork();
+          } catch (error) {
+            Alert.alert("Error", "Could not remove member completely.");
+          }
         }
       }
     ]);
   };
 
   const handleOpenSharing = (member: any) => {
-    if (member.status !== 'accepted') {
-      Alert.alert("Pending", "They must accept your invite before you can share tags.");
-      return;
-    }
-    if (!member.friend_id) {
-      Alert.alert("Not Registered", "They must create an account before you can share tags.");
-      return;
-    }
-    
-    // Now confident we have the ID, navigate to the sharing dashboard!
-    navigation.navigate('SharedTags', { 
-      friendId: member.friend_id, 
-      friendName: member.friend_name 
-    });
+    if (member.status !== 'accepted') { Alert.alert("Pending", "They must accept your invite before you can share tags."); return; }
+    if (!member.friend_id) { Alert.alert("Connection Error", `We couldn't find the ID for ${member.friend_name}. Try refreshing.`); return; }
+    navigation.navigate('SharedTags', { friendId: member.friend_id, friendName: member.friend_name });
   };
 
   return (
@@ -206,7 +162,6 @@ export default function TrustedNetworkScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
         <View style={styles.heroBanner}>
           <View style={styles.heroIconBg}><Users color="#DB2777" size={32} /></View>
           <Text style={styles.heroTitle}>Family & Friends</Text>
@@ -234,25 +189,17 @@ export default function TrustedNetworkScreen() {
         ) : (
           <View style={styles.card}>
             {network.map((member, index) => (
-              <TouchableOpacity 
-                key={member.id} 
-                style={[styles.memberRow, index !== network.length - 1 && styles.borderBottom]}
-                onPress={() => handleOpenSharing(member)}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity key={member.id} style={[styles.memberRow, index !== network.length - 1 && styles.borderBottom]} onPress={() => handleOpenSharing(member)} activeOpacity={0.7}>
                 <View style={styles.memberLeft}>
                   {member.status === 'accepted' ? <CheckCircle color="#10B981" size={20} /> : <Clock color="#F59E0B" size={20} />}
                   <View style={{ marginLeft: 12 }}>
                     <Text style={styles.memberEmail}>{member.friend_name}</Text>
-                    <Text style={[styles.memberStatus, { color: member.status === 'accepted' ? '#10B981' : '#F59E0B' }]}>
-                      {member.status === 'accepted' ? 'Active Member' : 'Invite Pending'}
-                    </Text>
+                    <Text style={[styles.memberStatus, { color: member.status === 'accepted' ? '#10B981' : '#F59E0B' }]}>{member.status === 'accepted' ? 'Active Member' : 'Invite Pending'}</Text>
                   </View>
                 </View>
-
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {member.status === 'accepted' && <ChevronRight color="#9CA3AF" size={20} style={{ marginRight: 12 }} />}
-                  <TouchableOpacity style={styles.deleteBtn} onPress={() => removeMember(member.id)}>
+                  <TouchableOpacity style={styles.deleteBtn} onPress={() => removeMember(member.id, member.friend_id)}>
                     <Trash2 color="#EF4444" size={18} />
                   </TouchableOpacity>
                 </View>

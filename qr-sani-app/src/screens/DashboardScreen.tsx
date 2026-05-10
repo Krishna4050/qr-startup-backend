@@ -18,15 +18,17 @@ export default function DashboardScreen() {
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   
-  const [tags, setTags] = useState<any[]>([]);
+  const [tags, setTags] = useState<any[]>([]); // Combined array of My Tags + Shared Tags
   const [pausedTagsCount, setPausedTagsCount] = useState(0);
   const [alerts, setAlerts] = useState<any[]>([]);
   
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [networkMembers, setNetworkMembers] = useState(0);
 
+  const [sharedWithMe, setSharedWithMe] = useState<any[]>([]);
+
   const totalTags = tags.length;
-  const foundItems = tags.filter(t => t.status === 'found').length;
+  const foundItems = tags.filter(t => t.status === 'found' && !t.is_shared).length;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -36,31 +38,25 @@ export default function DashboardScreen() {
     return 'Good Night!';
   };
 
-  // --- THE FIX: REALTIME AUTO-REFRESH ENGINE ---
   useEffect(() => {
     if (isFocused) {
       fetchDashboardData();
     }
 
-    // 1. Listen for ANY changes to the Notifications table
     const notifSubscription = supabase_lucifer_core
       .channel('public:notifications')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
-        console.log("Realtime: Notification change detected!");
-        fetchDashboardData(); // Instantly refresh the badge count!
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        fetchDashboardData(); 
       })
       .subscribe();
 
-    // 2. Listen for ANY changes to the Trusted Network table (Invites)
     const networkSubscription = supabase_lucifer_core
       .channel('public:trusted_network')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'trusted_network' }, (payload) => {
-        console.log("Realtime: Network change detected!");
-        fetchDashboardData(); // Instantly refresh the member count!
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trusted_network' }, () => {
+        fetchDashboardData(); 
       })
       .subscribe();
 
-    // Cleanup listeners when you leave the screen
     return () => {
       supabase_lucifer_core.removeChannel(notifSubscription);
       supabase_lucifer_core.removeChannel(networkSubscription);
@@ -80,43 +76,66 @@ export default function DashboardScreen() {
       
       setProfile(profileData || { display_name: user.user_metadata?.username });
 
-      const { data: tagsData } = await supabase_lucifer_core
+      const { data: myTagsData } = await supabase_lucifer_core
         .from('qr_tags')
         .select('*')
         .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
       
-      if (tagsData) {
-        const visibleTags = tagsData.filter(t => t.status === 'active' || t.status === 'lost');
-        setTags(visibleTags);
-        const pausedCount = tagsData.filter(t => t.status === 'paused').length;
-        setPausedTagsCount(pausedCount);
+      let myVisibleTags: any[] = [];
+      let myPausedCount = 0;
+      
+      if (myTagsData) {
+        myVisibleTags = myTagsData.filter(t => t.status === 'active' || t.status === 'lost');
+        myPausedCount = myTagsData.filter(t => t.status === 'paused').length;
       }
 
-      const { data: alertsData } = await supabase_lucifer_core
-        .from('alerts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
+      const { data: sharedIdsData } = await supabase_lucifer_core
+        .from('shared_tags')
+        .select('tag_id, owner_id')
+        .eq('shared_with_id', user.id);
+
+      let sharedVisibleTags: any[] = [];
+      let sharedPausedCount = 0;
+
+      if (sharedIdsData && sharedIdsData.length > 0) {
+        const sharedIds = sharedIdsData.map(row => row.tag_id);
+        const { data: sharedTagsData } = await supabase_lucifer_core
+          .from('qr_tags')
+          .select('*')
+          .in('id', sharedIds);
+
+        const ownerIds = [...new Set(sharedIdsData.map(row => row.owner_id))];
+        const { data: owners } = await supabase_lucifer_core.from('profiles').select('id, display_name, username').in('id', ownerIds);
+
+        if (sharedTagsData) {
+          sharedPausedCount = sharedTagsData.filter(t => t.status === 'paused').length;
+
+          sharedVisibleTags = sharedTagsData
+            .filter(t => t.status === 'active' || t.status === 'lost')
+            .map(tag => {
+              const shareRecord = sharedIdsData.find(s => s.tag_id === tag.id);
+              const owner = owners?.find((o: any) => o.id === shareRecord?.owner_id);
+              return {
+                ...tag,
+                is_shared: true,
+                owner_name: owner?.display_name || owner?.username || 'A Friend'
+              };
+            });
+        }
+      }
+
+      setTags([...myVisibleTags, ...sharedVisibleTags]);
+      setSharedWithMe(sharedVisibleTags);
+      setPausedTagsCount(myPausedCount + sharedPausedCount);
+
+      const { data: alertsData } = await supabase_lucifer_core.from('alerts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
       if (alertsData) setAlerts(alertsData);
 
-      // Get Unread Notifications
-      const { count: notifCount } = await supabase_lucifer_core
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
+      const { count: notifCount } = await supabase_lucifer_core.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false);
       setUnreadNotifications(notifCount || 0);
 
-      // --- THE FIX: COUNT BOTH WAYS (Owner AND Invitee) ---
-      const { count: memberCount } = await supabase_lucifer_core
-        .from('trusted_network')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'accepted')
-        .or(`owner_id.eq.${user.id},member_email.eq.${user.email}`); 
-        // ^ "Count it if I am the owner OR if I am the email being invited"
-        
+      const { count: memberCount } = await supabase_lucifer_core.from('trusted_network').select('*', { count: 'exact', head: true }).eq('status', 'accepted').or(`owner_id.eq.${user.id},member_email.ilike.${user.email}`); 
       setNetworkMembers(memberCount || 0);
 
     } catch (error) {
@@ -126,14 +145,18 @@ export default function DashboardScreen() {
     }
   };
 
-  const toggleLostMode = async (tagId: string, currentStatus: string, itemName: string) => {
-    const newStatus = currentStatus === 'active' ? 'lost' : 'active';
+  const toggleLostMode = async (tag: any) => {
+    if (tag.is_shared) {
+        navigation.navigate('TagManage', { tagId: tag.id });
+        return;
+    }
+    const newStatus = tag.status === 'active' ? 'lost' : 'active';
     const actionText = newStatus === 'lost' ? 'Marked as Lost' : 'Marked as Active';
 
     try {
-      const { error } = await supabase_lucifer_core.from('qr_tags').update({ status: newStatus }).eq('id', tagId);
+      const { error } = await supabase_lucifer_core.from('qr_tags').update({ status: newStatus }).eq('id', tag.id);
       if (error) throw error;
-      Alert.alert(actionText, `${itemName} is now ${newStatus}.`);
+      Alert.alert(actionText, `${tag.item_name} is now ${newStatus}.`);
       fetchDashboardData(); 
     } catch (error: any) {
       Alert.alert("Error", error.message);
@@ -151,7 +174,14 @@ export default function DashboardScreen() {
   const pickImage = async (useCamera: boolean) => {
     try {
       let result;
-      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.5, base64: true };
+      const options: ImagePicker.ImagePickerOptions = { 
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, 
+        allowsEditing: true, 
+        aspect: [1, 1], 
+        quality: 0.5, 
+        base64: true 
+      };
+      
       if (useCamera) {
         await ImagePicker.requestCameraPermissionsAsync();
         result = await ImagePicker.launchCameraAsync(options);
@@ -159,7 +189,8 @@ export default function DashboardScreen() {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
         result = await ImagePicker.launchImageLibraryAsync(options);
       }
-      if (!result.canceled && result.assets[0].base64) {
+
+      if (!result.canceled && result.assets && result.assets.length > 0 && result.assets[0].base64) {
         await uploadAvatar(result.assets[0].base64);
       }
     } catch (error) {
@@ -172,13 +203,17 @@ export default function DashboardScreen() {
     try {
       const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) throw new Error("No user found");
+
       const filePath = `${user.id}/avatar.jpg`;
       const { error: uploadError } = await supabase_lucifer_core.storage.from('avatars').upload(filePath, decode(base64Image), { upsert: true, contentType: 'image/jpeg' });
       if (uploadError) throw uploadError;
+
       const { data: publicUrlData } = supabase_lucifer_core.storage.from('avatars').getPublicUrl(filePath);
       const newAvatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+      
       const { error: updateError } = await supabase_lucifer_core.from('profiles').update({ avatar_url: newAvatarUrl }).eq('id', user.id);
       if (updateError) throw updateError;
+      
       setProfile((prev: any) => ({ ...prev, avatar_url: newAvatarUrl }));
     } catch (error: any) {
       Alert.alert("Upload Failed", error.message);
@@ -212,11 +247,22 @@ export default function DashboardScreen() {
                   </View>
                 )}
               </TouchableOpacity>
-
-              <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress} disabled={uploading}>
-                {uploading ? <ActivityIndicator color="#0F2D4D" /> : profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} /> : <User color="#0F2D4D" size={24} />}
+              
+              {/* --- UPDATE HERE: AVATAR UI --- */}
+              <TouchableOpacity style={styles.avatarTouchableOpacity} onPress={handleAvatarPress} disabled={uploading}>
+                <View style={styles.avatarContainer}>
+                  {uploading ? (
+                    <ActivityIndicator color="#0F2D4D" />
+                  ) : profile?.avatar_url ? (
+                    <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                  ) : (
+                    <User color="#0F2D4D" size={24} />
+                  )}
+                </View>
+                {/* Badge is now outside the visible container */}
                 <View style={styles.avatarBadge}><Text style={styles.avatarBadgeText}>+</Text></View>
               </TouchableOpacity>
+              
             </View>
           </View>
         </SafeAreaView>
@@ -224,7 +270,6 @@ export default function DashboardScreen() {
 
       <RefreshableScroll onRefreshAction={fetchDashboardData} style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         
-        {/* ACTIVE TAGS */}
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.sectionTitle}>Active Tags</Text>
@@ -238,15 +283,17 @@ export default function DashboardScreen() {
             <View style={styles.emptyCard}><Text style={styles.emptyCardText}>No tags added yet. Tap + to add!</Text></View>
           ) : (
             tags.map((tag) => (
-              <TouchableOpacity key={tag.id} style={styles.tagCard} onPress={() => navigation.navigate('TagManage', { tagId: tag.id })}>
-                <Text style={styles.tagCategory}>ITEM TAG</Text>
+              <TouchableOpacity key={tag.id} style={[styles.tagCard, tag.is_shared && { borderColor: '#BFDBFE', borderWidth: 1 }]} onPress={() => navigation.navigate('TagManage', { tagId: tag.id })}>
+                <Text style={[styles.tagCategory, tag.is_shared && { color: '#2563EB' }]}>{tag.is_shared ? `SHARED BY ${tag.owner_name?.toUpperCase()}` : 'MY ITEM'}</Text>
                 <Text style={styles.tagTitle} numberOfLines={2}>{tag.item_name || 'Unnamed Item'}</Text>
                 <View style={styles.tagStatus}>
                   <ShieldCheck color={tag.status === 'active' ? "#10B981" : "#F59E0B"} size={14} />
                   <Text style={[styles.tagStatusText, { color: tag.status === 'active' ? '#10B981' : '#F59E0B' }]}>{tag.status === 'active' ? 'Protected & Active' : 'Reported Lost'}</Text>
                 </View>
-                <View style={styles.tagIconWrapper}><Tag color="#0F2D4D" size={20} /></View>
-                <TouchableOpacity style={[styles.lostModeBtn, { backgroundColor: tag.status === 'lost' ? '#FEF2F2' : '#F3F4F6' }]} onPress={() => toggleLostMode(tag.id, tag.status, tag.item_name)}>
+                <View style={[styles.tagIconWrapper, tag.is_shared && { backgroundColor: '#EFF6FF' }]}>
+                  {tag.is_shared ? <Users color="#2563EB" size={20} /> : <Tag color="#0F2D4D" size={20} />}
+                </View>
+                <TouchableOpacity style={[styles.lostModeBtn, { backgroundColor: tag.status === 'lost' ? '#FEF2F2' : '#F3F4F6' }]} onPress={() => toggleLostMode(tag)}>
                   <ShieldAlert color={tag.status === 'lost' ? '#EF4444' : '#9CA3AF'} size={18} />
                   <Text style={[styles.lostModeText, { color: tag.status === 'lost' ? '#EF4444' : '#6B7280' }]}>{tag.status === 'lost' ? 'Lost Mode: ON' : 'Mark as Lost'}</Text>
                 </TouchableOpacity>
@@ -255,7 +302,6 @@ export default function DashboardScreen() {
           )}
         </ScrollView>
 
-        {/* RECENT ALERTS */}
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.sectionTitle}>Recent Alerts</Text>
@@ -280,18 +326,11 @@ export default function DashboardScreen() {
           )}
         </ScrollView>
 
-        {/* FRIENDS & FAMILY NETWORK */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Friends & Family</Text>
         </View>
         <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
-          
-          {/* THE FIX: ENTIRE CARD IS NOW TOUCHABLE */}
-          <TouchableOpacity 
-            style={styles.contactCard} 
-            activeOpacity={0.7} 
-            onPress={() => navigation.navigate('TrustedNetwork')}
-          >
+          <TouchableOpacity style={styles.contactCard} activeOpacity={0.7} onPress={() => navigation.navigate('TrustedNetwork')}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={[styles.contactIconBg, { backgroundColor: '#FCE7F3' }]}><Users color="#DB2777" size={24} /></View>
               <View style={{ marginLeft: 16 }}>
@@ -304,10 +343,8 @@ export default function DashboardScreen() {
               <Text style={[styles.addContactText, { color: '#DB2000' }]}>Manage</Text>
             </View>
           </TouchableOpacity>
-
         </View>
 
-        {/* OVERVIEW SECTION */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Overview</Text>
         </View>
@@ -341,14 +378,43 @@ const styles = StyleSheet.create({
   headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: Platform.OS === 'android' ? 40 : 10 },
   greetingText: { fontSize: 14, color: '#DED1C6', marginBottom: 4 },
   userNameText: { fontSize: 24, fontWeight: 'bold', color: '#F2F3F4' },
-  
   notificationBadge: { position: 'absolute', top: -6, right: -6, backgroundColor: '#EF4444', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: '#0F2D4D' },
   notificationBadgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
-
-  avatarContainer: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#E0E7FF', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
-  avatarImage: { width: 46, height: 46, borderRadius: 23 },
-  avatarBadge: { position: 'absolute', bottom: -4, right: -4, backgroundColor: '#10B981', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#0F2D4D' },
-  avatarBadgeText: { color: '#FFF', fontSize: 12, fontWeight: 'bold', lineHeight: 14 },
+  
+  // --- UPDATED STYLES FOR AVATAR ---
+  avatarTouchableOpacity: {
+    width: 50,
+    height: 50,
+    position: 'relative', // Necessary for absolute badge placement
+  },
+  avatarContainer: { 
+    width: '100%', 
+    height: '100%', 
+    borderRadius: 25, 
+    backgroundColor: '#E0E7FF', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    borderWidth: 2, 
+    borderColor: '#FFFFFF', 
+    overflow: 'hidden' // Keep Image/Icon inside the circle
+  },
+  avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  avatarBadge: { 
+    position: 'absolute', 
+    bottom: -5, // Tweak this to move up/down
+    right: -5,  // Tweak this to move left/right
+    backgroundColor: '#10B981', 
+    width: 22, // Slightly bigger
+    height: 22, 
+    borderRadius: 11, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    borderWidth: 2, 
+    borderColor: '#0F2D4D', // Match header BG
+    zIndex: 10 // Ensure it stays on top
+  },
+  avatarBadgeText: { color: '#FFF', fontSize: 14, fontWeight: 'bold', lineHeight: Platform.OS === 'ios' ? 16 : 18 },
+  // ---------------------------------
 
   scrollContainer: { flex: 1, paddingTop: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 16, marginTop: 8 },
@@ -357,29 +423,24 @@ const styles = StyleSheet.create({
   badgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
   seeAllText: { fontSize: 12, fontWeight: 'bold', color: '#3B82F6' },
   horizontalScroll: { paddingHorizontal: 24, paddingBottom: 16, gap: 16 },
-  
   emptyCard: { width: width * 0.85, padding: 24, backgroundColor: '#FFFFFF', borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderStyle: 'dashed' },
   emptyCardText: { color: '#6B7280', fontSize: 14, textAlign: 'center' },
-
   tagCard: { width: width * 0.65, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   tagCategory: { fontSize: 10, fontWeight: 'bold', color: '#6B7280', letterSpacing: 1, marginBottom: 8 },
   tagTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 12, height: 40 },
   tagStatus: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   tagStatusText: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
   tagIconWrapper: { width: 36, height: 36, backgroundColor: '#F3F4F6', borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'absolute', bottom: 16, right: 16 },
-
   alertCard: { width: width * 0.75, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, borderLeftWidth: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   alertCategory: { fontSize: 10, fontWeight: 'bold', color: '#6B7280', letterSpacing: 1, marginBottom: 8 },
   alertTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
   alertDetail: { fontSize: 12, color: '#6B7280' },
-
   contactCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   contactIconBg: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#E0E7FF', justifyContent: 'center', alignItems: 'center' },
   contactCardTitle: { fontSize: 14, color: '#6B7280', fontWeight: '600' },
   contactCardNumber: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginTop: 2 },
   addContactBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
   addContactText: { color: '#3B82F6', fontWeight: 'bold', marginLeft: 6, fontSize: 14 },
-
   overviewCard: { width: width * 0.65, height: width * 0.5, borderRadius: 24, padding: 24, justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
   overviewCardTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', opacity: 0.9 },
   overviewCardNumber: { fontSize: 56, fontWeight: '900', color: '#FFFFFF' },
