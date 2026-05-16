@@ -6,9 +6,9 @@ import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 48; // Standard padding of 24 on each side
+const CARD_MARGIN = 24;
+const CARD_WIDTH = width - (CARD_MARGIN * 2); 
 
-// --- THE STYLE CARD COMPONENT ---
 const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -21,7 +21,8 @@ const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
 
   return (
     <TouchableOpacity style={styles.shopCard} activeOpacity={1} onPress={onPress}>
-      {/* THE IMAGE CAROUSEL */}
+      
+      {/* 1. THE PERFECT IMAGE CAROUSEL */}
       <View style={styles.imageContainer}>
         {item.photos.length > 0 ? (
           <>
@@ -30,14 +31,14 @@ const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
               pagingEnabled 
               showsHorizontalScrollIndicator={false}
               onScroll={handleScroll}
-              scrollEventThrottle={16} // Smooth scrolling detection
+              scrollEventThrottle={16}
             >
               {item.photos.map((url: string, index: number) => (
                 <Image key={index} source={{ uri: url }} style={styles.shopImage} />
               ))}
             </ScrollView>
 
-            {/* Pagination Dots */}
+            {/* Airbnb-style Pagination Dots */}
             {item.photos.length > 1 && (
               <View style={styles.dotsContainer}>
                 {item.photos.map((_: any, i: number) => (
@@ -48,40 +49,41 @@ const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
           </>
         ) : (
           <View style={styles.noImagePlaceholder}>
-            <Text style={{ color: '#9CA3AF' }}>No Photos</Text>
+            <Text style={{ color: '#8892B0', fontSize: 13, fontWeight: '600', letterSpacing: 1 }}>NO IMAGES</Text>
           </View>
         )}
 
-        {/* Favorite Heart Button */}
-        <TouchableOpacity 
-          style={styles.heartButton} 
-          onPress={() => setIsFavorite(!isFavorite)}
-        >
+        {/* Favorite Heart - Top Right */}
+        <TouchableOpacity style={styles.heartButton} onPress={() => setIsFavorite(!isFavorite)}>
           <Heart 
-            color={isFavorite ? "#FF385C" : "#FFFFFF"} // Airbnb Red
-            fill={isFavorite ? "#FF385C" : "rgba(0,0,0,0.3)"} 
+            color={isFavorite ? "#FF715B" : "#FFFFFF"} 
+            fill={isFavorite ? "#FF715B" : "rgba(0,0,0,0.25)"} 
             size={24} 
             strokeWidth={1.5} 
           />
         </TouchableOpacity>
       </View>
 
-      {/*TYPOGRAPHY */}
+      {/* 2. AIRBNB PIXEL-PERFECT TYPOGRAPHY STACK */}
       <View style={styles.infoContainer}>
+        {/* Line 1: Title and Rating (Same Line, Space Between) */}
         <View style={styles.titleRow}>
-          <Text style={styles.shopCity}>{item.city}, Finland</Text>
+          <Text style={styles.shopCity} numberOfLines={1}>{item.city?.toUpperCase()}, FINLAND</Text>
           <View style={styles.ratingRow}>
-            <Star color="#222222" fill="#222222" size={13} />
+            <Star color="#0A192F" fill="#0A192F" size={12} />
             <Text style={styles.ratingText}>{item.average_rating}</Text>
           </View>
         </View>
         
+        {/* Line 2 & 3: Details (Gray, Tight Line Height) */}
         <Text style={styles.subtitleText} numberOfLines={1}>{item.shop_name}</Text>
         <Text style={styles.subtitleText} numberOfLines={1}>{item.street}</Text>
         
-        <Text style={styles.priceLine}>
-          <Text style={styles.priceBold}>From €50</Text> <Text style={styles.priceRegular}>/ repair</Text>
-        </Text>
+        {/* Line 4: Price (Bold number, regular unit) */}
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceBold}>€50</Text>
+          <Text style={styles.priceRegular}> per repair</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -113,7 +115,7 @@ export default function VehicleRepairDirectory() {
         const formattedShops = shopsData.map((shop: any) => {
           const reviews = shop.shop_reviews || [];
           const avgRating = reviews.length > 0 
-            ? (reviews.reduce((acc: number, curr: any) => acc + curr.rating, 0) / reviews.length).toFixed(2) // Airbnb uses 2 decimal places usually!
+            ? (reviews.reduce((acc: number, curr: any) => acc + curr.rating, 0) / reviews.length).toFixed(2)
             : 'New';
 
           return {
@@ -137,18 +139,35 @@ export default function VehicleRepairDirectory() {
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
+      
+      {/* 1. TOP ROW: Back Button & Search Bar */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft color="#222222" size={24} />
+          <ArrowLeft color="#0A192F" size={24} strokeWidth={2.5} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.searchBar}>
-          <Search color="#222222" size={18} />
-          <Text style={styles.searchText}>Search services in Finland</Text>
+          <Search color="#4A00E0" size={18} strokeWidth={2.5} />
+          <Text style={styles.searchText}>Discover Finland</Text>
         </TouchableOpacity>
       </View>
 
-      {/* FILTER PILLS */}
+      {/* 2. SECOND ROW: The Host Banner (Now outside the header!) */}
+      <TouchableOpacity 
+        style={styles.hostBanner} 
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate('PartnerOnboardingIntro')}
+      >
+        <View style={styles.hostBannerTextContainer}>
+          <Text style={styles.hostBannerTitle}>Own a repair shop?</Text>
+          <Text style={styles.hostBannerSub}>Partner with us and list your services.</Text>
+        </View>
+        <Image 
+          source={{ uri: 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150' }} 
+          style={styles.hostBannerImage} 
+        />
+      </TouchableOpacity>
+
+      {/* 3. THIRD ROW: The Filters */}
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
           {filters.map((filter) => (
@@ -165,10 +184,10 @@ export default function VehicleRepairDirectory() {
         </ScrollView>
       </View>
 
-      {/* SHOP LIST */}
+      {/* 4. THE SHOP LIST */}
       {loading ? (
         <View style={styles.centerScreen}>
-          <ActivityIndicator size="large" color="#FF385C" />
+          <ActivityIndicator size="large" color="#4A00E0" />
         </View>
       ) : (
         <RefreshableScroll 
@@ -178,7 +197,7 @@ export default function VehicleRepairDirectory() {
         >
           {filteredShops.length === 0 ? (
             <View style={styles.centerScreen}>
-              <Text style={styles.emptyText}>No repair shops found in this area.</Text>
+              <Text style={styles.emptyText}>No repair shops found.</Text>
             </View>
           ) : (
             filteredShops.map((item) => (
@@ -189,7 +208,7 @@ export default function VehicleRepairDirectory() {
               />
             ))
           )}
-          <View style={{ height: 40 }} />
+          <View style={{ height: 60 }} />
         </RefreshableScroll>
       )}
     </View>
@@ -197,48 +216,52 @@ export default function VehicleRepairDirectory() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  
-  // Header
-  header: { flexDirection: 'row', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingHorizontal: 24, paddingBottom: 10 },
+  container: { flex: 1, backgroundColor: '#FAFAFC' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingHorizontal: CARD_MARGIN, paddingBottom: 16 },
   backButton: { marginRight: 16 },
-  searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 16, height: 48, borderRadius: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
-  searchText: { marginLeft: 12, color: '#222222', fontSize: 14, fontWeight: '500' },
+  searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 16, height: 48, borderRadius: 24, shadowColor: '#4A00E0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 5 },
+  searchText: { marginLeft: 12, color: '#0A192F', fontSize: 14, fontWeight: '600' },
   
-  // Filters
-  filterScroll: { paddingHorizontal: 24, paddingVertical: 16, gap: 12 },
-  filterPill: { paddingHorizontal: 0, paddingVertical: 8, borderBottomWidth: 2, borderColor: 'transparent' },
-  activeFilterPill: { borderColor: '#222222' },
-  filterText: { color: '#717171', fontSize: 14, fontWeight: '500' },
-  activeFilterText: { color: '#222222', fontWeight: 'bold' },
+  filterScroll: { paddingHorizontal: CARD_MARGIN, paddingVertical: 12, gap: 16 },
+  filterPill: { paddingBottom: 8, borderBottomWidth: 3, borderColor: 'transparent' },
+  activeFilterPill: { borderColor: '#4A00E0' },
+  filterText: { color: '#8892B0', fontSize: 14, fontWeight: '600' },
+  activeFilterText: { color: '#0A192F', fontWeight: '800' },
 
-  listContent: { paddingHorizontal: 24, paddingTop: 10 },
+  listContent: { paddingHorizontal: CARD_MARGIN, paddingTop: 16 },
   
-  // CARD STYLES
+  // CARD STYLES - PIXEL PERFECT
   shopCard: { marginBottom: 36 },
-  imageContainer: { width: CARD_WIDTH, height: CARD_WIDTH * 0.95, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F3F4F6', position: 'relative' },
+  imageContainer: { width: CARD_WIDTH, aspectRatio: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#E2E8F0', position: 'relative' },
   shopImage: { width: CARD_WIDTH, height: '100%', resizeMode: 'cover' },
   noImagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   
-  heartButton: { position: 'absolute', top: 12, right: 12, padding: 4 },
+  heartButton: { position: 'absolute', top: 14, right: 14, padding: 2 },
   
-  dotsContainer: { position: 'absolute', bottom: 12, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.5)' },
-  activeDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#FFFFFF' },
+  dotsContainer: { position: 'absolute', bottom: 12, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5 },
+  dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.6)' },
+  activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFFFFF' },
 
-  infoContainer: { marginTop: 12 },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  shopCity: { fontSize: 15, fontWeight: '600', color: '#222222', flex: 1 },
+  // TEXT LAYOUT - TIGHT AND UNIFORM
+  infoContainer: { marginTop: 12, paddingHorizontal: 2 }, // Slight inset to match Airbnb's optical alignment
+  
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  shopCity: { fontSize: 15, fontWeight: '600', color: '#0A192F', flex: 1, paddingRight: 8 }, 
   
   ratingRow: { flexDirection: 'row', alignItems: 'center' },
-  ratingText: { marginLeft: 4, fontWeight: '400', color: '#222222', fontSize: 14 },
+  ratingText: { marginLeft: 4, fontWeight: '400', color: '#0A192F', fontSize: 14 },
   
-  subtitleText: { fontSize: 15, color: '#717171', marginTop: 2 },
+  subtitleText: { fontSize: 15, color: '#8892B0', fontWeight: '400', lineHeight: 21 }, // LineHeight creates the tight stacking
   
-  priceLine: { marginTop: 6 },
-  priceBold: { fontSize: 15, fontWeight: '600', color: '#222222' },
-  priceRegular: { fontSize: 15, color: '#222222' },
+  priceContainer: { flexDirection: 'row', alignItems: 'baseline', marginTop: 6 },
+  priceBold: { fontSize: 15, fontWeight: '600', color: '#0A192F' },
+  priceRegular: { fontSize: 15, color: '#0A192F', fontWeight: '400' },
 
   centerScreen: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
-  emptyText: { color: '#717171', fontSize: 15 }
+  emptyText: { color: '#8892B0', fontSize: 15, fontWeight: '600' },
+  hostBanner: { flexDirection: 'row', backgroundColor: '#FFFFFF', marginHorizontal: CARD_MARGIN, marginTop: 4, marginBottom: 12, borderRadius: 16, padding: 16, alignItems: 'center', shadowColor: '#4A00E0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
+  hostBannerTextContainer: { flex: 1, paddingRight: 16 },
+  hostBannerTitle: { fontSize: 16, fontWeight: '700', color: '#0A192F', marginBottom: 4 },
+  hostBannerSub: { fontSize: 14, color: '#8892B0', lineHeight: 20 },
+  hostBannerImage: { width: 60, height: 60, borderRadius: 12 },
 });

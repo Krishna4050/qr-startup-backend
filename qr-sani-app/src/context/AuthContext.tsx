@@ -27,10 +27,14 @@ export const AuthProvider = ({ children }: any) => {
     });
 
     // Standard State Listener
-    const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange((_event, session) => {
-      set_mayalu_session(session);
+    const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange((event, session) => {
+      
+      if (event === 'SIGNED_IN') {
+        set_mayalu_session(session); 
+      } else if (event === 'SIGNED_OUT') {
+        set_mayalu_session(null);
+      }
     });
-
     // --- MNSKB Deep Link Interceptor ---
     const handleDeepLink = async ({ url }: { url: string }) => {
       if (url && url.includes('access_token')) {
