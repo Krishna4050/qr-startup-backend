@@ -7,6 +7,7 @@ require github.com/joho/godotenv v1.5.1
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/lib/pq v1.12.3
+	github.com/resend/resend-go/v2 v2.28.0
 	github.com/twilio/twilio-go v1.30.5
 )
 

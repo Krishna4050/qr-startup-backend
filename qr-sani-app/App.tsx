@@ -7,6 +7,7 @@ import ContactManagerScreen from './src/screens/ContactManagerScreen';
 import TagManageScreen from './src/screens/TagManageScreen';
 import 'react-native-url-polyfill/auto';
 import MainTabs from './src/navigation/MainTabs';
+import HostShopDetailsScreen from './src/screens/HostShopDetailsScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SharedTagsScreen from './src/screens/SharedTagsScreen';
@@ -69,7 +70,7 @@ export default function App() {
             <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="ContactManager" component={ContactManagerScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="SharedTags" component={SharedTagsScreen} options={{ headerShown: false, presentation: 'modal'}} />
-            <Stack.Screen name="VehicleRepairDirectory" component={VehicleRepairDirectory} options={{ headerShown: false }}/>
+            <Stack.Screen name="HostShopDetails" component={HostShopDetailsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} />

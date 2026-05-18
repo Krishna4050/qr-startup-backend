@@ -63,6 +63,7 @@ func main(){
 	mux.HandleFunc("GET /api/tags/{id}", handlers.GetTagHandler)
 	mux.HandleFunc("POST /api/invite", handlers.SendInviteEmail)
 	mux.HandleFunc("POST /api/security/login", handlers.LoginSecurityCheck)
+	mux.HandleFunc("/api/host/welcome-email", handlers.WelcomeEmailHandler)
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost:%s\n", port)

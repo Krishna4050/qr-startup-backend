@@ -5,6 +5,7 @@ import { Home, LayoutGrid, Plus, User, ShoppingBag } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import ServicesScreen from '../screens/ServicesScreen';
 import { supabase_lucifer_core } from '../utils/supabase';
+import VehicleRepairDirectory from '../screens/VehicleRepairDirectory';
 
 // Import our screens
 import DashboardScreen from '../screens/DashboardScreen';
@@ -125,6 +126,7 @@ export default function MainTabs() {
         component={DummyScreen} 
         options={{ tabBarIcon: ({ color }) => <ShoppingBag color={color} size={24} /> }} 
       />
+      <Tab.Screen name="VehicleRepairDirectory" component={VehicleRepairDirectory} />
     </Tab.Navigator>
   );
 }
