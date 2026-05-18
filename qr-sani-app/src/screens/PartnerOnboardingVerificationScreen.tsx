@@ -46,11 +46,31 @@ export default function PartnerOnboardingVerificationScreen() {
     return publicUrlData.publicUrl;
   };
 
+  // This securely hits your Go Backend to handle the Resend email logic!
+  const triggerWelcomeEmail = async (userEmail: string, shopName: string) => {
+    try {
+      // Assuming your Go backend is running and exposed via env variable
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://YOUR_LOCAL_GO_IP:8080';
+      
+      await fetch(`${backendUrl}/api/host/welcome-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          shopName: shopName
+        })
+      });
+    } catch (err) {
+      console.error("Failed to trigger email from backend", err);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!documentFile) {
       Alert.alert("Verification Required", "Please upload a document to proceed.");
       return;
     }
+
 
     setLoading(true);
     try {
@@ -58,13 +78,13 @@ export default function PartnerOnboardingVerificationScreen() {
       if (!user) throw new Error("You must be logged in.");
       const timestamp = Date.now();
 
-      // 1. UPLOAD DOCUMENT
+      // UPLOAD DOCUMENT
       setLoadingText('Uploading verification...');
       const docExt = documentFile.name.split('.').pop();
       const docPath = `documents/${user.id}_${timestamp}.${docExt}`;
       const uploadedDocUrl = await uploadToSupabase(documentFile.uri, docPath, 'application/octet-stream');
 
-      // 2. INSERT SHOP INTO DATABASE
+      // INSERT SHOP INTO DATABASE
       setLoadingText('Saving shop details...');
       const { data: newShopData, error: shopError } = await supabase_lucifer_core
         .from('shop_locations')
@@ -87,7 +107,7 @@ export default function PartnerOnboardingVerificationScreen() {
       if (shopError) throw shopError;
       const newShopId = newShopData.id;
 
-      // 3. UPLOAD PHOTOS & INSERT INTO shop_photos TABLE
+      // UPLOAD PHOTOS & INSERT INTO shop_photos TABLE
       setLoadingText('Uploading photos...');
       const localUris = shopData.localPhotoUris || [];
       
@@ -100,8 +120,12 @@ export default function PartnerOnboardingVerificationScreen() {
           photo_url: uploadedPhotoUrl
         }]);
       }
+      await triggerWelcomeEmail(shopData.finalContactEmail, shopData.shopName);
 
-      // 4. DONE! REDIRECT TO DASHBOARD
+      Alert.alert("Success!", "Your shop is securely saved and under review.");
+      navigation.reset({ index: 0, routes: [{ name: 'HostDashboard' }] });
+      
+      // DONE! REDIRECT TO DASHBOARD
       Alert.alert("Success!", "Your shop is securely saved and under review.");
       navigation.reset({ index: 0, routes: [{ name: 'HostDashboard' }] });
 

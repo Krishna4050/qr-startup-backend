@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Dimensions, ScrollView, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Star, Search, Heart } from 'lucide-react-native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { ArrowLeft, Star, Search, Heart, Clock, Settings } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
 
@@ -21,24 +21,14 @@ const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
 
   return (
     <TouchableOpacity style={styles.shopCard} activeOpacity={1} onPress={onPress}>
-      
-      {/* 1. THE PERFECT IMAGE CAROUSEL */}
       <View style={styles.imageContainer}>
         {item.photos.length > 0 ? (
           <>
-            <ScrollView 
-              horizontal 
-              pagingEnabled 
-              showsHorizontalScrollIndicator={false}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-            >
+            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
               {item.photos.map((url: string, index: number) => (
                 <Image key={index} source={{ uri: url }} style={styles.shopImage} />
               ))}
             </ScrollView>
-
-            {/* Airbnb-style Pagination Dots */}
             {item.photos.length > 1 && (
               <View style={styles.dotsContainer}>
                 {item.photos.map((_: any, i: number) => (
@@ -52,21 +42,12 @@ const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
             <Text style={{ color: '#8892B0', fontSize: 13, fontWeight: '600', letterSpacing: 1 }}>NO IMAGES</Text>
           </View>
         )}
-
-        {/* Favorite Heart - Top Right */}
         <TouchableOpacity style={styles.heartButton} onPress={() => setIsFavorite(!isFavorite)}>
-          <Heart 
-            color={isFavorite ? "#FF715B" : "#FFFFFF"} 
-            fill={isFavorite ? "#FF715B" : "rgba(0,0,0,0.25)"} 
-            size={24} 
-            strokeWidth={1.5} 
-          />
+          <Heart color={isFavorite ? "#FF715B" : "#FFFFFF"} fill={isFavorite ? "#FF715B" : "rgba(0,0,0,0.25)"} size={24} strokeWidth={1.5} />
         </TouchableOpacity>
       </View>
 
-      {/* 2. AIRBNB PIXEL-PERFECT TYPOGRAPHY STACK */}
       <View style={styles.infoContainer}>
-        {/* Line 1: Title and Rating (Same Line, Space Between) */}
         <View style={styles.titleRow}>
           <Text style={styles.shopCity} numberOfLines={1}>{item.city?.toUpperCase()}, FINLAND</Text>
           <View style={styles.ratingRow}>
@@ -74,12 +55,8 @@ const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
             <Text style={styles.ratingText}>{item.average_rating}</Text>
           </View>
         </View>
-        
-        {/* Line 2 & 3: Details (Gray, Tight Line Height) */}
         <Text style={styles.subtitleText} numberOfLines={1}>{item.shop_name}</Text>
         <Text style={styles.subtitleText} numberOfLines={1}>{item.street}</Text>
-        
-        {/* Line 4: Price (Bold number, regular unit) */}
         <View style={styles.priceContainer}>
           <Text style={styles.priceBold}>€50</Text>
           <Text style={styles.priceRegular}> per repair</Text>
@@ -91,15 +68,44 @@ const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
 
 export default function VehicleRepairDirectory() {
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused(); // Triggers a re-check when returning to this screen
+  
   const [shops, setShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
+  
+  // STATE TO TRACK IF THEY ARE A HOST
+  const [hostStatus, setHostStatus] = useState<'none' | 'pending' | 'active'>('none');
 
   const filters = ['All', 'Helsinki', 'Espoo', 'Vantaa', 'Tampere'];
 
   useEffect(() => {
-    fetchShops();
-  }, []);
+    if (isFocused) {
+      fetchShops();
+      checkUserHostStatus();
+    }
+  }, [isFocused]);
+
+  const checkUserHostStatus = async () => {
+    try {
+      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase_lucifer_core
+        .from('shop_locations')
+        .select('verification_status')
+        .eq('owner_id', user.id);
+
+      if (data && data.length > 0) {
+        const isPending = data.some(shop => shop.verification_status === 'pending');
+        setHostStatus(isPending ? 'pending' : 'active');
+      } else {
+        setHostStatus('none');
+      }
+    } catch (err) {
+      console.error("Error checking host status:", err);
+    }
+  };
 
   const fetchShops = async () => {
     try {
@@ -140,7 +146,7 @@ export default function VehicleRepairDirectory() {
   return (
     <View style={styles.container}>
       
-      {/* 1. TOP ROW: Back Button & Search Bar */}
+      {/* TOP ROW: Back Button & Search Bar */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowLeft color="#0A192F" size={24} strokeWidth={2.5} />
@@ -151,61 +157,66 @@ export default function VehicleRepairDirectory() {
         </TouchableOpacity>
       </View>
 
-      {/* 2. SECOND ROW: The Host Banner (Now outside the header!) */}
-      <TouchableOpacity 
-        style={styles.hostBanner} 
-        activeOpacity={0.8}
-        onPress={() => navigation.navigate('PartnerOnboardingIntro')}
-      >
-        <View style={styles.hostBannerTextContainer}>
-          <Text style={styles.hostBannerTitle}>Own a repair shop?</Text>
-          <Text style={styles.hostBannerSub}>Partner with us and list your services.</Text>
-        </View>
-        <Image 
-          source={{ uri: 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150' }} 
-          style={styles.hostBannerImage} 
-        />
-      </TouchableOpacity>
+      {/* DYNAMIC HOST BANNER */}
+      {hostStatus === 'none' && (
+        <TouchableOpacity style={styles.hostBanner} activeOpacity={0.8} onPress={() => navigation.navigate('PartnerOnboardingIntro')}>
+          <View style={styles.hostBannerTextContainer}>
+            <Text style={styles.hostBannerTitle}>Own a repair shop?</Text>
+            <Text style={styles.hostBannerSub}>Partner with us and list your services.</Text>
+          </View>
+          <Image source={{ uri: 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150' }} style={styles.hostBannerImage} />
+        </TouchableOpacity>
+      )}
 
-      {/* 3. THIRD ROW: The Filters */}
+      {hostStatus === 'pending' && (
+        <TouchableOpacity style={[styles.hostBanner, { backgroundColor: '#FEF3C7', shadowColor: '#D97706' }]} activeOpacity={0.8} onPress={() => navigation.navigate('HostDashboard')}>
+          <View style={styles.hostBannerTextContainer}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+              <Clock color="#D97706" size={16} style={{ marginRight: 6 }} />
+              <Text style={[styles.hostBannerTitle, { color: '#D97706', marginBottom: 0 }]}>Verification Pending</Text>
+            </View>
+            <Text style={styles.hostBannerSub}>We are reviewing your documents. Tap to view dashboard.</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {hostStatus === 'active' && (
+        <TouchableOpacity style={[styles.hostBanner, { backgroundColor: '#F8FAFC' }]} activeOpacity={0.8} onPress={() => navigation.navigate('HostDashboard')}>
+          <View style={styles.hostBannerTextContainer}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+              <Settings color="#0A192F" size={16} style={{ marginRight: 6 }} />
+              <Text style={[styles.hostBannerTitle, { marginBottom: 0 }]}>Manage Your Shops</Text>
+            </View>
+            <Text style={styles.hostBannerSub}>Go to your Host Dashboard to view bookings.</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* FILTERS */}
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
           {filters.map((filter) => (
-            <TouchableOpacity 
-              key={filter} 
-              style={[styles.filterPill, activeFilter === filter && styles.activeFilterPill]}
-              onPress={() => setActiveFilter(filter)}
-            >
-              <Text style={[styles.filterText, activeFilter === filter && styles.activeFilterText]}>
-                {filter}
-              </Text>
+            <TouchableOpacity key={filter} style={[styles.filterPill, activeFilter === filter && styles.activeFilterPill]} onPress={() => setActiveFilter(filter)}>
+              <Text style={[styles.filterText, activeFilter === filter && styles.activeFilterText]}>{filter}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* 4. THE SHOP LIST */}
+      {/* SHOP LIST */}
       {loading ? (
         <View style={styles.centerScreen}>
           <ActivityIndicator size="large" color="#4A00E0" />
         </View>
       ) : (
-        <RefreshableScroll 
-          onRefreshAction={fetchShops} 
-          style={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        >
+        <RefreshableScroll onRefreshAction={fetchShops} style={styles.listContent} showsVerticalScrollIndicator={false}>
           {filteredShops.length === 0 ? (
             <View style={styles.centerScreen}>
               <Text style={styles.emptyText}>No repair shops found.</Text>
             </View>
           ) : (
             filteredShops.map((item) => (
-              <ShopCard 
-                key={item.id} 
-                item={item} 
-                onPress={() => navigation.navigate('ShopDetails', { shopData: item })} 
-              />
+              <ShopCard key={item.id} item={item} onPress={() => navigation.navigate('ShopDetails', { shopData: item })} />
             ))
           )}
           <View style={{ height: 60 }} />
@@ -230,29 +241,21 @@ const styles = StyleSheet.create({
 
   listContent: { paddingHorizontal: CARD_MARGIN, paddingTop: 16 },
   
-  // CARD STYLES - PIXEL PERFECT
   shopCard: { marginBottom: 36 },
   imageContainer: { width: CARD_WIDTH, aspectRatio: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#E2E8F0', position: 'relative' },
   shopImage: { width: CARD_WIDTH, height: '100%', resizeMode: 'cover' },
   noImagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  
   heartButton: { position: 'absolute', top: 14, right: 14, padding: 2 },
-  
   dotsContainer: { position: 'absolute', bottom: 12, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5 },
   dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.6)' },
   activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFFFFF' },
 
-  // TEXT LAYOUT - TIGHT AND UNIFORM
-  infoContainer: { marginTop: 12, paddingHorizontal: 2 }, // Slight inset to match Airbnb's optical alignment
-  
+  infoContainer: { marginTop: 12, paddingHorizontal: 2 }, 
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
   shopCity: { fontSize: 15, fontWeight: '600', color: '#0A192F', flex: 1, paddingRight: 8 }, 
-  
   ratingRow: { flexDirection: 'row', alignItems: 'center' },
   ratingText: { marginLeft: 4, fontWeight: '400', color: '#0A192F', fontSize: 14 },
-  
-  subtitleText: { fontSize: 15, color: '#8892B0', fontWeight: '400', lineHeight: 21 }, // LineHeight creates the tight stacking
-  
+  subtitleText: { fontSize: 15, color: '#8892B0', fontWeight: '400', lineHeight: 21 },
   priceContainer: { flexDirection: 'row', alignItems: 'baseline', marginTop: 6 },
   priceBold: { fontSize: 15, fontWeight: '600', color: '#0A192F' },
   priceRegular: { fontSize: 15, color: '#0A192F', fontWeight: '400' },
