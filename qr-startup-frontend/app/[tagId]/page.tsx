@@ -239,8 +239,8 @@ export default function FinderPage() {
 
               <button 
                 onClick={handleSendOTP}
-                disabled={isLoading}
-                className="w-full bg-[#2563EB] disabled:bg-blue-400 text-white font-semibold py-4 rounded-xl flex justify-center items-center gap-2 hover:bg-blue-700 transition-colors"
+                disabled={isLoading || !turnstileToken} 
+                className="w-full bg-[#2563EB] disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl flex justify-center items-center gap-2 hover:bg-blue-700 transition-colors"
               >
                 {isLoading ? 'Sending...' : 'Send Code'} <ArrowRight size={18} />
               </button>
