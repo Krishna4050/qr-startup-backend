@@ -64,6 +64,7 @@ func main(){
 	mux.HandleFunc("POST /api/invite", handlers.SendInviteEmail)
 	mux.HandleFunc("POST /api/security/login", handlers.LoginSecurityCheck)
 	mux.HandleFunc("/api/host/welcome-email", handlers.WelcomeEmailHandler)
+	mux.HandleFunc("/api/host/verified-email", handlers.VerifiedEmailHandler)
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost:%s\n", port)

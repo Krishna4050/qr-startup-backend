@@ -47,3 +47,47 @@ func WelcomeEmailHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "Email sent successfully"})
 }
+
+
+
+func VerifiedEmailHandler(w http.ResponseWriter, r *http.Request) {
+	// Ensure it's a POST request
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Decode the incoming data 
+	var req EmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Initialize Resend
+	apiKey := os.Getenv("RESEND_API_KEY")
+	client := resend.NewClient(apiKey)
+
+	// Draft the  Email
+	htmlContent := "<h2>Congratulations, " + req.ShopName + "! 🎉</h2>" +
+		"<p>Great news! Our team has reviewed your business documents and your repair shop has been officially verified.</p>" +
+		"<p>Your listing is now <strong>Live and Active</strong> on the directory for customers to see.</p>" +
+		"<p>Log in to your Host Dashboard to view your active listing.</p>"
+
+	params := &resend.SendEmailRequest{
+		From:    "Admin <verification@krishnaadhikari.com>",
+		To:      []string{req.Email},
+		Subject: "Your Shop is Now Verified! 🎉",
+		Html:    htmlContent,
+	}
+
+	// Send it
+	_, err := client.Emails.Send(params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "Verification email sent successfully"})
+}
