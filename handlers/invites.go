@@ -68,7 +68,7 @@ func SendInviteEmail(w http.ResponseWriter, r *http.Request) {
 				<p style="font-size: 16px; line-height: 1.6; color: #4B5563;">SecureFind is a smart platform that helps people protect, track, and recover their valuable items using secure QR tags.</p>
 				<p style="font-size: 16px; line-height: 1.6; color: #4B5563;">By accepting this invite, you'll be able to help them out if their items ever go missing.</p>
 				<div style="text-align: center; margin: 40px 0 20px;">
-					<a href="https://yourwebsite.com/download" style="background-color: #DB2777; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">Download the App</a>
+					<a href="https://ats.krishnaadhikari.com/download" style="background-color: #DB2777; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">Download the App</a>
 				</div>
 			</div>
 			<div style="background-color: #F9FAFB; padding: 24px; text-align: center; color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB;">
@@ -81,7 +81,7 @@ func SendInviteEmail(w http.ResponseWriter, r *http.Request) {
 
 	// Build the exact JSON payload Resend expects
 	resendPayload := map[string]interface{}{
-		"from":    "SecureFind <onboarding@krishnaadhikari.com>", // Note: You'll update this to your real domain later
+		"from":    "At Your Service <onboarding@krishnaadhikari.com>", 
 		"to":      []string{req.Email},
 		"subject": subject,
 		"html":    htmlBody,

@@ -19,7 +19,7 @@ func WelcomeEmailHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	
+
 	var req EmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
@@ -29,10 +29,10 @@ func WelcomeEmailHandler(w http.ResponseWriter, r *http.Request) {
 	apiKey := os.Getenv("RESEND_API_KEY")
 	client := resend.NewClient(apiKey)
 
-	htmlContent := "<h2>Welcome, " + req.ShopName + "!</h2><p>Thank you for registering to become a host on QR-Startup. Our team is currently reviewing your verification documents. We will get back to you within 24-48 hours with next steps.</p>"
+	htmlContent := "<h2>Welcome, " + req.ShopName + "!</h2><p>Thank you for registering to become a host on At Your Service. Our team is currently reviewing your verification documents. We will get back to you within 24-48 hours with next steps.</p>"
 
 	params := &resend.SendEmailRequest{
-		From:    "Onboarding <onboarding@yourdomain.com>", // Make sure yourdomain.com is verified in Resend!
+		From:    "Onboarding <service@krishnaadhikari.com>", 
 		To:      []string{req.Email},
 		Subject: "We received your host application!",
 		Html:    htmlContent,
