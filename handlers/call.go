@@ -12,6 +12,34 @@ import (
 // ProxyCallWebhook is the URL. The proxy Proxy
 func ProxyCallWebhook(w http.ResponseWriter, r *http.Request){
 
+	
+	// CHECK THE MASTER TOGGLE FIRST
+	
+	var twilioEnabled bool
+	
+	// Assuming DB is exported in  database package
+	err := database.DB.QueryRow("SELECT setting_value FROM system_settings WHERE setting_key = 'twilio_call_enabled'").Scan(&twilioEnabled)
+	
+	if err != nil {
+		fmt.Printf("Warning: Failed to check Twilio settings in DB, defaulting to disabled: %v\n", err)
+		twilioEnabled = false // Default to safe/free mode if DB check fails
+	}
+
+	if !twilioEnabled {
+		// TOGGLE IS OFF: Play a free message and hang up immediately
+		fmt.Println("[MOCK] Admin Toggle is OFF. Rejecting Twilio Call to save money.")
+		
+		disabledTwiMl := `<?xml version="1.0" encoding="UTF-8"?>
+		<Response>
+				<Say voice="alice">Sorry, the call routing service is currently unavailable for maintenance. Please try again later.</Say>
+		</Response>`
+
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(http.StatusOK) // Still return 200 so Twilio reads the message properly
+		w.Write([]byte(disabledTwiMl))
+		return
+	}
+
 	// Tag ID fromt the URL
 	tagID := r.URL.Query().Get("tag_id")
 	if tagID == ""{
@@ -53,7 +81,7 @@ func ProxyCallWebhook(w http.ResponseWriter, r *http.Request){
 	<Response>
 			<Say voice="alice">Connecting you to the owner of this item. Please hold.</Say>
 			<Dial callerID="%s" timeLimit="180">
-					<Number>%s<Number>
+					<Number>%s</Number>
 			</Dial>
 	</Response>`,twilioNumber, ownerNumber)
 
