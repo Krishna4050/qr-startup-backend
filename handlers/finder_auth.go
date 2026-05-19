@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	//"net/url"
-	//"os"
+	"net/url"
+	"os"
 
 	//"github.com/twilio/twilio-go"
 	verify "github.com/twilio/twilio-go/rest/verify/v2"
+	"github.com/Krishna4050/qr-startup-backend/database"
 )
 
 // Structs to read the JSON from Next.js
@@ -23,47 +24,76 @@ type CheckVerificationRequest struct {
 	TagID		string `json:"tag_id"` // Who to call
 }
 
+// Struct to read Cloudflare's answer
+type TurnstileResponse struct {
+	Success bool     `json:"success"`
+	Errors  []string `json:"error-codes"`
+}
+
 // Start the Verification (check Captcha and send SMS)
-func StartVerification(w http.ResponseWriter, r *http.Request){
-	var req  StartVerificationRequest
-	json.NewDecoder(r.Body).Decode(&req)
+func StartVerification(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-	// Verify the cloudflare turnstile
-	// we will comment this for now because for now we are using dummy verification so our localhost verifyes it but cloutflare block it as an garbage token
-	/*
-	cfSecret := os.Getenv("CLOUDFLARE_SECRET_KEY")
-	cfResp, _ := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify", url.Values{"secret": {cfSecret}, "response": {req.TurnstileToken}})
+	var req StartVerificationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// ========================================================
+	// 1. CLOUDFLARE TURNSTILE VERIFICATION (Anti-Bot)
+	// ========================================================
+	secretKey := os.Getenv("TURNSTILE_SECRET_KEY")
 	
-	if cfResp.StatusCode != 200 {
-		http.Error(w, "Bot detected", http.StatusForbidden)
-		return
-	}
-	*/
-	fmt.Println("[MOCK] Bypassed cloudflare for local testing")
-
-	// Send Twilio Verify OTP
-	// client := twilio.NewRestClient()
-	// verifySID := os.Getenv("TWILIO_VERIFY-SERVICE_SID")
-
-	params := &verify.CreateVerificationParams{}
-	params.SetTo(req.PhoneNumber)
-	params.SetChannel("sms")
-
-	// Real sms and verification
-	// commenting to for now 
-
-	/*
-	_, err := client.VerifyV2.CreateVerification(verifySID, params)
+	// Send the token to Cloudflare to verify
+	resp, err := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify",
+		url.Values{
+			"secret":   {secretKey},
+			"response": {req.TurnstileToken},
+		})
+		
 	if err != nil {
-		http.Error(w, "Failed to send OTP", http.StatusInternalServerError)
+		http.Error(w, "Failed to verify security challenge", http.StatusInternalServerError)
 		return
 	}
-	*/
-	fmt.Printf("[MOC] Sent OPT to Finder: %s\n", req.PhoneNumber)
+	defer resp.Body.Close()
+
+	var cfResponse TurnstileResponse
+	json.NewDecoder(resp.Body).Decode(&cfResponse)
+
+	if !cfResponse.Success {
+		// BUSTED! It's a bot. Stop execution right here.
+		fmt.Println("Blocked a bot attempt on SMS verification!")
+		http.Error(w, "Security verification failed", http.StatusForbidden)
+		return
+	}
+
+	// ========================================================
+	// 2. CHECK THE MASTER TOGGLE (Save Money)
+	// ========================================================
+	var twilioEnabled bool
+	err = database.DB.QueryRow("SELECT setting_value FROM system_settings WHERE setting_key = 'twilio_sms_enabled'").Scan(&twilioEnabled)
+	if err != nil {
+		twilioEnabled = false // Default to off if database check fails
+	}
+
+	// ========================================================
+	// 3. SEND SMS OR MOCK IT
+	// ========================================================
+	if twilioEnabled {
+		fmt.Printf("[TWILIO] Admin Toggle is ON. Sending real OTP to %s...\n", req.PhoneNumber)
+		// ... (Run your real Twilio CreateMessage logic here) ...
+        
+	} else {
+		fmt.Printf("[MOCK] Admin Toggle OFF. Pretending to send OTP to %s. Use code 123456\n", req.PhoneNumber)
+		// You can insert the mock code '123456' into your database/cache for validation later
+	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status": "success", "message": "OTP sent!}`))
-
+	json.NewEncoder(w).Encode(map[string]string{"status": "OTP processed"})
 }
 
 // Check the code and trigger the call

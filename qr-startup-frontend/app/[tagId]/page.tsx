@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Phone, MessageCircle, ShieldCheck, Backpack, ArrowRight, ArrowLeft, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 const BackButton = ({ onClick, disabled }: { onClick: () => void, disabled?: boolean }) => (
   <button 
@@ -37,6 +38,7 @@ export default function FinderPage() {
   const [messageText, setMessageText] = useState(''); 
   const [resendTimer, setResendTimer] = useState(30);
   const [isLoading, setIsLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   // --- Fetch Tag Details from Go Backend on Load ---
   useEffect(() => {
@@ -74,16 +76,17 @@ export default function FinderPage() {
 
   const handleSendOTP = async () => {
     if (!phoneNumber) return alert("Please enter a valid phone number.");
+    if (!turnstileToken) return alert("Please complete the security check."); // BLOCK BOTS
     
     setIsLoading(true);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://ats.krishnaadhikari.com';
       const response = await fetch(`${backendUrl}/api/verify/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone_number: phoneNumber,
-          turnstile_token: 'dummy-token-for-testing' 
+          turnstile_token: turnstileToken // SEND REAL TOKEN TO GO BACKEND
         }),
       });
 
@@ -225,6 +228,14 @@ export default function FinderPage() {
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 disabled={isLoading}
               />
+
+              {/* THE CLOUDFLARE WIDGET */}
+              <div className="mb-4 flex justify-center">
+                <Turnstile 
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} 
+                  onSuccess={(token) => setTurnstileToken(token)}
+                />
+              </div>
 
               <button 
                 onClick={handleSendOTP}
