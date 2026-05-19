@@ -44,7 +44,7 @@ export default function FinderPage() {
 
     const fetchTagDetails = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://ats.krishnaadhikari.com';
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
         const res = await fetch(`${backendUrl}/api/tags/${tagId}`);
         if (!res.ok) throw new Error("Tag not found");
         
@@ -77,7 +77,7 @@ export default function FinderPage() {
     
     setIsLoading(true);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://ats.krishnaadhikari.com';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
       const response = await fetch(`${backendUrl}/api/verify/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,7 +104,7 @@ export default function FinderPage() {
     
     setIsLoading(true);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
       const response = await fetch(`${backendUrl}/api/verify/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
