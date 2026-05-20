@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+
 import { Settings, Plus, MapPin, Clock, Home, CheckCircle, ChevronRight } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
 
@@ -129,7 +130,7 @@ export default function HostDashboardScreen() {
       )}
 
       <View style={styles.bottomNavContainer}>
-        <TouchableOpacity style={styles.switchModeBtn} activeOpacity={0.9} onPress={() => navigation.navigate('ServicesScreen')}>
+        <TouchableOpacity style={styles.switchModeBtn} activeOpacity={0.9} onPress={() => navigation.navigate('ServiceScreen')}>
           <Home color="#FFFFFF" size={20} style={{ marginRight: 10 }} />
           <Text style={styles.switchModeText}>Return to User View</Text>
         </TouchableOpacity>

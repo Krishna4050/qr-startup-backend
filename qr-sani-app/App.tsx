@@ -20,6 +20,7 @@ import PartnerOnboardingStep2Screen from './src/screens/PartnerOnboardingStep2Sc
 import PartnerOnboardingStep3Screen from './src/screens/PartnerOnboardingStep3Screen';
 import PartnerOnboardingStep4Screen from './src/screens/PartnerOnboardingStep4Screen';
 import HostDashboardScreen from './src/screens/HostDashboardScreen';
+import ServicesScreen from './src/screens/ServicesScreen';
 
 // Providers
 import { ContentProvider } from './src/context/ContentContext';
@@ -80,6 +81,7 @@ export default function App() {
             <Stack.Screen name="PartnerOnboardingStep2" component={PartnerOnboardingStep2Screen} options={{ headerShown: false }} />
             <Stack.Screen name="PartnerOnboardingStep4" component={PartnerOnboardingStep4Screen} options={{ headerShown: false }} />
             <Stack.Screen name="HostDashboard" component={HostDashboardScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="ServicesScreen" component={ServicesScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </ContentProvider>
