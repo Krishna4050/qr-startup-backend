@@ -130,7 +130,7 @@ export default function HostDashboardScreen() {
       )}
 
       <View style={styles.bottomNavContainer}>
-        <TouchableOpacity style={styles.switchModeBtn} activeOpacity={0.9} onPress={() => navigation.navigate('ServiceScreen')}>
+        <TouchableOpacity style={styles.switchModeBtn} activeOpacity={0.9} onPress={() => navigation.navigate('VehicleRepairDirectory')}>
           <Home color="#FFFFFF" size={20} style={{ marginRight: 10 }} />
           <Text style={styles.switchModeText}>Return to User View</Text>
         </TouchableOpacity>
