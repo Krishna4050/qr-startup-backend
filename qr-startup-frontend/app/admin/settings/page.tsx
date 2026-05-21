@@ -14,8 +14,8 @@ export default function AdminSettingsPage() {
   
 
   // Fetch current settings from Go Backend on load
-  
   useEffect(() => {
+    // DEFINE the function INSIDE the useEffect
     const fetchSettings = async () => {
       try {
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
@@ -34,10 +34,9 @@ export default function AdminSettingsPage() {
       }
     };
 
+    // CALL the function immediately
     fetchSettings();
-  }, []);
-// Add this block under your fetchSettings useEffect
-
+  }, []); // 
   // SECURITY: Automatically log out if the browser or tab is closed
   useEffect(() => {
     const handleUnload = () => {
@@ -57,7 +56,7 @@ export default function AdminSettingsPage() {
       window.removeEventListener('beforeunload', handleUnload);
     };
   }, []);
-  
+
   // Flip the switch and tell the Go Backend
   const toggleSetting = async (key: string, currentValue: boolean) => {
     setIsSaving(key);
