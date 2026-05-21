@@ -46,16 +46,18 @@ func AdminGetStatsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var stats DashboardStats
 
-	// Count Users 
-	database.DB.QueryRow("SELECT COUNT(*) FROM profiles").Scan(&stats.TotalUsers)
+	// Count users from public.profiles
+	database.DB.QueryRow("SELECT COUNT(*) FROM public.profiles").Scan(&stats.TotalUsers)
 	
-	// Count Tags
-	database.DB.QueryRow("SELECT COUNT(*) FROM tags").Scan(&stats.TotalTags)
+	// Count active tags from public.qr_tags
+	database.DB.QueryRow("SELECT COUNT(*) FROM public.qr_tags WHERE is_active = true").Scan(&stats.TotalTags)
+
+	// Count proxy calls from public.call_logs
+	database.DB.QueryRow("SELECT COUNT(*) FROM public.call_logs").Scan(&stats.TotalProxyCalls)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
 }
-
 
 // GET ALL TAGS
 
@@ -65,9 +67,10 @@ func AdminGetTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// We calculate "is_claimed" by checking if owner_id exists
 	rows, err := database.DB.Query(`
-		SELECT tag_id, COALESCE(owner_id::text, ''), is_claimed, created_at 
-		FROM tags 
+		SELECT id::text, COALESCE(owner_id::text, ''), (owner_id IS NOT NULL) as is_claimed, created_at 
+		FROM public.qr_tags 
 		ORDER BY created_at DESC LIMIT 100
 	`)
 	if err != nil {
@@ -84,10 +87,7 @@ func AdminGetTagsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Ensure return an empty array [] instead of null if there are no tags
-	if tags == nil {
-		tags = []AdminTag{}
-	}
+	if tags == nil { tags = []AdminTag{} }
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tags)
