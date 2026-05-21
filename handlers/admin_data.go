@@ -13,6 +13,7 @@ import (
 type DashboardStats struct {
 	TotalUsers int `json:"totalUsers"`
 	TotalTags  int `json:"totalTags"`
+	TotalProxyCalls int `json:"totalProxyCalls"`
 }
 
 type AdminTag struct {
@@ -85,4 +86,40 @@ func AdminGetTagsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tags)
+}
+
+// GET ALL USERS
+
+func AdminGetUsersHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// We query Supabase's secure auth.users table directly
+	rows, err := database.DB.Query(`
+		SELECT id, email, COALESCE(phone, 'No Phone Number'), created_at 
+		FROM auth.users 
+		ORDER BY created_at DESC LIMIT 100
+	`)
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var users []AdminUser
+	for rows.Next() {
+		var u AdminUser
+		if err := rows.Scan(&u.ID, &u.Email, &u.PhoneNumber, &u.CreatedAt); err == nil {
+			users = append(users, u)
+		}
+	}
+
+	if users == nil {
+		users = []AdminUser{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
 }

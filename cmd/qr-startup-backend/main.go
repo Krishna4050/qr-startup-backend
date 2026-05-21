@@ -89,6 +89,7 @@ func main(){
 	mux.HandleFunc("POST /api/admin/check-email", handlers.CheckAdminEmailHandler)
 	mux.HandleFunc("GET /api/admin/stats", handlers.AdminGetStatsHandler)
 	mux.HandleFunc("GET /api/admin/tags", handlers.AdminGetTagsHandler)
+	mux.HandleFunc("GET /api/admin/users", handlers.AdminGetUsersHandler)
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost:%s\n", port)
