@@ -3,124 +3,228 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
+	"time"
 
-	//"github.com/twilio/twilio-go"
-	verify "github.com/twilio/twilio-go/rest/verify/v2"
 	"github.com/Krishna4050/qr-startup-backend/database"
+
+	"github.com/twilio/twilio-go"
+	api "github.com/twilio/twilio-go/rest/api/v2010"
 )
 
-// Structs to read the JSON from Next.js
-type StartVerificationRequest struct {
-	PhoneNumber string `json:"phone_number"`
+
+
+type OTPData struct {
+	Code      string
+	ExpiresAt time.Time
+	Attempts  int
+}
+
+var (
+	// Maps the phone number to the secure OTPData struct
+	otpCache  = make(map[string]OTPData)
+	otpMutex  sync.RWMutex
+	mathsRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
+
+// Generates a real, random 6-digit code (e.g., 843902)
+func generateRealOTP() string {
+	return fmt.Sprintf("%06d", mathsRand.Intn(1000000))
+}
+
+// Structs for reading requests
+type StartVerifyRequest struct {
+	PhoneNumber    string `json:"phone_number"`
 	TurnstileToken string `json:"turnstile_token"`
 }
 
-type CheckVerificationRequest struct {
+type CheckVerifyRequest struct {
 	PhoneNumber string `json:"phone_number"`
-	Code		string `json:"code"`
-	TagID		string `json:"tag_id"` // Who to call
+	Code        string `json:"code"`
+	TagID       string `json:"tag_id"`
 }
 
-// Struct to read Cloudflare's answer
 type TurnstileResponse struct {
 	Success bool     `json:"success"`
 	Errors  []string `json:"error-codes"`
 }
 
-// Start the Verification (check Captcha and send SMS)
+
+// START VERIFICATION (Generate & Send Real SMS)
+
 func StartVerification(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var req StartVerificationRequest
+	var req StartVerifyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
-	// ========================================================
-	// 1. CLOUDFLARE TURNSTILE VERIFICATION (Anti-Bot)
-	// ========================================================
+	// Cloudflare Bot Protection 
 	secretKey := os.Getenv("TURNSTILE_SECRET_KEY")
-	
-	// Send the token to Cloudflare to verify
 	resp, err := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify",
-		url.Values{
-			"secret":   {secretKey},
-			"response": {req.TurnstileToken},
-		})
-		
+		url.Values{"secret": {secretKey}, "response": {req.TurnstileToken}})
 	if err != nil {
-		http.Error(w, "Failed to verify security challenge", http.StatusInternalServerError)
+		http.Error(w, "Verification failed", http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
 
 	var cfResponse TurnstileResponse
 	json.NewDecoder(resp.Body).Decode(&cfResponse)
-
 	if !cfResponse.Success {
-		// BUSTED! It's a bot. Stop execution right here.
-		fmt.Println("Blocked a bot attempt on SMS verification!")
+		fmt.Println("CRITICAL: Blocked a bot from spamming SMS!")
 		http.Error(w, "Security verification failed", http.StatusForbidden)
 		return
 	}
 
-	// ========================================================
-	// 2. CHECK THE MASTER TOGGLE (Save Money)
-	// ========================================================
+	//  Generate and Store the Real Code 
+	realCode := generateRealOTP()
+	
+	otpMutex.Lock()
+	otpCache[req.PhoneNumber] = OTPData{
+		Code:      realCode,
+		ExpiresAt: time.Now().Add(5 * time.Minute), // Code dies in 5 minutes!
+		Attempts:  0,
+	}
+	otpMutex.Unlock()
+
+	messageBody := fmt.Sprintf("Your secure QR Startup verification code is: %s", realCode)
+
+	//  Check Toggle & Send SMS 
 	var twilioEnabled bool
 	err = database.DB.QueryRow("SELECT setting_value FROM system_settings WHERE setting_key = 'twilio_sms_enabled'").Scan(&twilioEnabled)
 	if err != nil {
-		twilioEnabled = false // Default to off if database check fails
+		twilioEnabled = false
 	}
 
-	// ========================================================
-	// 3. SEND SMS OR MOCK IT
-	// ========================================================
 	if twilioEnabled {
-		fmt.Printf("[TWILIO] Admin Toggle is ON. Sending real OTP to %s...\n", req.PhoneNumber)
-		// ... (Run your real Twilio CreateMessage logic here) ...
-        
+		// ACTUAL TWILIO SMS SENDING
+		fmt.Printf("[PRODUCTION] Sending REAL 6-digit code to %s\n", req.PhoneNumber)
+		projectNumber := os.Getenv("TWILIO_PHONE_NUMBER")
+		
+		client := twilio.NewRestClient()
+		params := &api.CreateMessageParams{}
+		params.SetTo(req.PhoneNumber)
+		params.SetFrom(projectNumber)
+		params.SetBody(messageBody)
+
+		_, err := client.Api.CreateMessage(params)
+		if err != nil {
+			http.Error(w, "Failed to Send SMS", http.StatusInternalServerError)
+			return
+		}
 	} else {
-		fmt.Printf("[MOCK] Admin Toggle OFF. Pretending to send OTP to %s. Use code 123456\n", req.PhoneNumber)
-		// You can insert the mock code '123456' into your database/cache for validation later
+		//  TOGGLE IS OFF - WE PRINT IT TO THE TERMINAL SO YOU CAN STILL TEST IT
+		fmt.Printf("[ADMIN DISABLED] Twilio SMS is paused. The generated code for %s is: %s\n", req.PhoneNumber, realCode)
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "OTP processed"})
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
-// Check the code and trigger the call
+
+// CHECK VERIFICATION & CONNECT REAL CALL
+
 func CheckVerificationAndCall(w http.ResponseWriter, r *http.Request) {
-	var req CheckVerificationRequest
-	json.NewDecoder(r.Body).Decode(&req)
-
-	// client := twilio.NewRestClient()
-	// verifySID := os.Getenv("TWILIO_VERIFY_SERVICE_SID")
-
-	params := &verify.CreateVerificationCheckParams{}
-	params.SetTo(req.PhoneNumber)
-	params.SetCode(req.Code)
-
-
-	// Check the code with Twilio
-	// for now comenting 
-	/*
-	resp, err := client.VerifyV2.CreateVerificationCheck(verifySID, params)
-	if err != nil || *resp.Status != "approved" {
-		http.Error(w, "Invalid Code", http.StatusUnauthorized)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	*/
-	fmt.Printf("[MOCK] Finder %s entered correct code: %s\n", req.PhoneNumber, req.Code)
 
-	// Trigger the proxy call
+	var req CheckVerifyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// --- Verify the Real Code  ---
+	otpMutex.Lock() // We use Lock instead of RLock because we need to update attempt counts
+	otpData, exists := otpCache[req.PhoneNumber]
+
+	// Check 1: Does it exist?
+	if !exists {
+		otpMutex.Unlock()
+		http.Error(w, "No verification code requested for this number", http.StatusBadRequest)
+		return
+	}
+
+	// Check 2: Did it expire? (Older than 5 mins)
+	if time.Now().After(otpData.ExpiresAt) {
+		delete(otpCache, req.PhoneNumber) // Delete expired code
+		otpMutex.Unlock()
+		http.Error(w, "Verification code has expired. Please request a new one.", http.StatusUnauthorized)
+		return
+	}
+
+	// Check 3: Brute force protection (Max 3 attempts)
+	if otpData.Attempts >= 3 {
+		delete(otpCache, req.PhoneNumber) // Lock them out, force them to start over
+		otpMutex.Unlock()
+		http.Error(w, "Too many failed attempts. Please request a new code.", http.StatusTooManyRequests)
+		return
+	}
+
+	// Check 4: Is the code actually wrong?
+	if otpData.Code != req.Code {
+		// Increment their failed attempt count!
+		otpData.Attempts++
+		otpCache[req.PhoneNumber] = otpData
+		otpMutex.Unlock()
+		
+		http.Error(w, "Invalid verification code", http.StatusUnauthorized)
+		return
+	}
+
+	// SUCCESS! The code was right. Delete it so it can't be reused.
+	delete(otpCache, req.PhoneNumber)
+	otpMutex.Unlock()
+
+	// Check Call Toggle
+	var twilioCallEnabled bool
+	err := database.DB.QueryRow("SELECT setting_value FROM system_settings WHERE setting_key = 'twilio_call_enabled'").Scan(&twilioCallEnabled)
+	if err != nil {
+		twilioCallEnabled = false
+	}
+
+	// INITIATE THE ACTUAL PHONE CALL
+	if twilioCallEnabled {
+		fmt.Printf("[PRODUCTION] Code verified! Dialing finder's phone (%s)...\n", req.PhoneNumber)
+
+		client := twilio.NewRestClient()
+		twilioNumber := os.Getenv("TWILIO_PHONE_NUMBER")
+		backendURL := os.Getenv("BACKEND_URL") 
+		
+		// THIS IS THE MAGIC LINK: 
+		// We pass the tag_id to the webhook. When the Finder picks up the phone, 
+		
+		webhookURL := fmt.Sprintf("%s/api/call-owner?tag_id=%s", backendURL, req.TagID)
+
+		params := &api.CreateCallParams{}
+		params.SetTo(req.PhoneNumber)
+		params.SetFrom(twilioNumber)
+		params.SetUrl(webhookURL)
+
+		_, err := client.Api.CreateCall(params)
+		if err != nil {
+			fmt.Printf("Twilio Error Initiating Call: %v\n", err)
+			http.Error(w, "Failed to initiate call", http.StatusInternalServerError)
+			return
+		}
+
+	} else {
+		fmt.Printf("[ADMIN DISABLED] Code was correct, but Call routing is paused. Did not dial.\n")
+	}
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status": "success", "message": "Call initiated!}`))	
+	json.NewEncoder(w).Encode(map[string]string{"status": "Call connected successfully"})
 }
+
