@@ -71,6 +71,7 @@ func main(){
 	mux.HandleFunc("POST /api/admin/update-setting", handlers.AdminUpdateSettingHandler)
 	//mux.HandleFunc("GET /api/admin/settings", handlers.GetSettingsHandler)
 	//mux.HandleFunc("/api/admin/update-setting", handlers.AdminUpdateSettingHandler)
+	mux.HandleFunc("POST /api/admin/check-email", handlers.CheckAdminEmailHandler)
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost:%s\n", port)

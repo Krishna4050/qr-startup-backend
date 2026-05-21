@@ -28,18 +28,46 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
 
-    // Sends a 6-digit code to the email
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false }, // Only allow existing users
-    });
+    try {
+      // 1. PRE-CHECK: Ask the Go Backend if this email is an Admin
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const checkRes = await fetch(`${backendUrl}/api/admin/check-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
 
-    setIsLoading(false);
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        
+        // IF NOT ADMIN: Throw an error and STOP immediately. No email sent!
+        if (!checkData.isAdmin) {
+          setError("Unauthorized: This email does not have administrator access.");
+          setIsLoading(false);
+          return; 
+        }
+      } else {
+        setError("Failed to verify security credentials.");
+        setIsLoading(false);
+        return;
+      }
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setStep('otp'); // Move to the verification step
+      // 2. IF ADMIN: Safe to proceed! Send the 6-digit code.
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false }, 
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        setStep('otp'); 
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Network error occurred.");
+    } finally {
+      setIsLoading(false);
     }
   };
 

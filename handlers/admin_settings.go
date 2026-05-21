@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"fmt"
 
 	"github.com/Krishna4050/qr-startup-backend/database"
 )
@@ -12,6 +13,9 @@ type UpdateSettingRequest struct {
 	SettingValue bool   `json:"settingValue"`
 }
 
+type CheckAdminRequest struct {
+	Email string `json:"email"`
+}
 // AdminUpdateSettingHandler flips the switches in the database
 func AdminUpdateSettingHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -67,4 +71,38 @@ func GetSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(settings)
+}
+
+// CheckAdminEmailHandler securely checks if an email is on the list
+func CheckAdminEmailHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CheckAdminRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var isAdmin bool
+	// Join the Supabase auth schema with your public schema to verify the email
+	query := `
+		SELECT EXISTS (
+			SELECT 1 
+			FROM auth.users u 
+			JOIN public.admin_users au ON u.id = au.user_id 
+			WHERE u.email = $1
+		)
+	`
+	err := database.DB.QueryRow(query, req.Email).Scan(&isAdmin)
+	if err != nil {
+		fmt.Printf("Error checking admin status: %v\n", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"isAdmin": isAdmin})
 }
