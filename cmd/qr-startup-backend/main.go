@@ -64,7 +64,12 @@ func main(){
 	mux.HandleFunc("POST /api/invite", handlers.SendInviteEmail)
 	mux.HandleFunc("POST /api/security/login", handlers.LoginSecurityCheck)
 	mux.HandleFunc("/api/host/welcome-email", handlers.WelcomeEmailHandler)
+	//mux.HandleFunc("/api/host/verified-email", handlers.VerifiedEmailHandler)
+	mux.HandleFunc("GET /api/admin/settings", handlers.GetSettingsHandler)
+	//mux.HandleFunc("POST /api/admin/update-setting", handlers.AdminUpdateSettingHandler)
 	mux.HandleFunc("/api/host/verified-email", handlers.VerifiedEmailHandler)
+	mux.HandleFunc("POST /api/admin/update-setting", handlers.AdminUpdateSettingHandler)
+	mux.HandleFunc("GET /api/admin/settings", handlers.GetSettingsHandler)
 	//mux.HandleFunc("/api/admin/update-setting", handlers.AdminUpdateSettingHandler)
 
 	//start the server
