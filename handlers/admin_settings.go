@@ -93,7 +93,7 @@ func CheckAdminEmailHandler(w http.ResponseWriter, r *http.Request) {
 			SELECT 1 
 			FROM auth.users u 
 			JOIN public.admin_users au ON u.id = au.user_id 
-			WHERE u.email = $1
+			WHERE u.email = LOWER($1)
 		)
 	`
 	err := database.DB.QueryRow(query, req.Email).Scan(&isAdmin)
