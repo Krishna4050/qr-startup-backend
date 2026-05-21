@@ -15,8 +15,26 @@ import (
 // enableCORS tells the browser that it is safe to talk to our server
 func enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "https://ats.krishnaadhikari.com") //trust Next.js http://localhost:3000
-		w.Header().Set("Access-Control-Allow-Methods", "https://sani.krishnaadhikari.com")
+		
+		// 1. Get the website trying to talk to us
+		origin := r.Header.Get("Origin")
+
+		// 2. Our VIP list of allowed Next.js websites
+		allowedOrigins := []string{
+			"http://localhost:3000",
+			"http://localhost:3001",
+			"https://ats.krishnaadhikari.com",
+			"https://sani.krishnaadhikari.com",
+		}
+
+		// 3. If the website is on the list, let them through!
+		for _, allowed := range allowedOrigins {
+			if origin == allowed {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				break
+			}
+		}
+
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
 
