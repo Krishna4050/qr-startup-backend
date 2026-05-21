@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os" //Built-in package to read environment variable
+	"os" 
 
 	"github.com/Krishna4050/qr-startup-backend/database"
 	"github.com/Krishna4050/qr-startup-backend/handlers"
@@ -16,7 +16,7 @@ import (
 func enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		
-		// 1. Get the website trying to talk to us
+		//  Get the website trying to talk to us
 		origin := r.Header.Get("Origin")
 
 		// 2. Our VIP list of allowed Next.js websites
@@ -27,7 +27,7 @@ func enableCORS(next http.Handler) http.Handler {
 			"https://sani.krishnaadhikari.com",
 		}
 
-		// 3. If the website is on the list, let them through!
+		//  If the website is on the list, let them through!
 		for _, allowed := range allowedOrigins {
 			if origin == allowed {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -83,14 +83,12 @@ func main(){
 	mux.HandleFunc("POST /api/invite", handlers.SendInviteEmail)
 	mux.HandleFunc("POST /api/security/login", handlers.LoginSecurityCheck)
 	mux.HandleFunc("/api/host/welcome-email", handlers.WelcomeEmailHandler)
-	//mux.HandleFunc("/api/host/verified-email", handlers.VerifiedEmailHandler)
 	mux.HandleFunc("GET /api/admin/settings", handlers.GetSettingsHandler)
-	//mux.HandleFunc("POST /api/admin/update-setting", handlers.AdminUpdateSettingHandler)
 	mux.HandleFunc("/api/host/verified-email", handlers.VerifiedEmailHandler)
 	mux.HandleFunc("POST /api/admin/update-setting", handlers.AdminUpdateSettingHandler)
-	//mux.HandleFunc("GET /api/admin/settings", handlers.GetSettingsHandler)
-	//mux.HandleFunc("/api/admin/update-setting", handlers.AdminUpdateSettingHandler)
 	mux.HandleFunc("POST /api/admin/check-email", handlers.CheckAdminEmailHandler)
+	mux.HandleFunc("GET /api/admin/stats", handlers.AdminGetStatsHandler)
+	mux.HandleFunc("GET /api/admin/tags", handlers.AdminGetTagsHandler)
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost:%s\n", port)
