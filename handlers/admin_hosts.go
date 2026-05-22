@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/Krishna4050/qr-startup-backend/database"
+	"github.com/resend/resend-go/v2" 
 )
 
 type AdminHost struct {
@@ -23,23 +25,27 @@ type VerifyHostRequest struct {
 	Action    string `json:"action"` // "approve" or "reject"
 }
 
-// ==========================================
-// 1. FETCH ALL HOST APPLICATIONS
-// ==========================================
+
+// FETCH ALL HOST APPLICATIONS 
+
 func AdminGetHostsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Join partner_companies with auth.users to get the manager's email
+	// LEFT JOIN so we don't lose rows, and COALESCE so Go never crashes on NULLs
 	rows, err := database.DB.Query(`
 		SELECT 
-			pc.id::text, pc.manager_id::text, u.email, 
-			pc.company_name, COALESCE(pc.business_registration_id, 'N/A'), 
-			pc.status, pc.created_at::text
+			pc.id::text, 
+			COALESCE(pc.manager_id::text, 'Unassigned'), 
+			COALESCE(u.email, 'No Email Found'), 
+			COALESCE(pc.company_name, 'Unknown Company'), 
+			COALESCE(pc.business_registration_id, 'N/A'), 
+			COALESCE(pc.status, 'pending_verification'), 
+			pc.created_at::text
 		FROM public.partner_companies pc
-		JOIN auth.users u ON pc.manager_id = u.id
+		LEFT JOIN auth.users u ON pc.manager_id = u.id
 		ORDER BY pc.created_at DESC
 	`)
 	if err != nil {
@@ -52,8 +58,13 @@ func AdminGetHostsHandler(w http.ResponseWriter, r *http.Request) {
 	var hosts []AdminHost
 	for rows.Next() {
 		var h AdminHost
-		if err := rows.Scan(&h.CompanyID, &h.ManagerID, &h.ManagerEmail, &h.CompanyName, &h.RegistrationID, &h.Status, &h.CreatedAt); err == nil {
+		err := rows.Scan(&h.CompanyID, &h.ManagerID, &h.ManagerEmail, &h.CompanyName, &h.RegistrationID, &h.Status, &h.CreatedAt)
+		
+		if err == nil {
 			hosts = append(hosts, h)
+		} else {
+			// If a row still fails, print EXACTLY why to the Render terminal
+			fmt.Printf("CRITICAL: Silent Scan Error on Host Row: %v\n", err)
 		}
 	}
 
@@ -63,9 +74,9 @@ func AdminGetHostsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(hosts)
 }
 
-// ==========================================
-// 2. APPROVE OR REJECT HOST
-// ==========================================
+
+// APPROVE OR REJECT HOST
+
 func AdminVerifyHostHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -78,20 +89,20 @@ func AdminVerifyHostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine the new status in the database
 	newStatus := "rejected"
-	if req.Action == "approve" {
-		newStatus = "verified"
-	}
+	if req.Action == "approve" { newStatus = "verified" }
 
-	// 1. Update the partner_companies table
-	var managerEmail, managerID string
+	// Bulletproof Update: COALESCE the returning values so it doesn't crash if an email is missing
+	var managerEmail, managerID, companyName string
 	err := database.DB.QueryRow(`
 		UPDATE public.partner_companies 
 		SET status = $1 
 		WHERE id = $2 
-		RETURNING manager_id, (SELECT email FROM auth.users WHERE id = manager_id)
-	`, newStatus, req.CompanyID).Scan(&managerID, &managerEmail)
+		RETURNING 
+			COALESCE(manager_id::text, 'system'), 
+			COALESCE((SELECT email FROM auth.users WHERE id = manager_id), 'no-reply@krishnaadhikari.com'), 
+			COALESCE(company_name, 'Your Company')
+	`, newStatus, req.CompanyID).Scan(&managerID, &managerEmail, &companyName)
 	
 	if err != nil {
 		fmt.Printf("Failed to verify host: %v\n", err)
@@ -99,26 +110,36 @@ func AdminVerifyHostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Log this action to your System Audit Trail!
-	logDetails := map[string]string{
-		"company_id": req.CompanyID,
-		"action":     req.Action,
-		"manager_id": managerID,
-	}
-	detailsJSON, _ := json.Marshal(logDetails)
-	database.DB.Exec(
-		"INSERT INTO public.system_logs (user_id, action_type, details) VALUES ($1, $2, $3)", 
-		managerID, "HOST_APPLICATION_PROCESSED", string(detailsJSON),
-	)
+	// Trigger automated email via Resend
+	apiKey := os.Getenv("RESEND_API_KEY")
+	if apiKey != "" && managerEmail != "no-reply@krishnaadhikari.com" {
+		client := resend.NewClient(apiKey)
 
-	// 3. Trigger the Notification Email
-	if req.Action == "approve" {
-		fmt.Printf("[EMAIL TRIGGER] Sending APPROVAL email to: %s\n", managerEmail)
-		// TODO: Hook this up to your actual email sender (Resend, AWS SES, or SendGrid)
+		var subject, html string
+		if req.Action == "approve" {
+			subject = "Your Shop is Now Verified! 🎉"
+			html = "<h2>Congratulations, " + companyName + "! 🎉</h2><p>Great news! Your repair shop has been officially verified and is now live.</p>"
+		} else {
+			subject = "Update regarding your application"
+			html = "<h2>Update for " + companyName + "</h2><p>Unfortunately, your application was not approved at this time. Please contact support for details.</p>"
+		}
+
+		params := &resend.SendEmailRequest{
+			From:    "Admin <verification@krishnaadhikari.com>",
+			To:      []string{managerEmail},
+			Subject: subject,
+			Html:    html,
+		}
+		_, _ = client.Emails.Send(params) 
 	} else {
-		fmt.Printf("[EMAIL TRIGGER] Sending REJECTION email to: %s\n", managerEmail)
+		fmt.Println("Skipping Email: No Resend API Key found or User has no email.")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	// Log to System Logs
+	logDetails := map[string]string{ "company_id": req.CompanyID, "action": req.Action }
+	detailsJSON, _ := json.Marshal(logDetails)
+	database.DB.Exec("INSERT INTO public.system_logs (user_id, action_type, details) VALUES ($1, $2, $3)", managerID, "HOST_APPLICATION_PROCESSED", string(detailsJSON))
+
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
