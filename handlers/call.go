@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json" // <-- Added for logging
 	"fmt"
 	"net/http"
 	"os"
@@ -12,12 +13,15 @@ import (
 // ProxyCallWebhook is the URL Twilio hits to connect the two parties
 func ProxyCallWebhook(w http.ResponseWriter, r *http.Request) {
 
+	// 1. Grab data that Twilio sends in the request
+	r.ParseForm() // Required to read Twilio's payload
+	callerNumber := r.FormValue("From") // The Finder's phone number
+	callSid := r.FormValue("CallSid")   // Twilio's unique ID for the call
+	tagID := r.URL.Query().Get("tag_id")
 
-	// CHECK THE Sani CALL TOGGLE
-	
+	// 2. CHECK THE SYSTEM SETTINGS TOGGLE
 	var twilioCallEnabled bool
 	
-	// Check the database to ensure calls are actually allowed right now
 	err := database.DB.QueryRow("SELECT setting_value FROM system_settings WHERE setting_key = 'twilio_call_enabled'").Scan(&twilioCallEnabled)
 	if err != nil {
 		fmt.Printf("Warning: Failed to check Twilio call settings in DB, defaulting to disabled: %v\n", err)
@@ -28,23 +32,35 @@ func ProxyCallWebhook(w http.ResponseWriter, r *http.Request) {
 		// TOGGLE IS OFF: Play a free message and hang up immediately to save money
 		fmt.Println("[MOCK] Admin Call Toggle is OFF. Rejecting Twilio Call connection.")
 		
+		// ==========================================
+		// NEW: LOG THE INTERCEPTED CALL TO AUDIT TRAIL
+		// ==========================================
+		logDetails := map[string]string{
+			"tag_id":        tagID,
+			"caller_number": callerNumber,
+			"mode":          "mock_call_blocked",
+		}
+		detailsJSON, _ := json.Marshal(logDetails)
+		
+		database.DB.Exec(
+			"INSERT INTO public.system_logs (action_type, details) VALUES ($1, $2)", 
+			"MOCK_CALL_BLOCKED", 
+			string(detailsJSON),
+		)
+		// ==========================================
+
 		disabledTwiMl := `<?xml version="1.0" encoding="UTF-8"?>
 		<Response>
 				<Say voice="alice">Sorry, the call routing service is currently paused for maintenance. Please try again later.</Say>
 		</Response>`
 
 		w.Header().Set("Content-Type", "application/xml")
-		w.WriteHeader(http.StatusOK) // Still return 200 so Twilio reads the message properly
+		w.WriteHeader(http.StatusOK) 
 		w.Write([]byte(disabledTwiMl))
 		return
 	}
 
-	
 	// TOGGLE IS ON: PROCEED WITH REAL CALL
-	
-
-	// Tag ID from the URL (Passed over by your CheckVerificationAndCall function)
-	tagID := r.URL.Query().Get("tag_id")
 	if tagID == "" {
 		http.Error(w, "Missing tag_id", http.StatusBadRequest)
 		return
@@ -54,8 +70,6 @@ func ProxyCallWebhook(w http.ResponseWriter, r *http.Request) {
 	ownerNumber, err := database.GetOwnerPhone(tagID)
 	if err != nil {
 		fmt.Printf("Call Failed or Tag not found: %v\n", err)
-
-		// Inform Twilio to play an error message instead of making a call
 		errorTwiMl := `<?xml version="1.0" encoding="UTF-8"?>
 		<Response>
 				<Say voice="alice">Sorry, this item is not registered or the owner is currently unavailable.</Say>
@@ -67,13 +81,25 @@ func ProxyCallWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	} 
 
-	// Get your Twilio proxy number from the .env file
 	twilioNumber := os.Getenv("TWILIO_PHONE_NUMBER")
 	if twilioNumber == "" {
 		fmt.Println("Error: TWILIO_PHONE_NUMBER is missing from .env")
 		http.Error(w, "Server Configuration Error", http.StatusInternalServerError)
 		return
 	}
+
+	// ==========================================
+	// NEW: LOG THE REAL CALL (Updates Dashboard Stat!)
+	// ==========================================
+	_, dbErr := database.DB.Exec(`
+		INSERT INTO public.call_logs (tag_id, status, caller_number, receiver_number, twilio_call_sid)
+		VALUES ($1, 'initiated', $2, $3, $4)
+	`, tagID, callerNumber, ownerNumber, callSid)
+	
+	if dbErr != nil {
+		fmt.Printf("Warning: Failed to log real call to database: %v\n", dbErr)
+	}
+	// ==========================================
 
 	// Generate the XML (TwiML) to securely dial the real owner number
 	twiML := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>

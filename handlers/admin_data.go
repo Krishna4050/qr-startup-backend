@@ -36,6 +36,13 @@ type UserActionRequest struct {
 	Action string `json:"action"` // "delete", "suspend", "activate"
 }
 
+type AdminSystemLog struct {
+	ID         string `json:"id"`
+	ActionType string `json:"actionType"`
+	Details    string `json:"details"` // We return the JSONB as a string for React to parse
+	CreatedAt  string `json:"createdAt"`
+}
+
 // GET OVERVIEW STATS
 
 func AdminGetStatsHandler(w http.ResponseWriter, r *http.Request) {
@@ -165,4 +172,38 @@ func AdminUserActionHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
+
+// GET ALL SYSTEM LOGS
+
+func AdminGetLogsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Fetch the 50 most recent logs from your database
+	rows, err := database.DB.Query(`
+		SELECT id::text, action_type, COALESCE(details::text, '{}'), created_at 
+		FROM public.system_logs 
+		ORDER BY created_at DESC LIMIT 50
+	`)
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var logs []AdminSystemLog
+	for rows.Next() {
+		var l AdminSystemLog
+		if err := rows.Scan(&l.ID, &l.ActionType, &l.Details, &l.CreatedAt); err == nil {
+			logs = append(logs, l)
+		}
+	}
+
+	if logs == nil { logs = []AdminSystemLog{} }
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(logs)
 }
