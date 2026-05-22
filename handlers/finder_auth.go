@@ -16,8 +16,6 @@ import (
 	api "github.com/twilio/twilio-go/rest/api/v2010"
 )
 
-
-
 type OTPData struct {
 	Code      string
 	ExpiresAt time.Time
@@ -92,7 +90,7 @@ func StartVerification(w http.ResponseWriter, r *http.Request) {
 	otpMutex.Lock()
 	otpCache[req.PhoneNumber] = OTPData{
 		Code:      realCode,
-		ExpiresAt: time.Now().Add(5 * time.Minute), // Code dies in 5 minutes!
+		ExpiresAt: time.Now().Add(1 * time.Minute), // Code dies in 1 minutes!
 		Attempts:  0,
 	}
 	otpMutex.Unlock()
@@ -123,8 +121,27 @@ func StartVerification(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		//  TOGGLE IS OFF - WE PRINT IT TO THE TERMINAL SO YOU CAN STILL TEST IT
+		//  TOGGLE IS OFF - WE PRINT IT TO THE TERMINAL AND SAVE IT TO THE DASHBOARD
 		fmt.Printf("[ADMIN DISABLED] Twilio SMS is paused. The generated code for %s is: %s\n", req.PhoneNumber, realCode)
+		
+		
+		// AUDIT LOG INJECTION: Save Mock OTP to Dashboard
+		
+		logDetails := map[string]string{
+			"target_phone": req.PhoneNumber,
+			"otp_code":     realCode, 
+			"mode":         "mock_sms",
+		}
+		detailsJSON, _ := json.Marshal(logDetails)
+		_, dbErr := database.DB.Exec(
+			"INSERT INTO public.system_logs (action_type, details) VALUES ($1, $2)", 
+			"MOCK_OTP_GENERATED", 
+			string(detailsJSON),
+		)
+		if dbErr != nil {
+			fmt.Printf("Failed to write mock OTP to system_logs: %v\n", dbErr)
+		}
+		// ---------------------------------------------------------
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -133,6 +150,7 @@ func StartVerification(w http.ResponseWriter, r *http.Request) {
 
 
 // CHECK VERIFICATION & CONNECT REAL CALL
+
 
 func CheckVerificationAndCall(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -157,7 +175,7 @@ func CheckVerificationAndCall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check 2: Did it expire? (Older than 5 mins)
+	// Check 2: Did it expire? (Older than 1 mins)
 	if time.Now().After(otpData.ExpiresAt) {
 		delete(otpCache, req.PhoneNumber) // Delete expired code
 		otpMutex.Unlock()
@@ -205,7 +223,6 @@ func CheckVerificationAndCall(w http.ResponseWriter, r *http.Request) {
 		
 		// THIS IS THE MAGIC LINK: 
 		// We pass the tag_id to the webhook. When the Finder picks up the phone, 
-		
 		webhookURL := fmt.Sprintf("%s/api/call-owner?tag_id=%s", backendURL, req.TagID)
 
 		params := &api.CreateCallParams{}
@@ -222,9 +239,27 @@ func CheckVerificationAndCall(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		fmt.Printf("[ADMIN DISABLED] Code was correct, but Call routing is paused. Did not dial.\n")
+		
+		
+		// AUDIT LOG INJECTION: Save Mock Call to Dashboard
+		
+		logDetails := map[string]string{
+			"target_phone": req.PhoneNumber,
+			"tag_id":       req.TagID, 
+			"mode":         "mock_call_blocked",
+		}
+		detailsJSON, _ := json.Marshal(logDetails)
+		_, dbErr := database.DB.Exec(
+			"INSERT INTO public.system_logs (action_type, details) VALUES ($1, $2)", 
+			"MOCK_CALL_BLOCKED", 
+			string(detailsJSON),
+		)
+		if dbErr != nil {
+			fmt.Printf("Failed to write mock Call to system_logs: %v\n", dbErr)
+		}
+		// ---------------------------------------------------------
 	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "Call connected successfully"})
 }
-
