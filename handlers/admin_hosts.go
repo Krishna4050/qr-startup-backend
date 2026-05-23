@@ -41,7 +41,6 @@ func AdminGetHostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We use COALESCE and array_agg to safely pull all photos and nested data without crashing
 	rows, err := database.DB.Query(`
 		SELECT 
 			sl.id::text, 
@@ -93,9 +92,7 @@ func AdminGetHostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if hosts == nil {
-		hosts = []AdminHost{}
-	}
+	if hosts == nil { hosts = []AdminHost{} }
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(hosts)
@@ -116,41 +113,24 @@ func AdminVerifyHostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Map the requested action to the database status
 	newStatus := req.Action
 	isActive := false
-	// if req.Action == "approve" {
-	// 	newStatus = "verified"
-	// 	isActive = true
-	// } else if req.Action == "reject" {
-	// 	newStatus = "rejected"
-	// } else if req.Action == "pause" {
-	// 	newStatus = "paused"
-	// } else if req.Action == "suspend" {
-	// 	newStatus = "suspended"
-	// } else if req.Action == "delete" {
-	// 	newStatus = "deleted" // SOFT DELETE!
-	// }
 
-	// switch statement:
+	// FIXED: Replaced if/else chain with a clean tagged switch
 	switch req.Action {
-		case "approve":
-			newStatus = "verified"
-			isActive = true
-		case "rejected":
-			newStatus = "rejected"
-		case "paused":
-			newStatus = "paused"
-		case "suspend":
-			newStatus = "suspended"
-		case "delete":
-			newStatus = "deleted" // SOFT DELETE!
-		default:
-			// Handle unexpected action
-			fmt.Printf("Unknown action: %s\n", req.Action)
-		}
+	case "approve":
+		newStatus = "verified"
+		isActive = true
+	case "reject":
+		newStatus = "rejected"
+	case "pause":
+		newStatus = "paused"
+	case "suspend":
+		newStatus = "suspended"
+	case "delete":
+		newStatus = "deleted"
+	}
 
-	// Update the shop_locations table
 	var managerEmail, managerID, shopName, companyID string
 	err := database.DB.QueryRow(`
 		UPDATE public.shop_locations 
@@ -169,12 +149,10 @@ func AdminVerifyHostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If deleting, cascade the soft delete to the parent company
 	if newStatus == "deleted" && companyID != "" {
 		database.DB.Exec("UPDATE public.partner_companies SET status = 'deleted' WHERE id = $1", companyID)
 	}
 
-	// Trigger Email Notification (if applicable)
 	apiKey := os.Getenv("RESEND_API_KEY")
 	if apiKey != "" && managerEmail != "no-reply@krishnaadhikari.com" {
 		client := resend.NewClient(apiKey)
@@ -192,20 +170,16 @@ func AdminVerifyHostHandler(w http.ResponseWriter, r *http.Request) {
 			html = "<h2>Notice for " + shopName + "</h2><p>Your shop account has been suspended due to a violation of our terms of service.</p>"
 		case "delete":
 			subject = "Account Deleted"
-			html = "<h2>Account Closure</h2><p>Your shop <b>" + shopName + "</b> has been removed from our platform. If you believe this was an error, please re-register or contact support.</p>"
+			html = "<h2>Account Closure</h2><p>Your shop <b>" + shopName + "</b> has been removed from our platform. If you believe this was an error, please re-register.</p>"
 		}
 
 		if subject != "" {
 			_, _ = client.Emails.Send(&resend.SendEmailRequest{
-				From:    "Admin <verification@krishnaadhikari.com>",
-				To:      []string{managerEmail},
-				Subject: subject,
-				Html:    html,
+				From: "Admin <verification@krishnaadhikari.com>", To: []string{managerEmail}, Subject: subject, Html: html,
 			})
 		}
 	}
 
-	// Log to System Audit Trail
 	logDetails := map[string]string{"shop_id": req.ShopID, "action": req.Action}
 	detailsJSON, _ := json.Marshal(logDetails)
 	database.DB.Exec("INSERT INTO public.system_logs (user_id, action_type, details) VALUES ($1, $2, $3)", managerID, "SHOP_LIFECYCLE_EVENT", string(detailsJSON))
@@ -214,17 +188,16 @@ func AdminVerifyHostHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
-// IN-APP COMMUNICATION CENTER
-
+// ==========================================
+// 3. IN-APP COMMUNICATION CENTER
+// ==========================================
 func AdminCommunicateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Parse multipart form (to support future file attachments up to 10MB)
-	err := r.ParseMultipartForm(10 << 20)
-	if err != nil {
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "Failed to parse form", http.StatusBadRequest)
 		return
 	}
@@ -236,49 +209,29 @@ func AdminCommunicateHandler(w http.ResponseWriter, r *http.Request) {
 	subject := r.FormValue("subject")
 	body := r.FormValue("body")
 	priority := r.FormValue("priority")
-	sendSms := r.FormValue("sendSms") // "true" or "false"
+	sendSms := r.FormValue("sendSms") 
 
-	// Format the email based on priority
 	htmlBody := fmt.Sprintf(`
 		<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
 			%s
 			<p style="white-space: pre-wrap;">%s</p>
 			<hr style="border: none; border-top: 1px solid #eaeaea; margin-top: 30px;" />
-			<p style="font-size: 12px; color: #888;">This is an official communication from Sani Admin.</p>
+			<p style="font-size: 12px; color: #888;">This is an official communication from Admin.</p>
 		</div>
 	`, map[bool]string{true: `<div style="background-color: #fee2e2; color: #991b1b; padding: 10px; border-radius: 5px; font-weight: bold; margin-bottom: 20px;">🚨 URGENT NOTICE</div>`, false: ""}[priority == "urgent" || priority == "alert"], body)
 
-	// Trigger Email via Resend
 	apiKey := os.Getenv("RESEND_API_KEY")
 	if apiKey != "" {
 		client := resend.NewClient(apiKey)
 		params := &resend.SendEmailRequest{
-			From:    "Admin <support@krishnaadhikari.com>",
-			To:      []string{toEmail},
-			Subject: subject,
-			Html:    htmlBody,
+			From: "Admin <support@krishnaadhikari.com>", To: []string{toEmail}, Subject: subject, Html: htmlBody,
 		}
-		
 		if ccEmail != "" { params.Cc = []string{ccEmail} }
 		if bccEmail != "" { params.Bcc = []string{bccEmail} }
-		
-		// Note: To attach files, you would loop through r.MultipartForm.File["attachments"] here
-		_, err := client.Emails.Send(params)
-		if err != nil {
-			fmt.Printf("Resend Error: %v\n", err)
-		}
+		_, _ = client.Emails.Send(params)
 	}
 
-	// Trigger SMS (If checked)
-	if sendSms == "true" {
-		fmt.Printf("📱 [MOCK SMS TRIGGERED] To Shop ID %s: %s\n", shopID, subject)
-		// Here you would call your Twilio client from twilio.go
-	}
-
-	// Log to System Audit Trail
-	logDetails := map[string]string{
-		"shop_id": shopID, "type": "communication", "priority": priority, "sms_sent": sendSms,
-	}
+	logDetails := map[string]string{"shop_id": shopID, "type": "communication", "priority": priority, "sms_sent": sendSms}
 	detailsJSON, _ := json.Marshal(logDetails)
 	database.DB.Exec("INSERT INTO public.system_logs (user_id, action_type, details) VALUES ($1, $2, $3)", "system", "HOST_CONTACTED", string(detailsJSON))
 
