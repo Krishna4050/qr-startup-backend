@@ -15,7 +15,6 @@ export default function PartnerOnboardingVerificationScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
   
-  // Store the local document info
   const [documentFile, setDocumentFile] = useState<{ uri: string, name: string } | null>(null);
 
   const handlePickDocument = async () => {
@@ -32,7 +31,6 @@ export default function PartnerOnboardingVerificationScreen() {
     }
   };
 
-  // Helper function to handle Supabase Base64 Uploads natively
   const uploadToSupabase = async (localUri: string, bucketPath: string, contentType: string) => {
     const base64 = await FileSystem.readAsStringAsync(localUri, { encoding: 'base64' });
     const { data, error } = await supabase_lucifer_core.storage
@@ -41,28 +39,8 @@ export default function PartnerOnboardingVerificationScreen() {
 
     if (error) throw error;
     
-    // Get the public URL
     const { data: publicUrlData } = supabase_lucifer_core.storage.from('shop_assets').getPublicUrl(bucketPath);
     return publicUrlData.publicUrl;
-  };
-
-  // This securely hits your Go Backend to handle the Resend email logic!
-  const triggerWelcomeEmail = async (userEmail: string, shopName: string) => {
-    try {
-      // Assuming your Go backend is running and exposed via env variable
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://YOUR_LOCAL_GO_IP:8080';
-      
-      await fetch(`${backendUrl}/api/host/welcome-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userEmail,
-          shopName: shopName
-        })
-      });
-    } catch (err) {
-      console.error("Failed to trigger email from backend", err);
-    }
   };
 
   const handleSubmit = async () => {
@@ -71,61 +49,57 @@ export default function PartnerOnboardingVerificationScreen() {
       return;
     }
 
-
     setLoading(true);
     try {
       const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) throw new Error("You must be logged in.");
       const timestamp = Date.now();
 
-      // UPLOAD DOCUMENT
+      // 1. UPLOAD DOCUMENT TO STORAGE BUCKET
       setLoadingText('Uploading verification...');
       const docExt = documentFile.name.split('.').pop();
       const docPath = `documents/${user.id}_${timestamp}.${docExt}`;
       const uploadedDocUrl = await uploadToSupabase(documentFile.uri, docPath, 'application/octet-stream');
 
-      // INSERT SHOP INTO DATABASE
-      setLoadingText('Saving shop details...');
-      const { data: newShopData, error: shopError } = await supabase_lucifer_core
-        .from('shop_locations')
-        .insert([{
-          owner_id: user.id,
-          shop_name: shopData.shopName,
-          street: shopData.street,
-          city: shopData.city,
-          contact_phone: shopData.phone,
-          contact_email: shopData.finalContactEmail,
-          shop_types: shopData.shopTypes,
-          amenities: shopData.amenities,
-          verification_doc_url: uploadedDocUrl,
-          verification_status: 'pending',
-          is_active: false 
-        }])
-        .select('id')
-        .single();
-
-      if (shopError) throw shopError;
-      const newShopId = newShopData.id;
-
-      // UPLOAD PHOTOS & INSERT INTO shop_photos TABLE
+      // 2. UPLOAD PHOTOS TO STORAGE BUCKET
       setLoadingText('Uploading photos...');
       const localUris = shopData.localPhotoUris || [];
+      const finalPhotoUrls: string[] = [];
       
       for (let i = 0; i < localUris.length; i++) {
-        const photoPath = `photos/${newShopId}_${timestamp}_${i}.jpg`;
+        const photoPath = `photos/${user.id}_${timestamp}_${i}.jpg`;
         const uploadedPhotoUrl = await uploadToSupabase(localUris[i], photoPath, 'image/jpeg');
-        
-        await supabase_lucifer_core.from('shop_photos').insert([{
-          location_id: newShopId,
-          photo_url: uploadedPhotoUrl
-        }]);
+        finalPhotoUrls.push(uploadedPhotoUrl);
       }
-      await triggerWelcomeEmail(shopData.finalContactEmail, shopData.shopName);
 
-      Alert.alert("Success!", "Your shop is securely saved and under review.");
-      navigation.reset({ index: 0, routes: [{ name: 'HostDashboard' }] });
+      // 3. SEND ALL DATA TO THE GO BACKEND FOR SECURE DB INSERTION
+      setLoadingText('Finalizing registration...');
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://YOUR_LOCAL_GO_IP:8080';
       
-      // DONE! REDIRECT TO DASHBOARD
+      const payload = {
+        ownerId: user.id,
+        shopName: shopData.shopName,
+        street: shopData.street,
+        city: shopData.city,
+        phone: shopData.phone,
+        email: shopData.finalContactEmail,
+        shopTypes: shopData.shopTypes || [],
+        amenities: shopData.amenities || [],
+        verificationDocUrl: uploadedDocUrl,
+        photoUrls: finalPhotoUrls
+      };
+
+      const response = await fetch(`${backendUrl}/api/host/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error("Backend failed to register the shop. Check server logs.");
+      }
+
+      // SUCCESS!
       Alert.alert("Success!", "Your shop is securely saved and under review.");
       navigation.reset({ index: 0, routes: [{ name: 'HostDashboard' }] });
 
@@ -214,23 +188,19 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 24, paddingTop: Platform.OS === 'android' ? 24 : 10, paddingBottom: 10 },
   backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
   scrollContent: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 120 },
-  
   iconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F5F3FF', justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
   mainTitle: { fontSize: 32, fontWeight: '800', color: '#0A192F', letterSpacing: -0.5, marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#717171', lineHeight: 22, marginBottom: 32 },
-
   uploadBox: { backgroundColor: '#FAFAFC', borderWidth: 2, borderColor: '#E2E8F0', borderStyle: 'dashed', borderRadius: 16, padding: 32, alignItems: 'center', justifyContent: 'center' },
   uploadBoxSuccess: { borderColor: '#10B981', backgroundColor: '#ECFDF5', borderStyle: 'solid' },
   uploadText: { fontSize: 16, fontWeight: '600', color: '#0A192F', marginBottom: 4 },
   uploadTextSuccess: { fontSize: 16, fontWeight: '600', color: '#10B981', marginBottom: 4, paddingHorizontal: 20, textAlign: 'center' },
   uploadSubtext: { fontSize: 13, color: '#8892B0' },
-
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E5E7EB' },
   progressBarBg: { height: 4, backgroundColor: '#F3F4F6', width: '100%' },
   progressBarFill: { height: 4, backgroundColor: '#10B981', width: '100%' }, 
   bottomBarContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 16, paddingBottom: Platform.OS === 'ios' ? 34 : 24 },
   backText: { fontSize: 16, fontWeight: '600', color: '#0A192F', textDecorationLine: 'underline' },
-  
   primaryButton: { backgroundColor: '#FF715B', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12, minWidth: 120, alignItems: 'center' }, 
   primaryButtonDisabled: { backgroundColor: '#D1D5DB' },
   primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
