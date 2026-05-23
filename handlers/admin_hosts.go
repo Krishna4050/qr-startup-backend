@@ -213,3 +213,75 @@ func AdminVerifyHostHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
+
+// IN-APP COMMUNICATION CENTER
+
+func AdminCommunicateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse multipart form (to support future file attachments up to 10MB)
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	shopID := r.FormValue("shopId")
+	toEmail := r.FormValue("to")
+	ccEmail := r.FormValue("cc")
+	bccEmail := r.FormValue("bcc")
+	subject := r.FormValue("subject")
+	body := r.FormValue("body")
+	priority := r.FormValue("priority")
+	sendSms := r.FormValue("sendSms") // "true" or "false"
+
+	// Format the email based on priority
+	htmlBody := fmt.Sprintf(`
+		<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+			%s
+			<p style="white-space: pre-wrap;">%s</p>
+			<hr style="border: none; border-top: 1px solid #eaeaea; margin-top: 30px;" />
+			<p style="font-size: 12px; color: #888;">This is an official communication from Sani Admin.</p>
+		</div>
+	`, map[bool]string{true: `<div style="background-color: #fee2e2; color: #991b1b; padding: 10px; border-radius: 5px; font-weight: bold; margin-bottom: 20px;">🚨 URGENT NOTICE</div>`, false: ""}[priority == "urgent" || priority == "alert"], body)
+
+	// Trigger Email via Resend
+	apiKey := os.Getenv("RESEND_API_KEY")
+	if apiKey != "" {
+		client := resend.NewClient(apiKey)
+		params := &resend.SendEmailRequest{
+			From:    "Admin <support@krishnaadhikari.com>",
+			To:      []string{toEmail},
+			Subject: subject,
+			Html:    htmlBody,
+		}
+		
+		if ccEmail != "" { params.Cc = []string{ccEmail} }
+		if bccEmail != "" { params.Bcc = []string{bccEmail} }
+		
+		// Note: To attach files, you would loop through r.MultipartForm.File["attachments"] here
+		_, err := client.Emails.Send(params)
+		if err != nil {
+			fmt.Printf("Resend Error: %v\n", err)
+		}
+	}
+
+	// Trigger SMS (If checked)
+	if sendSms == "true" {
+		fmt.Printf("📱 [MOCK SMS TRIGGERED] To Shop ID %s: %s\n", shopID, subject)
+		// Here you would call your Twilio client from twilio.go
+	}
+
+	// Log to System Audit Trail
+	logDetails := map[string]string{
+		"shop_id": shopID, "type": "communication", "priority": priority, "sms_sent": sendSms,
+	}
+	detailsJSON, _ := json.Marshal(logDetails)
+	database.DB.Exec("INSERT INTO public.system_logs (user_id, action_type, details) VALUES ($1, $2, $3)", "system", "HOST_CONTACTED", string(detailsJSON))
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}

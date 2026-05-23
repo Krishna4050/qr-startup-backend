@@ -95,6 +95,7 @@ func main(){
 	mux.HandleFunc("GET /api/admin/hosts", handlers.AdminGetHostsHandler)
 	mux.HandleFunc("POST /api/admin/hosts/verify", handlers.AdminVerifyHostHandler)
 	mux.HandleFunc("POST /api/host/register", handlers.RegisterHostHandler)
+	mux.HandleFunc("POST /api/admin/communicate", handlers.AdminCommunicateHandler)
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost:%s\n", port)
