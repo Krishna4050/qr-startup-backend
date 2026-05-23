@@ -74,7 +74,7 @@ export default function PartnerOnboardingVerificationScreen() {
 
       // 3. SEND ALL DATA TO THE GO BACKEND FOR SECURE DB INSERTION
       setLoadingText('Finalizing registration...');
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://YOUR_LOCAL_GO_IP:8080';
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8080';
       
       const payload = {
         ownerId: user.id,
