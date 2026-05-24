@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, LayoutGrid, Plus, User, ShoppingBag } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import ServicesScreen from '../screens/ServicesScreen';
 import { supabase_lucifer_core } from '../utils/supabase';
+import { useAuth } from '../context/AuthContext';
 import VehicleRepairDirectory from '../screens/VehicleRepairDirectory';
 
 // Import our screens
@@ -27,7 +28,10 @@ const CustomTabBarButton = ({ children }: any) => {
     
     try {
       const { data: { user } } = await supabase_lucifer_core.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        navigation.navigate('Login');
+        return;
+      }
 
       // Check the database for mandatory fields
       const { data: profile } = await supabase_lucifer_core
@@ -77,6 +81,9 @@ const CustomTabBarButton = ({ children }: any) => {
 };
 
 export default function MainTabs() {
+  const { user } = useAuth();
+  const navigation = useNavigation<any>();
+  
   return (
     <Tab.Navigator
       screenOptions={{
@@ -85,6 +92,7 @@ export default function MainTabs() {
         tabBarActiveTintColor: '#0F2D4D',
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarStyle: {
+          display: Platform.OS === 'web' ? 'none' : 'flex',
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#F3F4F6',
@@ -119,7 +127,18 @@ export default function MainTabs() {
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen} 
-        options={{ tabBarIcon: ({ color }) => <User color={color} size={24} /> }} 
+        listeners={{
+          tabPress: (e) => {
+            if (!user) {
+              e.preventDefault();
+              navigation.navigate('Login');
+            }
+          },
+        }}
+        options={{ 
+          title: user ? "Profile" : "Sign In",
+          tabBarIcon: ({ color }) => <User color={color} size={24} /> 
+        }} 
       />
       <Tab.Screen 
         name="Store" 

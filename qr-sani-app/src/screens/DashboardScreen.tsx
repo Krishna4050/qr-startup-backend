@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions, Platform, ActivityIndicator, Alert, Image } from 'react-native';
-import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle, ShieldAlert } from 'lucide-react-native';
+import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle, ShieldAlert, LayoutGrid, Globe, Wrench, Bike, Car, Bed, BusFront, Train, Plane } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
+import WebHeader from '../components/WebHeader';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
@@ -26,6 +27,7 @@ export default function DashboardScreen() {
   const [networkMembers, setNetworkMembers] = useState(0);
 
   const [sharedWithMe, setSharedWithMe] = useState<any[]>([]);
+  const [isGuest, setIsGuest] = useState(false);
 
   const totalTags = tags.length;
   const foundItems = tags.filter(t => t.status === 'found' && !t.is_shared).length;
@@ -44,14 +46,14 @@ export default function DashboardScreen() {
     }
 
     const notifSubscription = supabase_lucifer_core
-      .channel('public:notifications')
+      .channel(`public:notifications-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
         fetchDashboardData(); 
       })
       .subscribe();
 
     const networkSubscription = supabase_lucifer_core
-      .channel('public:trusted_network')
+      .channel(`public:trusted_network-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trusted_network' }, () => {
         fetchDashboardData(); 
       })
@@ -66,7 +68,12 @@ export default function DashboardScreen() {
   const fetchDashboardData = async () => {
     try {
       const { data: { user } } = await supabase_lucifer_core.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setIsGuest(true);
+        setLoading(false);
+        return;
+      }
+      setIsGuest(false);
 
       const { data: profileData } = await supabase_lucifer_core
         .from('profiles')
@@ -224,49 +231,153 @@ export default function DashboardScreen() {
 
   if (loading) return <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}><ActivityIndicator size="large" color="#0F2D4D" /></View>;
 
-  const displayName = profile?.display_name || profile?.username || 'User';
-
-  return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.headerGradient}>
-        <SafeAreaView>
-          <View style={styles.headerContent}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.greetingText}>{getGreeting()}</Text>
-              <Text style={styles.userNameText}>{displayName}</Text>
-            </View>
-            
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
-                <Bell color="#F2F3F4" size={26} />
-                {unreadNotifications > 0 && (
-                  <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationBadgeText}>
-                      {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-              
-              {/* --- UPDATE HERE: AVATAR UI --- */}
-              <TouchableOpacity style={styles.avatarTouchableOpacity} onPress={handleAvatarPress} disabled={uploading}>
-                <View style={styles.avatarContainer}>
-                  {uploading ? (
-                    <ActivityIndicator color="#0F2D4D" />
-                  ) : profile?.avatar_url ? (
-                    <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-                  ) : (
-                    <User color="#0F2D4D" size={24} />
-                  )}
+  if (isGuest) {
+    return (
+      <View style={[styles.container]}>
+        <WebHeader profile={profile} isGuest={true} />
+        {Platform.OS !== 'web' && (
+          <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.headerGradient}>
+            <SafeAreaView>
+              <View style={styles.headerContent}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.greetingText}>Welcome to</Text>
+                  <Text style={styles.userNameText}>Smart QR Tags</Text>
                 </View>
-                {/* Badge is now outside the visible container */}
-                <View style={styles.avatarBadge}><Text style={styles.avatarBadgeText}>+</Text></View>
-              </TouchableOpacity>
-              
+                <TouchableOpacity 
+                  style={{ backgroundColor: '#10B981', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}
+                  onPress={() => navigation.navigate('Login')}
+                >
+                  <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Sign In</Text>
+                </TouchableOpacity>
+              </View>
+            </SafeAreaView>
+          </LinearGradient>
+        )}
+        
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[{ padding: 24, gap: 32 }, styles.webMaxWidth]}>
+          
+          {/* Hero Section */}
+          <View style={[styles.heroCard, Platform.OS === 'web' && { padding: 48 }]}>
+            <ShieldCheck color="#2563EB" size={Platform.OS === 'web' ? 64 : 48} style={{ marginBottom: 16 }} />
+            <Text style={[styles.heroTitle, Platform.OS === 'web' && { fontSize: 36 }]}>Protect What Matters</Text>
+            <Text style={[styles.heroSubtitle, Platform.OS === 'web' && { fontSize: 18, maxWidth: 600 }]}>
+              Never lose your valuables again. Our smart QR tags help finders contact you instantly and securely without revealing your personal phone number.
+            </Text>
+            <TouchableOpacity 
+              style={{ backgroundColor: '#0F2D4D', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 12, alignItems: 'center', alignSelf: 'flex-start', marginTop: 16 }}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>Create Your Account</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Why Smart Tags? */}
+          <View>
+            <Text style={styles.sectionTitle}>Why Smart Tags?</Text>
+            <View style={Platform.OS === 'web' ? [styles.webGridContainer, { paddingHorizontal: 0, marginTop: 16 }] : { gap: 16, marginTop: 16 }}>
+              {[
+                { title: "Instant Contact", desc: "Finders can scan and reach you without an app.", icon: <User color="#2563EB" size={32} /> },
+                { title: "Privacy First", desc: "Your phone number stays completely hidden.", icon: <ShieldCheck color="#10B981" size={32} /> },
+                { title: "No Batteries", desc: "Scan anywhere, anytime. Never needs charging.", icon: <BatteryMedium color="#F59E0B" size={32} /> },
+                { title: "Global Reach", desc: "Works seamlessly anywhere in the world.", icon: <Globe color="#8B5CF6" size={32} /> },
+              ].map((item, idx) => (
+                <View key={idx} style={[styles.whyCard, Platform.OS === 'web' && { width: '23%', minWidth: 200 }]}>
+                  <View style={{ marginBottom: 12 }}>{item.icon}</View>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 8 }}>{item.title}</Text>
+                  <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 20 }}>{item.desc}</Text>
+                </View>
+              ))}
             </View>
           </View>
-        </SafeAreaView>
-      </LinearGradient>
+
+          {/* Available Services */}
+          <View>
+            <Text style={styles.sectionTitle}>Available Services</Text>
+            <View style={Platform.OS === 'web' ? [styles.webGridContainer, { paddingHorizontal: 0, marginTop: 16 }] : { gap: 16, marginTop: 16 }}>
+               {[
+                { title: "Vehicle Repair", desc: "Trusted mechanics near you", bg: '#EEF2FF', color: '#4338CA', icon: <Wrench color="#4338CA" size={24} />, route: 'VehicleRepairDirectory' },
+                { title: "Bike Repair", desc: "Fix your bike quickly", bg: '#ECFDF5', color: '#047857', icon: <Bike color="#047857" size={24} /> },
+                { title: "Pay Parking", desc: "Find and pay for parking", bg: '#FFFBEB', color: '#B45309', icon: <Car color="#B45309" size={24} /> },
+                { title: "Hotels & Stays", desc: "Find a place to stay", bg: '#F5F3FF', color: '#6D28D9', icon: <Bed color="#6D28D9" size={24} /> },
+                { title: "City Transit", desc: "Get around the city", bg: '#FDF2F8', color: '#BE185D', icon: <BusFront color="#BE185D" size={24} /> },
+                { title: "Train Tickets", desc: "Travel across cities", bg: '#ECFEFF', color: '#0369A1', icon: <Train color="#0369A1" size={24} /> },
+                { title: "Flights", desc: "Book your next flight", bg: '#EEF2FF', color: '#4338CA', icon: <Plane color="#4338CA" size={24} /> },
+              ].map((item, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={[styles.serviceCard, { backgroundColor: item.bg }, Platform.OS === 'web' && { width: '23%', minWidth: 200 }]}
+                  onPress={() => navigation.navigate(item.route || 'Services')}
+                >
+                  <View style={{ marginBottom: 8 }}>{item.icon}</View>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: item.color, marginBottom: 4 }}>{item.title}</Text>
+                  <Text style={{ fontSize: 13, color: '#4B5563' }}>{item.desc}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+        </ScrollView>
+      </View>
+    );
+  }
+
+  const displayName = profile?.display_name || profile?.username || 'User';
+
+  const GridOrScroll = ({ children }: any) => {
+    if (Platform.OS === 'web') {
+      return <View style={styles.webGridContainer}>{children}</View>;
+    }
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+        {children}
+      </ScrollView>
+    );
+  };
+
+  return (
+    <View style={[styles.container, styles.webMaxWidth]}>
+      <WebHeader profile={profile} isGuest={false} />
+      {Platform.OS !== 'web' && (
+        <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.headerGradient}>
+          <SafeAreaView>
+            <View style={styles.headerContent}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.greetingText}>{getGreeting()}</Text>
+                <Text style={styles.userNameText}>{displayName}</Text>
+              </View>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+                  <Bell color="#F2F3F4" size={26} />
+                  {unreadNotifications > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.notificationBadgeText}>
+                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                
+                {/* --- UPDATED HERE: AVATAR UI --- */}
+                <TouchableOpacity style={styles.avatarTouchableOpacity} onPress={handleAvatarPress} disabled={uploading}>
+                  <View style={styles.avatarContainer}>
+                    {uploading ? (
+                      <ActivityIndicator color="#0F2D4D" />
+                    ) : profile?.avatar_url ? (
+                      <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                    ) : (
+                      <User color="#0F2D4D" size={24} />
+                    )}
+                  </View>
+                  {/* Badge is now outside the visible container */}
+                  <View style={styles.avatarBadge}><Text style={styles.avatarBadgeText}>+</Text></View>
+                </TouchableOpacity>
+                
+              </View>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+      )}
 
       <RefreshableScroll onRefreshAction={fetchDashboardData} style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         
@@ -278,7 +389,7 @@ export default function DashboardScreen() {
           <TouchableOpacity><Text style={styles.seeAllText}>SEE ALL</Text></TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+        <GridOrScroll>
           {tags.length === 0 ? (
             <View style={styles.emptyCard}><Text style={styles.emptyCardText}>No tags added yet. Tap + to add!</Text></View>
           ) : (
@@ -300,7 +411,7 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             ))
           )}
-        </ScrollView>
+        </GridOrScroll>
 
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -309,7 +420,7 @@ export default function DashboardScreen() {
           <TouchableOpacity><Text style={styles.seeAllText}>SEE ALL</Text></TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+        <GridOrScroll>
           {alerts.length === 0 ? (
              <View style={styles.emptyCard}><Text style={styles.emptyCardText}>No new alerts.</Text></View>
           ) : (
@@ -324,7 +435,7 @@ export default function DashboardScreen() {
               </View>
             ))
           )}
-        </ScrollView>
+        </GridOrScroll>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Friends & Family</Text>
@@ -349,7 +460,7 @@ export default function DashboardScreen() {
           <Text style={styles.sectionTitle}>Overview</Text>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.horizontalScroll, { paddingBottom: 40 }]} snapToInterval={width * 0.75 + 16} decelerationRate="fast">
+        <GridOrScroll>
           <View style={[styles.overviewCard, { backgroundColor: '#6366F1' }]}>
             <Text style={styles.overviewCardTitle}>Total Tags</Text>
             <Text style={styles.overviewCardNumber}>{totalTags}</Text>
@@ -365,7 +476,7 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.overviewCardNumber}>{pausedTagsCount}</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </GridOrScroll>
 
       </RefreshableScroll>
     </View>
@@ -374,6 +485,8 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
+  webMaxWidth: { maxWidth: Platform.OS === 'web' ? 1280 : '100%', alignSelf: 'center', width: '100%' },
+  webGridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 24, paddingHorizontal: 24, paddingBottom: 16 },
   headerGradient: { paddingBottom: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
   headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: Platform.OS === 'android' ? 40 : 10 },
   greetingText: { fontSize: 14, color: '#DED1C6', marginBottom: 4 },
@@ -423,15 +536,15 @@ const styles = StyleSheet.create({
   badgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
   seeAllText: { fontSize: 12, fontWeight: 'bold', color: '#3B82F6' },
   horizontalScroll: { paddingHorizontal: 24, paddingBottom: 16, gap: 16 },
-  emptyCard: { width: width * 0.85, padding: 24, backgroundColor: '#FFFFFF', borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderStyle: 'dashed' },
+  emptyCard: { width: Platform.OS === 'web' ? '100%' : width * 0.85, padding: 24, backgroundColor: '#FFFFFF', borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderStyle: 'dashed' },
   emptyCardText: { color: '#6B7280', fontSize: 14, textAlign: 'center' },
-  tagCard: { width: width * 0.65, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  tagCard: { width: Platform.OS === 'web' ? 280 : width * 0.65, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   tagCategory: { fontSize: 10, fontWeight: 'bold', color: '#6B7280', letterSpacing: 1, marginBottom: 8 },
   tagTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 12, height: 40 },
   tagStatus: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   tagStatusText: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
   tagIconWrapper: { width: 36, height: 36, backgroundColor: '#F3F4F6', borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'absolute', bottom: 16, right: 16 },
-  alertCard: { width: width * 0.75, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, borderLeftWidth: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  alertCard: { width: Platform.OS === 'web' ? 320 : width * 0.75, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, borderLeftWidth: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   alertCategory: { fontSize: 10, fontWeight: 'bold', color: '#6B7280', letterSpacing: 1, marginBottom: 8 },
   alertTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
   alertDetail: { fontSize: 12, color: '#6B7280' },
@@ -441,9 +554,16 @@ const styles = StyleSheet.create({
   contactCardNumber: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginTop: 2 },
   addContactBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
   addContactText: { color: '#3B82F6', fontWeight: 'bold', marginLeft: 6, fontSize: 14 },
-  overviewCard: { width: width * 0.65, height: width * 0.5, borderRadius: 24, padding: 24, justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  overviewCard: { width: Platform.OS === 'web' ? 280 : width * 0.65, height: Platform.OS === 'web' ? 160 : width * 0.5, borderRadius: 24, padding: 24, justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
   overviewCardTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', opacity: 0.9 },
   overviewCardNumber: { fontSize: 56, fontWeight: '900', color: '#FFFFFF' },
   lostModeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 12, alignSelf: 'flex-start', zIndex: 10 },
   lostModeText: { fontSize: 13, fontWeight: 'bold', marginLeft: 6 },
+  
+  // Guest Landing Page Styles
+  heroCard: { backgroundColor: '#FFF', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  heroTitle: { fontSize: 24, fontWeight: 'bold', color: '#111827', marginBottom: 8 },
+  heroSubtitle: { fontSize: 16, color: '#4B5563', lineHeight: 24, marginBottom: 24 },
+  whyCard: { backgroundColor: '#FFFFFF', borderRadius: 8, padding: 16, borderWidth: 1, borderColor: '#E5E7EB' },
+  serviceCard: { borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
 });

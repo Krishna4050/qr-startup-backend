@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
 import { Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ScrollView } from 'react-native';
-import { Mail, Lock, AtSign, Eye, EyeOff, AlertCircle } from 'lucide-react-native';
+import { Mail, Lock, AtSign, Eye, EyeOff, AlertCircle, ShieldCheck, ChevronLeft } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
 import { authStyles as styles } from '../styles/authStyles';
 import { registerForPushNotificationsAsync } from '../src/utils/notifications';
@@ -176,22 +176,14 @@ export default function AuthForm() {
     setLoading(false);
   };
 
-  return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, width: '100%' }}>
-        
-        {/* --- THE PREMIUM BACKGROUND GRADIENT --- */}
-        <LinearGradient 
-          colors={['#F2F3F4', '#174871']} 
-          start={{ x: 0, y: 0 }} 
-          end={{ x: 1, y: 1 }} 
-          style={{ flex: 1 }}
-        >
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
-            <View style={styles.formContainer}>
-              <Text style={styles.formTitle}>{isLogin ? 'Welcome back' : 'Create an account'}</Text>
+  const renderForm = () => (
+    <View style={[styles.formContainer, Platform.OS === 'web' && { backgroundColor: 'transparent', shadowOpacity: 0, padding: 0 }]}>
+      <Text style={[styles.formTitle, Platform.OS === 'web' && { color: '#0F2D4D', fontSize: 32 }]}>{isLogin ? 'Welcome back' : 'Create an account'}</Text>
+      {Platform.OS === 'web' && (
+        <Text style={{ color: '#4B5563', marginBottom: 32, fontSize: 16 }}>{isLogin ? 'Please enter your details to sign in.' : 'Sign up to get started.'}</Text>
+      )}
 
-              {/* TOP LEVEL AUTH ERROR */}
+      {/* TOP LEVEL AUTH ERROR */}
               {errors.auth ? (
                 <View style={{ backgroundColor: 'rgba(220, 38, 38, 0.1)', padding: 12, borderRadius: 8, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#DC2626' }}>
                   <AlertCircle color="#DC2626" size={16} style={{ marginRight: 8 }} />
@@ -265,17 +257,59 @@ export default function AuthForm() {
                 {loading ? <ActivityIndicator color="#F2F3F4" /> : <Text style={styles.mainButtonText}>{isLogin ? 'Sign In' : 'Sign Up'}</Text>}
               </TouchableOpacity>
 
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>{isLogin ? "Don't have an account? " : "Already have an account? "}</Text>
-                <TouchableOpacity onPress={() => { setIsLogin(!isLogin); setErrors({ username: '', email: '', password: '', confirm: '', auth: '' }); }}>
-                  <Text style={styles.toggleText}>{isLogin ? 'Create Account' : 'Login'}</Text>
+        <View style={styles.footer}>
+          <Text style={[styles.footerText, Platform.OS === 'web' && { color: '#4B5563' }]}>{isLogin ? "Don't have an account? " : "Already have an account? "}</Text>
+          <TouchableOpacity onPress={() => { setIsLogin(!isLogin); setErrors({ username: '', email: '', password: '', confirm: '', auth: '' }); }}>
+            <Text style={[styles.toggleText, Platform.OS === 'web' && { color: '#E11D48' }]}>{isLogin ? 'Create Account' : 'Login'}</Text>
+          </TouchableOpacity>
+        </View>
+        
+      </View>
+  );
+
+  const FormContent = (
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, width: '100%' }}>
+        {Platform.OS === 'web' ? (
+          <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#FFFFFF' }}>
+             {/* Left Pane Branding */}
+             <View style={{ flex: 1, backgroundColor: '#0F2D4D', justifyContent: 'center', alignItems: 'center', padding: 40, position: 'relative' }}>
+                <TouchableOpacity style={{ position: 'absolute', top: 40, left: 40, flexDirection: 'row', alignItems: 'center' }} onPress={() => navigation.replace('Dashboard')}>
+                  <ChevronLeft color="#FFFFFF" size={24} />
+                  <Text style={{ color: '#FFFFFF', marginLeft: 8, fontSize: 16, fontWeight: 'bold' }}>Back to Home</Text>
                 </TouchableOpacity>
-              </View>
-              
-            </View>
-          </ScrollView>
-        </LinearGradient>
+                <ShieldCheck color="#FFFFFF" size={80} style={{ marginBottom: 24 }} />
+                <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'center', marginBottom: 16 }}>Smart QR Tags</Text>
+                <Text style={{ fontSize: 20, color: '#DED1C6', textAlign: 'center', maxWidth: 450, lineHeight: 32 }}>
+                  Protect your valuables with privacy-first smart tags. Finders contact you instantly, and your personal phone number stays completely hidden.
+                </Text>
+             </View>
+             {/* Right Pane Form */}
+             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+               <View style={{ width: '100%', maxWidth: 480, padding: 40 }}>
+                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
+                   {renderForm()}
+                 </ScrollView>
+               </View>
+             </View>
+          </View>
+        ) : (
+          <LinearGradient 
+            colors={['#F2F3F4', '#174871']} 
+            start={{ x: 0, y: 0 }} 
+            end={{ x: 1, y: 1 }} 
+            style={{ flex: 1 }}
+          >
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
+              {renderForm()}
+            </ScrollView>
+          </LinearGradient>
+        )}
       </KeyboardAvoidingView>
+  );
+
+  return Platform.OS === 'web' ? FormContent : (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      {FormContent}
     </TouchableWithoutFeedback>
   );
 }

@@ -9,7 +9,7 @@ export default function LoginScreen({ navigation }: any) {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <GradientHeader />
+      {Platform.OS !== 'web' && <GradientHeader />}
       {/* We will pass the navigation tool into the form next time so the button works */}
       <AuthForm />
     </KeyboardAvoidingView>
