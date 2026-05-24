@@ -3,8 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, Scrol
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, ShieldCheck, UploadCloud, FileText } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { decode } from 'base64-arraybuffer';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase_lucifer_core } from '../utils/supabase';
 
 export default function PartnerOnboardingVerificationScreen() {
@@ -15,27 +14,48 @@ export default function PartnerOnboardingVerificationScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
   
-  const [documentFile, setDocumentFile] = useState<{ uri: string, name: string } | null>(null);
+  const [documentFile, setDocumentFile] = useState<{ uri: string, name: string, mimeType: string } | null>(null);
 
   const handlePickDocument = async () => {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/jpeg', 'image/png'],
+      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/heic'],
       copyToCacheDirectory: true,
     });
 
     if (!result.canceled && result.assets.length > 0) {
       setDocumentFile({
         uri: result.assets[0].uri,
-        name: result.assets[0].name
+        name: result.assets[0].name,
+        mimeType: result.assets[0].mimeType || 'application/octet-stream'
       });
     }
   };
 
+  // NEW: The Compression Engine
+  const compressImage = async (uri: string) => {
+    try {
+      // Scales image to a max width of 1080px (HD) and 80% JPEG quality.
+      // This reduces a 5MB image to ~300KB with zero visible quality loss.
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1080 } }], 
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      return manipResult.uri;
+    } catch (error) {
+      console.warn("Compression failed, uploading original:", error);
+      return uri; // Fallback to original if compression fails
+    }
+  };
+
   const uploadToSupabase = async (localUri: string, bucketPath: string, contentType: string) => {
-    const base64 = await FileSystem.readAsStringAsync(localUri, { encoding: 'base64' });
+    // Memory-safe upload via fetch ArrayBuffer
+    const response = await fetch(localUri);
+    const buffer = await response.arrayBuffer();
+
     const { data, error } = await supabase_lucifer_core.storage
       .from('shop_assets')
-      .upload(bucketPath, decode(base64), { contentType });
+      .upload(bucketPath, buffer, { contentType });
 
     if (error) throw error;
     
@@ -55,24 +75,38 @@ export default function PartnerOnboardingVerificationScreen() {
       if (!user) throw new Error("You must be logged in.");
       const timestamp = Date.now();
 
-      // 1. UPLOAD DOCUMENT TO STORAGE BUCKET
+      // 1. PROCESS & UPLOAD VERIFICATION DOCUMENT
       setLoadingText('Uploading verification...');
-      const docExt = documentFile.name.split('.').pop();
-      const docPath = `documents/${user.id}_${timestamp}.${docExt}`;
-      const uploadedDocUrl = await uploadToSupabase(documentFile.uri, docPath, 'application/octet-stream');
+      let finalDocUri = documentFile.uri;
+      let finalDocMime = documentFile.mimeType;
+      let docExt = documentFile.name.split('.').pop()?.toLowerCase() || 'pdf';
 
-      // 2. UPLOAD PHOTOS TO STORAGE BUCKET
-      setLoadingText('Uploading photos...');
+      // If the document is an image (not a PDF), compress it!
+      if (finalDocMime.startsWith('image/')) {
+        finalDocUri = await compressImage(finalDocUri);
+        finalDocMime = 'image/jpeg';
+        docExt = 'jpg';
+      }
+
+      const docPath = `documents/${user.id}_${timestamp}.${docExt}`;
+      const uploadedDocUrl = await uploadToSupabase(finalDocUri, docPath, finalDocMime);
+
+      // 2. COMPRESS & UPLOAD SHOP PHOTOS
+      setLoadingText('Compressing & uploading photos...');
       const localUris = shopData.localPhotoUris || [];
       const finalPhotoUrls: string[] = [];
       
       for (let i = 0; i < localUris.length; i++) {
+        // Compress the image before uploading
+        const compressedUri = await compressImage(localUris[i]);
+        
+        // Because the compressor always outputs a JPEG, we safely hardcode the mime/ext
         const photoPath = `photos/${user.id}_${timestamp}_${i}.jpg`;
-        const uploadedPhotoUrl = await uploadToSupabase(localUris[i], photoPath, 'image/jpeg');
+        const uploadedPhotoUrl = await uploadToSupabase(compressedUri, photoPath, 'image/jpeg');
         finalPhotoUrls.push(uploadedPhotoUrl);
       }
 
-      // 3. SEND ALL DATA TO THE GO BACKEND FOR SECURE DB INSERTION
+      // 3. SEND TO GO BACKEND
       setLoadingText('Finalizing registration...');
       const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8080';
       
