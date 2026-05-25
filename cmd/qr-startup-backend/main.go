@@ -23,8 +23,10 @@ func enableCORS(next http.Handler) http.Handler {
 		allowedOrigins := []string{
 			"http://localhost:3000",
 			"http://localhost:3001",
+			"http://localhost:8081",
 			"https://ats.krishnaadhikari.com",
 			"https://sani.krishnaadhikari.com",
+			"https://app.krishnaadhikari.com",
 		}
 
 		//  If the website is on the list, let them through!

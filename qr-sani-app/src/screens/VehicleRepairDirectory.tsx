@@ -137,7 +137,12 @@ export default function VehicleRepairDirectory() {
   const fetchShops = async () => {
     try {
       setLoading(true);
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      
+      if (!backendUrl) {
+        throw new Error('EXPO_PUBLIC_BACKEND_URL is not set in your .env file');
+      }
+
       const response = await fetch(`${backendUrl}/api/public/shops`);
       
       if (!response.ok) {
