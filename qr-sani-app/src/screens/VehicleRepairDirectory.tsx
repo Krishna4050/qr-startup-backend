@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Dim
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { ArrowLeft, Star, Search, Heart, Clock, Settings } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import { useAuth } from '../context/AuthContext';
 import RefreshableScroll from '../components/RefreshableScroll';
+import WebHeader from '../components/WebHeader';
 
 const { width } = Dimensions.get('window');
 const CARD_MARGIN = 24;
@@ -59,10 +61,6 @@ const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
         </View>
         <Text style={styles.subtitleText} numberOfLines={1}>{item.shop_name}</Text>
         <Text style={styles.subtitleText} numberOfLines={1}>{item.street}</Text>
-        <View style={styles.priceContainer}>
-          <Text style={styles.priceBold}>€50</Text>
-          <Text style={styles.priceRegular}> per repair</Text>
-        </View>
       </View>
     </TouchableOpacity>
   );
@@ -76,27 +74,53 @@ export default function VehicleRepairDirectory() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
   
+  // Reactively track auth state instead of one-time fetch
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const [isGuest, setIsGuest] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  
   // STATE TO TRACK IF THEY ARE A HOST
   const [hostStatus, setHostStatus] = useState<'none' | 'pending' | 'active'>('none');
 
   const filters = ['All', 'Helsinki', 'Espoo', 'Vantaa', 'Tampere'];
 
+  // Reactive effect for auth state
+  useEffect(() => {
+    if (!isAuthLoading) {
+      if (user) {
+        setIsGuest(false);
+        checkUserHostStatus(user.id);
+      } else {
+        setIsGuest(true);
+        setHostStatus('none');
+        setUserProfile(null);
+      }
+    }
+  }, [user, isAuthLoading]);
+
+  // Initial fetch for shops
   useEffect(() => {
     if (isFocused) {
       fetchShops();
-      checkUserHostStatus();
     }
   }, [isFocused]);
 
-  const checkUserHostStatus = async () => {
+  const checkUserHostStatus = async (userId: string) => {
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
-      if (!user) return;
+      const { data: profileData, error: profileError } = await supabase_lucifer_core
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (profileData) {
+        setUserProfile(profileData);
+      }
 
       const { data, error } = await supabase_lucifer_core
         .from('shop_locations')
         .select('verification_status')
-        .eq('owner_id', user.id);
+        .eq('owner_id', userId);
 
       if (data && data.length > 0) {
         const isPending = data.some(shop => shop.verification_status === 'pending');
@@ -106,36 +130,40 @@ export default function VehicleRepairDirectory() {
       }
     } catch (err) {
       console.error("Error checking host status:", err);
+      setHostStatus('none');
     }
   };
 
   const fetchShops = async () => {
     try {
       setLoading(true);
-      const { data: shopsData, error } = await supabase_lucifer_core
-        .from('shop_locations')
-        .select(`*, shop_photos ( photo_url ), shop_reviews ( rating )`)
-        .eq('is_active', true);
-
-      if (error) throw error;
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/public/shops`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch shops from backend');
+      }
+      
+      const shopsData = await response.json();
 
       if (shopsData) {
         const formattedShops = shopsData.map((shop: any) => {
-          const reviews = shop.shop_reviews || [];
-          const avgRating = reviews.length > 0 
-            ? (reviews.reduce((acc: number, curr: any) => acc + curr.rating, 0) / reviews.length).toFixed(2)
-            : 'New';
+          // The backend already falls back to verification_doc_url if photos are empty.
+          // We just need to resolve them into fully qualified URLs if they aren't already.
+          const processedPhotos = (shop.photos || []).map((pUrl: string) => {
+            if (pUrl.startsWith('http')) return pUrl;
+            return supabase_lucifer_core.storage.from('shop_assets').getPublicUrl(pUrl).data.publicUrl;
+          });
 
           return {
             ...shop,
-            average_rating: avgRating,
-            photos: shop.shop_photos?.map((p: any) => p.photo_url) || []
+            photos: processedPhotos
           };
         });
         setShops(formattedShops);
       }
     } catch (err) {
-      console.error("Error fetching shops:", err);
+      console.error("Error fetching shops securely:", err);
     } finally {
       setLoading(false);
     }
@@ -147,6 +175,7 @@ export default function VehicleRepairDirectory() {
 
   return (
     <View style={styles.container}>
+      <WebHeader isGuest={isGuest} profile={userProfile} />
       
       {/* TOP ROW: Back Button & Search Bar */}
       <View style={styles.header}>
@@ -160,7 +189,15 @@ export default function VehicleRepairDirectory() {
       </View>
 
       {/* DYNAMIC HOST BANNER */}
-      {hostStatus === 'none' && (
+      {isGuest ? (
+        <TouchableOpacity style={styles.hostBanner} activeOpacity={0.8} onPress={() => navigation.navigate('Login')}>
+          <View style={styles.hostBannerTextContainer}>
+            <Text style={styles.hostBannerTitle}>Own a repair shop?</Text>
+            <Text style={styles.hostBannerSub}>Sign in or create an account to host your shop.</Text>
+          </View>
+          <Image source={{ uri: 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150' }} style={styles.hostBannerImage} />
+        </TouchableOpacity>
+      ) : hostStatus === 'none' && (
         <TouchableOpacity style={styles.hostBanner} activeOpacity={0.8} onPress={() => navigation.navigate('PartnerOnboardingIntro')}>
           <View style={styles.hostBannerTextContainer}>
             <Text style={styles.hostBannerTitle}>Own a repair shop?</Text>
@@ -232,7 +269,7 @@ export default function VehicleRepairDirectory() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingHorizontal: CARD_MARGIN, paddingBottom: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 60 : 16, paddingHorizontal: CARD_MARGIN, paddingBottom: 16 },
   backButton: { marginRight: 16 },
   searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 16, height: 48, borderRadius: 24, shadowColor: '#4A00E0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 5 },
   searchText: { marginLeft: 12, color: '#0A192F', fontSize: 14, fontWeight: '600' },

@@ -7,10 +7,11 @@ import {
   SafeAreaView, 
   Platform, 
   ScrollView,
-  Dimensions
+  Dimensions,
+  TextInput
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Wrench, Truck, Car, Zap, Sparkles, Settings, Bike, Wrench as Tool } from 'lucide-react-native';
+import { ArrowLeft, Wrench, Truck, Car, Zap, Sparkles, Settings, Bike, Wrench as Tool, Plus } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48 - 16) / 2; // 2 columns, accounting for padding and gap
@@ -35,6 +36,8 @@ export default function PartnerOnboardingStep2Screen() {
 
   // Store multiple selected IDs
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  // Store custom manual inputs
+  const [customTypes, setCustomTypes] = useState<string[]>([]);
 
   const toggleType = (id: string) => {
     setSelectedTypes(prev => 
@@ -44,12 +47,20 @@ export default function PartnerOnboardingStep2Screen() {
     );
   };
 
+  const addCustomType = () => setCustomTypes([...customTypes, '']);
+  const updateCustomType = (text: string, index: number) => {
+    const newTypes = [...customTypes];
+    newTypes[index] = text;
+    setCustomTypes(newTypes);
+  };
+
   const handleNext = () => {
     // Navigate to final Verification step, passing all accumulated data
+    const validCustoms = customTypes.filter(t => t.trim() !== '');
     navigation.navigate('PartnerOnboardingStep3', {
       shopData: {
         ...shopData,
-        shopTypes: selectedTypes
+        shopTypes: [...selectedTypes, ...validCustoms]
       }
     });
   };
@@ -94,6 +105,25 @@ export default function PartnerOnboardingStep2Screen() {
             })}
           </View>
 
+          {/* CUSTOM TYPES SECTION */}
+          <View style={{ marginTop: 32 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#0A192F', marginBottom: 16 }}>Other Services</Text>
+            {customTypes.map((text, index) => (
+              <TextInput
+                key={index}
+                style={styles.customInput}
+                placeholder="e.g. Vintage Car Restoration"
+                placeholderTextColor="#A0AEC0"
+                value={text}
+                onChangeText={(val) => updateCustomType(val, index)}
+              />
+            ))}
+            <TouchableOpacity style={styles.addCustomBtn} onPress={addCustomType}>
+              <Plus color="#4A00E0" size={20} style={{ marginRight: 8 }} />
+              <Text style={{ color: '#4A00E0', fontWeight: '600', fontSize: 15 }}>Add a custom service</Text>
+            </TouchableOpacity>
+          </View>
+
         </ScrollView>
 
         {/* STICKY BOTTOM PROGRESS BAR */}
@@ -110,11 +140,11 @@ export default function PartnerOnboardingStep2Screen() {
             <TouchableOpacity 
               style={[
                 styles.primaryButton, 
-                selectedTypes.length === 0 && styles.primaryButtonDisabled
+                (selectedTypes.length === 0 && customTypes.filter(t => t.trim() !== '').length === 0) && styles.primaryButtonDisabled
               ]}
               activeOpacity={0.9}
               onPress={handleNext}
-              disabled={selectedTypes.length === 0}
+              disabled={selectedTypes.length === 0 && customTypes.filter(t => t.trim() !== '').length === 0}
             >
               <Text style={styles.primaryButtonText}>Next</Text>
             </TouchableOpacity>
@@ -144,6 +174,9 @@ const styles = StyleSheet.create({
   
   typeLabel: { fontSize: 15, fontWeight: '600', color: '#0A192F' },
   typeLabelSelected: { color: '#0A192F' },
+
+  customInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, paddingHorizontal: 16, height: 50, fontSize: 15, color: '#0A192F', marginBottom: 12 },
+  addCustomBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
 
   // Bottom Bar Styles
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E5E7EB' },
