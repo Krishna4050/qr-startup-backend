@@ -11,11 +11,14 @@ import (
 
 type PublicShop struct {
 	ID            string   `json:"id"`
+	OwnerID       string   `json:"owner_id"`
 	ShopName      string   `json:"shop_name"`
 	Street        string   `json:"street"`
 	City          string   `json:"city"`
 	AverageRating string   `json:"average_rating"`
 	Photos        []string `json:"photos"`
+	ShopTypes     []string `json:"shop_types"`
+	Amenities     []string `json:"amenities"`
 }
 
 // GetPublicDirectoryHandler fetches the active verified shops securely from the backend
@@ -28,6 +31,7 @@ func GetPublicDirectoryHandler(w http.ResponseWriter, r *http.Request) {
 	rows, err := database.DB.Query(`
 		SELECT 
 			sl.id::text, 
+			COALESCE(sl.owner_id::text, ''),
 			COALESCE(sl.shop_name, 'Unknown Shop'), 
 			COALESCE(sl.street, ''),
 			COALESCE(sl.city, ''),
@@ -39,7 +43,9 @@ func GetPublicDirectoryHandler(w http.ResponseWriter, r *http.Request) {
 				FROM shop_photos 
 				WHERE location_id = sl.id
 			), '{}'::text[]) as photos,
-			COALESCE(sl.verification_doc_url, '')
+			COALESCE(sl.verification_doc_url, ''),
+			COALESCE(sl.shop_types, '{}'::text[]) as shop_types,
+			COALESCE(sl.amenities, '{}'::text[]) as amenities
 		FROM public.shop_locations sl
 		WHERE sl.is_active = true
 	`)
@@ -58,7 +64,7 @@ func GetPublicDirectoryHandler(w http.ResponseWriter, r *http.Request) {
 		var rawRating float64
 
 		err := rows.Scan(
-			&s.ID, &s.ShopName, &s.Street, &s.City, &rawRating, pq.Array(&photos), &verificationDoc,
+			&s.ID, &s.OwnerID, &s.ShopName, &s.Street, &s.City, &rawRating, pq.Array(&photos), &verificationDoc, pq.Array(&s.ShopTypes), pq.Array(&s.Amenities),
 		)
 
 		if err == nil {

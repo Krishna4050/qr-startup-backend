@@ -73,6 +73,11 @@ export default function HostShopDetailsScreen() {
           <Text style={styles.sectionTitle}>Details</Text>
           
           <EditRow 
+            title="Messages" 
+            value="View customer inquiries" 
+            onPress={() => navigation.navigate('HostMessages', { shopData })} 
+          />
+          <EditRow 
             title="Photos" 
             hasImage={true} 
             imageUrl={coverPhoto} 

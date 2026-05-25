@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
-import { ArrowLeft, Star, MapPin, Phone, MessageSquare, ShieldCheck, Heart } from 'lucide-react-native';
+import { View, Text, StyleSheet, Image, Dimensions, TouchableOpacity, ScrollView, Platform, Linking, Alert } from 'react-native';
+import { ArrowLeft, Star, MapPin, Phone, MessageSquare, ShieldCheck, Heart, CheckCircle2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import RefreshableScroll from '../components/RefreshableScroll';
+import { useAuth } from '../context/AuthContext';
+import { supabase_lucifer_core } from '../utils/supabase';
 
 const { width } = Dimensions.get('window');
 
 export default function ShopDetailsScreen({ route, navigation }: any) {
   const { shopData } = route.params;
   const [isFavorite, setIsFavorite] = useState(false);
+  const { user } = useAuth();
 
   // We add RefreshableScroll here as well so users can pull down for fresh review stats!
   const handleRefresh = async () => {
@@ -16,9 +19,93 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
     // Future: Re-fetch shop details from Supabase here
   };
 
+  const handleDirections = () => {
+    if (!user) {
+      Alert.alert("Sign In Required", "Please sign in to get directions.");
+      return;
+    }
+    const fullAddress = `${shopData.street}, ${shopData.city}`;
+    const url = Platform.select({
+      ios: `maps:0,0?q=${encodeURIComponent(fullAddress)}`,
+      android: `geo:0,0?q=${encodeURIComponent(fullAddress)}`,
+      web: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
+    });
+    if (url) Linking.openURL(url);
+  };
+
+  const handleMessage = () => {
+    if (!user) {
+      Alert.alert("Sign In Required", "Please sign in to message this shop.");
+      return;
+    }
+    navigation.navigate("ChatScreen", {
+      shopId: shopData.id,
+      shopName: shopData.shop_name,
+      hostId: shopData.owner_id
+    });
+  };
+
+  const handleCall = async () => {
+    if (!user) {
+      Alert.alert("Sign In Required", "Please sign in to call this shop.");
+      return;
+    }
+
+    try {
+      // 1. Check Membership (Must have at least one registered QR Tag)
+      const { data: tags, error } = await supabase_lucifer_core
+        .from('qr_tags')
+        .select('id')
+        .eq('owner_id', user.id)
+        .limit(1);
+
+      if (error) throw error;
+
+      if (!tags || tags.length === 0) {
+        Alert.alert(
+          "Premium Feature", 
+          "You must be an active member of our QR System to use the proxy calling service. Please message the shop owner instead, or register a QR tag to unlock calling."
+        );
+        return;
+      }
+
+      // 2. Check if user profile has a phone number
+      const { data: profile } = await supabase_lucifer_core
+        .from('profiles')
+        .select('phone_number')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile?.phone_number) {
+        Alert.alert("Profile Incomplete", "Please add a verified phone number to your profile to make calls.");
+        return;
+      }
+
+      // 3. Trigger Backend Call Shop Endpoint
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      if (!backendUrl) throw new Error("Backend URL missing");
+
+      Alert.alert("Connecting...", "You will receive a call from our system shortly connecting you to the shop.");
+      
+      await fetch(`${backendUrl}/api/call-shop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          shop_id: shopData.id, 
+          phone_number: profile.phone_number 
+        })
+      });
+
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Something went wrong while initiating the call.");
+    }
+  };
+
   return (
     <View style={styles.container}>
       <RefreshableScroll onRefreshAction={handleRefresh} showsVerticalScrollIndicator={false} bounces={false}>
+        <View style={styles.webWrapper}>
         
         {/* TOP IMAGE HEADER */}
         <View style={styles.imageHeaderContainer}>
@@ -71,15 +158,15 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
           {/* ACTION BUTTONS */}
           <Text style={styles.sectionTitle}>Contact Shop</Text>
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleCall}>
               <Phone color="#0F2D4D" size={24} />
               <Text style={styles.actionText}>Call</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleMessage}>
               <MessageSquare color="#0F2D4D" size={24} />
               <Text style={styles.actionText}>Message</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleDirections}>
               <MapPin color="#0F2D4D" size={24} />
               <Text style={styles.actionText}>Directions</Text>
             </TouchableOpacity>
@@ -87,25 +174,29 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
 
           <View style={styles.divider} />
 
-          {/* SUBSCRIPTION / BOOKING */}
-          <Text style={styles.sectionTitle}>Available Services</Text>
+          {/* DYNAMIC SHOP TAGS */}
+          <Text style={styles.sectionTitle}>Services & Amenities</Text>
           
-          <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.subscriptionCard}>
-            <Text style={styles.subTitle}>Car Wash Subscription</Text>
-            <Text style={styles.subDesc}>Unlimited exterior washes for 1 month at this location.</Text>
-            <View style={styles.subPriceRow}>
-              <Text style={styles.subPrice}>€29.99<Text style={{ fontSize: 14 }}>/mo</Text></Text>
-              <TouchableOpacity style={styles.subscribeBtn}>
-                <Text style={styles.subscribeBtnText}>Subscribe</Text>
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
+          <View style={styles.tagsContainer}>
+            {shopData.shop_types && shopData.shop_types.length > 0 ? (
+              shopData.shop_types.map((type: string, idx: number) => (
+                <View key={`type-${idx}`} style={styles.tagPill}>
+                  <Text style={styles.tagText}>{type}</Text>
+                </View>
+              ))
+            ) : null}
 
-          <TouchableOpacity style={styles.serviceItem}>
-             <Text style={styles.serviceName}>Standard Towing Service</Text>
-             <Text style={styles.servicePrice}>From €80</Text>
-          </TouchableOpacity>
+            {shopData.amenities && shopData.amenities.length > 0 ? (
+              shopData.amenities.map((amenity: string, idx: number) => (
+                <View key={`amenity-${idx}`} style={styles.amenityRow}>
+                  <CheckCircle2 color="#10B981" size={16} style={{ marginRight: 6 }} />
+                  <Text style={styles.amenityText}>{amenity}</Text>
+                </View>
+              ))
+            ) : null}
+          </View>
 
+        </View>
         </View>
       </RefreshableScroll>
     </View>
@@ -113,9 +204,19 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  imageHeaderContainer: { width: '100%', height: width * 0.8, position: 'relative' },
-  headerImage: { width: width, height: '100%', resizeMode: 'cover' },
+  container: { flex: 1, backgroundColor: Platform.OS === 'web' ? '#F3F4F6' : '#FFFFFF' },
+  webWrapper: { 
+    width: '100%', 
+    maxWidth: Platform.OS === 'web' ? 800 : '100%', 
+    alignSelf: 'center', 
+    backgroundColor: '#FFFFFF',
+    minHeight: '100%',
+    shadowColor: '#000',
+    shadowOpacity: Platform.OS === 'web' ? 0.05 : 0,
+    shadowRadius: 20,
+  },
+  imageHeaderContainer: { width: '100%', height: Platform.OS === 'web' ? 400 : width * 0.8, position: 'relative' },
+  headerImage: { width: Platform.OS === 'web' ? 800 : width, height: '100%', resizeMode: 'cover' },
   floatingHeader: { position: 'absolute', top: 50, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between' },
   iconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
   
@@ -139,15 +240,10 @@ const styles = StyleSheet.create({
   actionButton: { flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginHorizontal: 6 },
   actionText: { marginTop: 8, fontSize: 14, fontWeight: '600', color: '#0F2D4D' },
   
-  subscriptionCard: { borderRadius: 20, padding: 20, marginBottom: 16 },
-  subTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 },
-  subDesc: { fontSize: 14, color: '#D1D5DB', marginBottom: 16, lineHeight: 20 },
-  subPriceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  subPrice: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
-  subscribeBtn: { backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
-  subscribeBtnText: { color: '#0F2D4D', fontWeight: 'bold' },
-
-  serviceItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  serviceName: { fontSize: 16, color: '#374151', fontWeight: '500' },
-  servicePrice: { fontSize: 16, color: '#111827', fontWeight: 'bold' }
+  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tagPill: { backgroundColor: '#F5F3FF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#DDD6FE' },
+  tagText: { color: '#4A00E0', fontWeight: '600', fontSize: 14 },
+  
+  amenityRow: { flexDirection: 'row', alignItems: 'center', width: '100%', marginTop: 8 },
+  amenityText: { color: '#4B5563', fontSize: 15 },
 });
