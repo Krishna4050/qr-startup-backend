@@ -20,9 +20,17 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
     // Future: Re-fetch shop details from Supabase here
   };
 
+  const safeAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const handleDirections = () => {
     if (!user) {
-      Alert.alert("Sign In Required", "Please sign in to get directions.");
+      safeAlert("Sign In Required", "Please sign in to get directions.");
       return;
     }
     const fullAddress = `${shopData.street}, ${shopData.city}`;
@@ -36,7 +44,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
 
   const handleMessage = () => {
     if (!user) {
-      Alert.alert("Sign In Required", "Please sign in to message this shop.");
+      safeAlert("Sign In Required", "Please sign in to message this shop.");
       return;
     }
     navigation.navigate("ChatScreen", {
@@ -48,7 +56,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
 
   const handleCall = async () => {
     if (!user) {
-      Alert.alert("Sign In Required", "Please sign in to call this shop.");
+      safeAlert("Sign In Required", "Please sign in to call this shop.");
       return;
     }
 
@@ -63,7 +71,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
       if (error) throw error;
 
       if (!tags || tags.length === 0) {
-        Alert.alert(
+        safeAlert(
           "Premium Feature", 
           "You must be an active member of our QR System to use the proxy calling service. Please message the shop owner instead, or register a QR tag to unlock calling."
         );
@@ -78,7 +86,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
         .single();
 
       if (!profile?.phone_number) {
-        Alert.alert("Profile Incomplete", "Please add a verified phone number to your profile to make calls.");
+        safeAlert("Profile Incomplete", "Please add a verified phone number to your profile to make calls.");
         return;
       }
 
@@ -86,7 +94,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
       const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
       if (!backendUrl) throw new Error("Backend URL missing");
 
-      Alert.alert("Connecting...", "You will receive a call from our system shortly connecting you to the shop.");
+      safeAlert("Connecting...", "You will receive a call from our system shortly connecting you to the shop.");
       
       await fetch(`${backendUrl}/api/call-shop`, {
         method: 'POST',
@@ -99,7 +107,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
 
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "Something went wrong while initiating the call.");
+      safeAlert("Error", "Something went wrong while initiating the call.");
     }
   };
 
@@ -238,7 +246,8 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 16 },
   
   actionRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  actionButton: { flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginHorizontal: 6 },
+  // @ts-ignore
+  actionButton: { flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginHorizontal: 6, cursor: Platform.OS === 'web' ? 'pointer' : 'auto' },
   actionText: { marginTop: 8, fontSize: 14, fontWeight: '600', color: '#0F2D4D' },
   
   tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
