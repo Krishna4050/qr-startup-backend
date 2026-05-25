@@ -13,20 +13,22 @@ const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
 
+  const actualCardWidth = Platform.OS === 'web' ? 300 : CARD_WIDTH;
+
   const handleScroll = (event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
-    const index = Math.round(scrollPosition / CARD_WIDTH);
+    const index = Math.round(scrollPosition / actualCardWidth);
     setActiveIndex(index);
   };
 
   return (
-    <TouchableOpacity style={styles.shopCard} activeOpacity={1} onPress={onPress}>
-      <View style={styles.imageContainer}>
+    <TouchableOpacity style={[styles.shopCard, { width: actualCardWidth }]} activeOpacity={1} onPress={onPress}>
+      <View style={[styles.imageContainer, { width: actualCardWidth }]}>
         {item.photos.length > 0 ? (
           <>
             <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
               {item.photos.map((url: string, index: number) => (
-                <Image key={index} source={{ uri: url }} style={styles.shopImage} />
+                <Image key={index} source={{ uri: url }} style={[styles.shopImage, { width: actualCardWidth }]} />
               ))}
             </ScrollView>
             {item.photos.length > 1 && (
@@ -215,9 +217,11 @@ export default function VehicleRepairDirectory() {
               <Text style={styles.emptyText}>No repair shops found.</Text>
             </View>
           ) : (
-            filteredShops.map((item) => (
-              <ShopCard key={item.id} item={item} onPress={() => navigation.navigate('ShopDetails', { shopData: item })} />
-            ))
+            <View style={Platform.OS === 'web' ? styles.webGridContainer : {}}>
+              {filteredShops.map((item) => (
+                <ShopCard key={item.id} item={item} onPress={() => navigation.navigate('ShopDetails', { shopData: item })} />
+              ))}
+            </View>
           )}
           <View style={{ height: 60 }} />
         </RefreshableScroll>
@@ -267,4 +271,5 @@ const styles = StyleSheet.create({
   hostBannerTitle: { fontSize: 16, fontWeight: '700', color: '#0A192F', marginBottom: 4 },
   hostBannerSub: { fontSize: 14, color: '#8892B0', lineHeight: 20 },
   hostBannerImage: { width: 60, height: 60, borderRadius: 12 },
+  webGridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 24 }
 });

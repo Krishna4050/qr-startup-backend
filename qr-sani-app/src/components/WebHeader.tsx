@@ -1,5 +1,5 @@
-import React, { useState, createElement } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, FlatList } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, FlatList, useWindowDimensions } from 'react-native';
 import { Search, Globe, Menu, User, ShieldCheck, ChevronDown, Plus, Minus } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 
@@ -8,10 +8,45 @@ export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest
   const [selectedService, setSelectedService] = useState('Vehicle Repair');
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [adults, setAdults] = useState(0);
   const [childrenCount, setChildrenCount] = useState(0);
 
+  const { width } = useWindowDimensions();
+  const isMobileWeb = width < 768;
+
   if (Platform.OS !== 'web') return null;
+
+  if (isMobileWeb) {
+    return (
+      <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <TouchableOpacity style={styles.logoSection} onPress={() => navigation.navigate('Dashboard')}>
+            <ShieldCheck color="#E11D48" size={28} />
+            <Text style={[styles.logoText, { fontSize: 18 }]}>smarttags</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.profileMenu}
+            onPress={() => isGuest ? navigation.navigate('Login') : navigation.navigate('Profile')}
+          >
+            <Menu color="#222222" size={16} />
+            <View style={[styles.avatarCircle, { width: 28, height: 28 }]}>
+              {profile?.avatar_url ? (
+                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+              ) : (
+                <User color="#FFF" size={14} />
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity style={{ marginTop: 16, backgroundColor: '#F7F7F7', borderRadius: 24, padding: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#DDDDDD' }}>
+            <Search color="#E11D48" size={18} />
+            <Text style={{ marginLeft: 12, fontSize: 14, fontWeight: '500', color: '#222222' }}>Where to?</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const servicesList = ['Vehicle Repair', 'Bike Repair', 'Pay Parking', 'Hotels & Stays', 'City Transit', 'Train Tickets', 'Flights'];
   const requiresGuests = ['Hotels & Stays', 'Train Tickets', 'Flights'].includes(selectedService);
@@ -42,13 +77,12 @@ export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest
           
           <View style={styles.divider} />
           
-          <TouchableOpacity style={styles.searchSection}>
+          <TouchableOpacity 
+            style={[styles.searchSection, showDateDropdown && styles.activeSection]}
+            onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowGuestDropdown(false); }}
+          >
             <Text style={styles.searchTitle}>When</Text>
-            {Platform.OS === 'web' ? (
-              createElement('input', { type: 'date', style: { border: 'none', outline: 'none', backgroundColor: 'transparent', color: '#717171', fontSize: 14, fontFamily: 'inherit', padding: 0, marginTop: 2 } })
-            ) : (
-              <Text style={styles.searchSub}>Add dates</Text>
-            )}
+            <Text style={styles.searchSub}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
           </TouchableOpacity>
           
           {requiresGuests && (
@@ -56,7 +90,7 @@ export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest
               <View style={styles.divider} />
               <TouchableOpacity 
                 style={[styles.searchSection, { flex: 1 }, showGuestDropdown && styles.activeSection]}
-                onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowServiceDropdown(false); }}
+                onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); }}
               >
                 <Text style={styles.searchTitle}>Who</Text>
                 <Text style={styles.searchSub}>{adults + childrenCount === 0 ? 'Add guests' : `${adults + childrenCount} guests`}</Text>
@@ -89,6 +123,28 @@ export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest
                   </Text>
                 </TouchableOpacity>
               ))}
+            </View>
+          )}
+
+          {/* Absolute Date Dropdown (Modern Calendar) */}
+          {showDateDropdown && (
+            <View style={[styles.dropdownMenu, { left: 180, width: 320, padding: 20 }]}>
+              <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 16, textAlign: 'center' }}>May 2026</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <Text key={d} style={{ color: '#717171', width: 40, textAlign: 'center', fontSize: 14 }}>{d}</Text>)}
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0 }}>
+                {Array.from({length: 5}).map((_, i) => <View key={`e-${i}`} style={{ width: 40, height: 40 }} />)}
+                {Array.from({length: 31}, (_, i) => i + 1).map(d => (
+                  <TouchableOpacity 
+                    key={d} 
+                    onPress={() => { setShowDateDropdown(false); setSelectedDate(d); }}
+                    style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 20, backgroundColor: selectedDate === d ? '#E11D48' : 'transparent' }}
+                  >
+                    <Text style={{ color: selectedDate === d ? '#FFF' : '#222' }}>{d}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
 
