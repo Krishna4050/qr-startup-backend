@@ -88,7 +88,7 @@ export default function App() {
             <Stack.Screen name="HostShopDetails" component={HostShopDetailsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} />
+            <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="PartnerOnboardingStep1" component={PartnerOnboardingStep1Screen} options={{ headerShown: false }} />
             <Stack.Screen name="PartnerOnboardingStep3" component={PartnerOnboardingStep3Screen} options={{ headerShown: false }} />
             <Stack.Screen name="PartnerOnboardingVerification" component={PartnerOnboardingVerificationScreen} options={{ headerShown: false }} />

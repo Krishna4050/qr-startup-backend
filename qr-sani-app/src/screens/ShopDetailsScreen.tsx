@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase_lucifer_core } from '../utils/supabase';
 
 const { width } = Dimensions.get('window');
+const containerWidth = Platform.OS === 'web' ? Math.min(width, 800) : width;
 
 export default function ShopDetailsScreen({ route, navigation }: any) {
   const { shopData } = route.params;
@@ -112,7 +113,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
           {shopData.photos && shopData.photos.length > 0 ? (
             <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
               {shopData.photos.map((url: string, index: number) => (
-                <Image key={index} source={{ uri: url }} style={styles.headerImage} />
+                <Image key={index} source={{ uri: url }} style={[styles.headerImage, { width: containerWidth }]} />
               ))}
             </ScrollView>
           ) : (
@@ -215,12 +216,12 @@ const styles = StyleSheet.create({
     shadowOpacity: Platform.OS === 'web' ? 0.05 : 0,
     shadowRadius: 20,
   },
-  imageHeaderContainer: { width: '100%', height: Platform.OS === 'web' ? 400 : width * 0.8, position: 'relative' },
-  headerImage: { width: Platform.OS === 'web' ? 800 : width, height: '100%', resizeMode: 'cover' },
-  floatingHeader: { position: 'absolute', top: 50, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between' },
+  imageHeaderContainer: { width: '100%', height: Platform.OS === 'web' ? 400 : width * 0.8, position: 'relative', zIndex: 0 },
+  headerImage: { height: '100%', resizeMode: 'cover' },
+  floatingHeader: { position: 'absolute', top: 50, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 },
   iconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
   
-  contentContainer: { padding: 24, paddingBottom: 60, marginTop: -20, backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  contentContainer: { padding: 24, paddingBottom: 60, marginTop: -20, backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, zIndex: 1, position: 'relative' },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
   shopName: { fontSize: 26, fontWeight: 'bold', color: '#111827', flex: 1, marginRight: 16 },
   ratingBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111827', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
