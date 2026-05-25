@@ -5,8 +5,8 @@ import { supabase_lucifer_core } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
 import { getOrCreateKeyPair, encryptMessage, decryptMessage, KeyPair } from '../utils/crypto';
 
-export default function ChatScreen({ route, navigation }: any) {
-  const { shopId, shopName, otherUserId } = route.params;
+export default function ChatScreen({ route, navigation, isEmbedded = false }: any) {
+  const { shopId, shopName, otherUserId } = route?.params || {};
   const { user } = useAuth();
   
   const [messages, setMessages] = useState<any[]>([]);
@@ -233,12 +233,14 @@ export default function ChatScreen({ route, navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft color="#111827" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{shopName}</Text>
-      </View>
+      {!isEmbedded && (
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <ArrowLeft color="#111827" size={24} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{shopName}</Text>
+        </View>
+      )}
 
       <FlatList
         data={messages}
