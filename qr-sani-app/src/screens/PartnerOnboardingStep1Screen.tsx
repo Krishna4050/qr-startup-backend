@@ -10,7 +10,8 @@ import {
   Platform, 
   ScrollView,
   ActivityIndicator,
-  Alert
+  Alert,
+  Switch
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
@@ -26,11 +27,36 @@ export default function PartnerOnboardingStep1Screen() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
 
+  const [usePrimaryPhone, setUsePrimaryPhone] = useState(true);
+  const [usePrimaryEmail, setUsePrimaryEmail] = useState(true);
+
+  const [primaryPhone, setPrimaryPhone] = useState('');
+  const [primaryEmail, setPrimaryEmail] = useState('');
+
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
+      if (user) {
+        setPrimaryEmail(user.email || '');
+        const { data: profile } = await supabase_lucifer_core.from('profiles').select('phone').eq('id', user.id).single();
+        if (profile?.phone) {
+          setPrimaryPhone(profile.phone);
+        } else {
+          setUsePrimaryPhone(false);
+        }
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleNext = async () => {
     // UPDATED VALIDATION: Email is no longer required here
-    if (!shopName || !street || !city || !phone) {
+    const finalPhone = usePrimaryPhone ? primaryPhone : phone;
+    const finalEmail = usePrimaryEmail ? primaryEmail : email;
+
+    if (!shopName || !street || !city || !finalPhone) {
       Alert.alert("Missing Info", "Please fill out all required fields so customers can find you.");
       return;
     }
@@ -41,16 +67,16 @@ export default function PartnerOnboardingStep1Screen() {
       if (!user) throw new Error("You must be logged in to create a listing.");
 
       // THE FALLBACK LOGIC: If they leave it blank, use their account email
-      const finalContactEmail = email.trim() !== '' ? email : user.email;
+      const finalContactEmail = finalEmail.trim() !== '' ? finalEmail : user.email;
        
-      console.log("Ready to push to Supabase:", { shopName, street, city, phone, finalContactEmail });
+      console.log("Ready to push to Supabase:", { shopName, street, city, phone: finalPhone, finalContactEmail });
       
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       
       navigation.navigate('PartnerOnboardingStep2', {
         // We pass the data forward so we can save it all at the end!
-        shopData: { shopName, street, city, phone, finalContactEmail }
+        shopData: { shopName, street, city, phone: finalPhone, finalContactEmail }
       });
       
     } catch (error: any) {
@@ -96,15 +122,41 @@ export default function PartnerOnboardingStep1Screen() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Contact Phone *</Text>
-            <TextInput style={getInputStyle('phone')} placeholder="+358 40 123 4567" placeholderTextColor="#A1A1AA" keyboardType="phone-pad" value={phone} onChangeText={setPhone} onFocus={() => setFocusedInput('phone')} onBlur={() => setFocusedInput(null)} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <View>
+                <Text style={styles.label}>Contact Phone *</Text>
+                {primaryPhone ? <Text style={styles.helperText}>Use {primaryPhone} or add a new one.</Text> : null}
+              </View>
+              {primaryPhone ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ marginRight: 8, fontSize: 13, color: '#0A192F', fontWeight: 'bold' }}>Use Primary</Text>
+                  <Switch value={usePrimaryPhone} onValueChange={setUsePrimaryPhone} trackColor={{ false: '#E2E8F0', true: '#0A192F' }} />
+                </View>
+              ) : null}
+            </View>
+            
+            {!usePrimaryPhone && (
+              <TextInput style={getInputStyle('phone')} placeholder="+358 40 123 4567" placeholderTextColor="#A1A1AA" keyboardType="phone-pad" value={phone} onChangeText={setPhone} onFocus={() => setFocusedInput('phone')} onBlur={() => setFocusedInput(null)} />
+            )}
           </View>
 
           <View style={styles.formGroup}>
-            {/* UPDATED LABEL */}
-            <Text style={styles.label}>Official Contact Email <Text style={styles.optionalText}>(Optional)</Text></Text>
-            <Text style={styles.helperText}>Leave blank to use your current account email.</Text>
-            <TextInput style={getInputStyle('email')} placeholder="contact@helsinkiauto.fi" placeholderTextColor="#A1A1AA" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} onFocus={() => setFocusedInput('email')} onBlur={() => setFocusedInput(null)} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <View>
+                <Text style={styles.label}>Official Contact Email <Text style={styles.optionalText}>(Optional)</Text></Text>
+                {primaryEmail ? <Text style={styles.helperText}>Use {primaryEmail} or add a new one.</Text> : <Text style={styles.helperText}>Leave blank to use your current account email.</Text>}
+              </View>
+              {primaryEmail ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ marginRight: 8, fontSize: 13, color: '#0A192F', fontWeight: 'bold' }}>Use Primary</Text>
+                  <Switch value={usePrimaryEmail} onValueChange={setUsePrimaryEmail} trackColor={{ false: '#E2E8F0', true: '#0A192F' }} />
+                </View>
+              ) : null}
+            </View>
+
+            {!usePrimaryEmail && (
+              <TextInput style={getInputStyle('email')} placeholder="contact@helsinkiauto.fi" placeholderTextColor="#A1A1AA" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} onFocus={() => setFocusedInput('email')} onBlur={() => setFocusedInput(null)} />
+            )}
           </View>
 
         </ScrollView>
@@ -117,7 +169,7 @@ export default function PartnerOnboardingStep1Screen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.primaryButton, (!shopName || !street || !city || !phone) && styles.primaryButtonDisabled]}
+              style={[styles.primaryButton, (!shopName || !street || !city || (!usePrimaryPhone && !phone) || (usePrimaryPhone && !primaryPhone)) && styles.primaryButtonDisabled]}
               activeOpacity={0.9}
               onPress={handleNext}
               disabled={loading}

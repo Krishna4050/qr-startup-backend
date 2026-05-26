@@ -115,7 +115,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
       // 1. Create Reservation
       const { error } = await supabase_lucifer_core.from('shop_reservations').insert({
         shop_id: shopData.id,
-        user_id: user!.id,
+        user_id: user.id,
         reservation_date: reservationDate,
         message: reservationMessage,
         status: 'pending'

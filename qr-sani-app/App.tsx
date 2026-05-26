@@ -20,6 +20,7 @@ import PartnerOnboardingStep2Screen from './src/screens/PartnerOnboardingStep2Sc
 import PartnerOnboardingStep3Screen from './src/screens/PartnerOnboardingStep3Screen';
 import PartnerOnboardingStep4Screen from './src/screens/PartnerOnboardingStep4Screen';
 import HostDashboardScreen from './src/screens/HostDashboardScreen';
+import HostSettingsScreen from './src/screens/HostSettingsScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import HostMessagesScreen from './src/screens/HostMessagesScreen';
 import UserMessagesScreen from './src/screens/UserMessagesScreen';
@@ -96,6 +97,7 @@ export default function App() {
             <Stack.Screen name="PartnerOnboardingStep2" component={PartnerOnboardingStep2Screen} options={{ headerShown: false }} />
             <Stack.Screen name="PartnerOnboardingStep4" component={PartnerOnboardingStep4Screen} options={{ headerShown: false }} />
             <Stack.Screen name="HostDashboard" component={HostDashboardScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="HostSettings" component={HostSettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ headerShown: false }} />
             <Stack.Screen name="HostMessages" component={HostMessagesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="UserMessages" component={UserMessagesScreen} options={{ headerShown: false }} />

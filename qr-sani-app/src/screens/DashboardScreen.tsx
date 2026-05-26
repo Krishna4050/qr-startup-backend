@@ -29,6 +29,11 @@ export default function DashboardScreen() {
   const [sharedWithMe, setSharedWithMe] = useState<any[]>([]);
   const [isGuest, setIsGuest] = useState(false);
 
+  // --- SEARCH STATE ---
+  const [searchFilters, setSearchFilters] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+
   const totalTags = tags.length;
   const foundItems = tags.filter(t => t.status === 'found' && !t.is_shared).length;
 
@@ -152,6 +157,28 @@ export default function DashboardScreen() {
     }
   };
 
+  const handleSearch = async (filters: any) => {
+    setSearchFilters(filters);
+    setIsSearching(true);
+    try {
+      // Mock search or actual DB fetch based on filters
+      // Let's fetch from public_directory for now
+      const { data, error } = await supabase_lucifer_core
+        .from('public_directory')
+        .select('*')
+        .ilike('shop_types', `%${filters.service}%`)
+        .ilike('city', `%${filters.location}%`);
+        
+      if (error) throw error;
+      setSearchResults(data || []);
+    } catch (e) {
+      console.error(e);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const toggleLostMode = async (tag: any) => {
     if (tag.is_shared) {
         navigation.navigate('TagManage', { tagId: tag.id });
@@ -234,7 +261,7 @@ export default function DashboardScreen() {
   if (isGuest) {
     return (
       <View style={[styles.container]}>
-        <WebHeader profile={profile} isGuest={true} />
+        <WebHeader profile={profile} isGuest={true} onSearch={handleSearch} />
         {Platform.OS !== 'web' && (
           <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.headerGradient}>
             <SafeAreaView>
@@ -256,8 +283,45 @@ export default function DashboardScreen() {
         
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[{ padding: 24, gap: 32 }, styles.webMaxWidth]}>
           
-          {/* Hero Section */}
-          <View style={[styles.heroCard, Platform.OS === 'web' && { padding: 48 }]}>
+          {searchFilters ? (
+            <View style={styles.searchResultsContainer}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <Text style={styles.mainSearchTitle}>
+                  {searchResults?.length} places for {searchFilters.service} in {searchFilters.location}
+                </Text>
+                <TouchableOpacity onPress={() => setSearchFilters(null)}>
+                  <Text style={{ color: '#E11D48', fontWeight: 'bold' }}>Clear Search</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {isSearching ? (
+                <ActivityIndicator size="large" color="#0F2D4D" style={{ marginTop: 40 }} />
+              ) : (
+                <View style={Platform.OS === 'web' ? [styles.webGridContainer, { paddingHorizontal: 0 }] : { gap: 16 }}>
+                  {searchResults?.map(shop => (
+                    <TouchableOpacity 
+                      key={shop.id} 
+                      style={[styles.shopCard, Platform.OS === 'web' && { width: '31%', minWidth: 250 }]}
+                      onPress={() => navigation.navigate('ShopDetails', { shopId: shop.id })}
+                    >
+                      <Image source={{ uri: shop.banner_url || 'https://images.unsplash.com/photo-1598555231223-f25b29b7a4be' }} style={styles.shopImage} />
+                      <View style={styles.shopInfo}>
+                        <Text style={styles.shopName} numberOfLines={1}>{shop.shop_name}</Text>
+                        <Text style={styles.shopAddress}>{shop.street}, {shop.city}</Text>
+                        <Text style={styles.shopRating}>★ 4.9 (120 reviews)</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                  {searchResults?.length === 0 && (
+                     <View style={[styles.emptyCard, { width: '100%', padding: 48 }]}><Text style={styles.emptyCardText}>No shops available for these dates.</Text></View>
+                  )}
+                </View>
+              )}
+            </View>
+          ) : (
+            <>
+              {/* Hero Section */}
+              <View style={[styles.heroCard, Platform.OS === 'web' && { padding: 48 }]}>
             <ShieldCheck color="#2563EB" size={Platform.OS === 'web' ? 64 : 48} style={{ marginBottom: 16 }} />
             <Text style={[styles.heroTitle, Platform.OS === 'web' && { fontSize: 36 }]}>Protect What Matters</Text>
             <Text style={[styles.heroSubtitle, Platform.OS === 'web' && { fontSize: 18, maxWidth: 600 }]}>
@@ -315,6 +379,8 @@ export default function DashboardScreen() {
               ))}
             </View>
           </View>
+          </>
+          )}
 
         </ScrollView>
       </View>
@@ -336,7 +402,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, styles.webMaxWidth]}>
-      <WebHeader profile={profile} isGuest={false} />
+      <WebHeader profile={profile} isGuest={false} onSearch={handleSearch} />
       {Platform.OS !== 'web' && (
         <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.headerGradient}>
           <SafeAreaView>
@@ -566,4 +632,14 @@ const styles = StyleSheet.create({
   heroSubtitle: { fontSize: 16, color: '#4B5563', lineHeight: 24, marginBottom: 24 },
   whyCard: { backgroundColor: '#FFFFFF', borderRadius: 8, padding: 16, borderWidth: 1, borderColor: '#E5E7EB' },
   serviceCard: { borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  
+  // Search Styles
+  searchResultsContainer: { flex: 1 },
+  mainSearchTitle: { fontSize: 28, fontWeight: '800', color: '#111827' },
+  shopCard: { backgroundColor: '#FFF', borderRadius: 16, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4, marginBottom: 16 },
+  shopImage: { width: '100%', height: 160 },
+  shopInfo: { padding: 16 },
+  shopName: { fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
+  shopAddress: { fontSize: 14, color: '#6B7280', marginBottom: 8 },
+  shopRating: { fontSize: 14, fontWeight: '600', color: '#10B981' },
 });

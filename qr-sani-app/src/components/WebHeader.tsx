@@ -3,13 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, FlatL
 import { Search, Globe, Menu, User, ShieldCheck, ChevronDown, Plus, Minus } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 
-export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest?: boolean }) {
+export default function WebHeader({ profile, isGuest, onSearch }: { profile?: any, isGuest?: boolean, onSearch?: (filters: any) => void }) {
   const navigation = useNavigation<any>();
   const [selectedService, setSelectedService] = useState('Vehicle Repair');
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
-  const [showGuestDropdown, setShowGuestDropdown] = useState(false);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('Helsinki');
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [adults, setAdults] = useState(0);
   const [childrenCount, setChildrenCount] = useState(0);
 
@@ -26,19 +28,30 @@ export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest
             <ShieldCheck color="#E11D48" size={28} />
             <Text style={[styles.logoText, { fontSize: 18 }]}>smarttags</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.profileMenu}
-            onPress={() => isGuest ? navigation.navigate('Login') : navigation.navigate('Profile')}
-          >
-            <Menu color="#222222" size={16} />
-            <View style={[styles.avatarCircle, { width: 28, height: 28 }]}>
-              {profile?.avatar_url ? (
-                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-              ) : (
-                <User color="#FFF" size={14} />
-              )}
-            </View>
-          </TouchableOpacity>
+          <View style={{ position: 'relative' }}>
+            <TouchableOpacity 
+              style={styles.profileMenu}
+              onPress={() => isGuest ? navigation.navigate('Login') : setShowProfileDropdown(!showProfileDropdown)}
+            >
+              <Menu color="#222222" size={16} />
+              <View style={[styles.avatarCircle, { width: 28, height: 28 }]}>
+                {profile?.avatar_url ? (
+                  <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                ) : (
+                  <User color="#FFF" size={14} />
+                )}
+              </View>
+            </TouchableOpacity>
+            {showProfileDropdown && (
+              <View style={[styles.dropdownMenu, { top: 40, right: 0, left: 'auto', width: 200, padding: 8 }]}>
+                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('Profile'); }}><Text style={styles.dropdownItemText}>Profile</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('UserMessages'); }}><Text style={styles.dropdownItemText}>Messages</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('HostDashboard'); }}><Text style={styles.dropdownItemText}>Host Dashboard</Text></TouchableOpacity>
+                <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 4 }} />
+                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('Login'); }}><Text style={styles.dropdownItemText}>Sign Out</Text></TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
         <TouchableOpacity style={{ marginTop: 16, backgroundColor: '#F7F7F7', borderRadius: 24, padding: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#DDDDDD' }}>
             <Search color="#E11D48" size={18} />
@@ -64,7 +77,7 @@ export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest
         <View style={styles.searchPill}>
           <TouchableOpacity 
             style={[styles.searchSection, showServiceDropdown && styles.activeSection]} 
-            onPress={() => setShowServiceDropdown(!showServiceDropdown)}
+            onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View>
@@ -78,29 +91,38 @@ export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest
           <View style={styles.divider} />
           
           <TouchableOpacity 
+            style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
+            onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); }}
+          >
+            <Text style={styles.searchTitle}>Where</Text>
+            <Text style={styles.searchSub}>{selectedLocation}</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.divider} />
+          
+          <TouchableOpacity 
             style={[styles.searchSection, showDateDropdown && styles.activeSection]}
-            onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowGuestDropdown(false); }}
+            onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
           >
             <Text style={styles.searchTitle}>When</Text>
             <Text style={styles.searchSub}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
           </TouchableOpacity>
           
-          {requiresGuests && (
-            <>
-              <View style={styles.divider} />
-              <TouchableOpacity 
-                style={[styles.searchSection, { flex: 1 }, showGuestDropdown && styles.activeSection]}
-                onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); }}
-              >
-                <Text style={styles.searchTitle}>Who</Text>
-                <Text style={styles.searchSub}>{adults + childrenCount === 0 ? 'Add guests' : `${adults + childrenCount} guests`}</Text>
-              </TouchableOpacity>
-            </>
-          )}
+
           
           {/* Search Button Container */}
           <View style={styles.searchButtonContainer}>
-            <TouchableOpacity style={styles.searchIconBg}>
+            <TouchableOpacity 
+              style={styles.searchIconBg}
+              onPress={() => {
+                setShowServiceDropdown(false);
+                setShowLocationDropdown(false);
+                setShowDateDropdown(false);
+                if (onSearch) {
+                  onSearch({ service: selectedService, location: selectedLocation, date: selectedDate });
+                }
+              }}
+            >
               <Search color="#FFF" size={16} />
               <Text style={{ color: '#FFF', fontWeight: 'bold', marginLeft: 6 }}>Search</Text>
             </TouchableOpacity>
@@ -120,6 +142,27 @@ export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest
                 >
                   <Text style={[styles.dropdownItemText, selectedService === service && styles.dropdownItemTextActive]}>
                     {service}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Absolute Location Dropdown */}
+          {showLocationDropdown && (
+            <View style={[styles.dropdownMenu, { left: 160 }]}>
+              {['Helsinki', 'Espoo', 'Vantaa', 'Tampere', 'Turku'].map((loc, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={[styles.dropdownItem, selectedLocation === loc && styles.dropdownItemActive]}
+                  onPress={() => {
+                    setSelectedLocation(loc);
+                    setShowLocationDropdown(false);
+                    setShowDateDropdown(true);
+                  }}
+                >
+                  <Text style={[styles.dropdownItemText, selectedLocation === loc && styles.dropdownItemTextActive]}>
+                    {loc}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -148,33 +191,7 @@ export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest
             </View>
           )}
 
-          {/* Absolute Guest Dropdown */}
-          {showGuestDropdown && (
-            <View style={[styles.dropdownMenu, { right: 100, left: 'auto', width: 300 }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <View>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Adults</Text>
-                  <Text style={{ color: '#717171', fontSize: 14 }}>Ages 13 or above</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                  <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#717171" /></TouchableOpacity>
-                  <Text style={{ fontSize: 16, width: 20, textAlign: 'center' }}>{adults}</Text>
-                  <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#717171" /></TouchableOpacity>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Children</Text>
-                  <Text style={{ color: '#717171', fontSize: 14 }}>Ages 2-12</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                  <TouchableOpacity onPress={() => setChildrenCount(Math.max(0, childrenCount - 1))} style={styles.circleBtn}><Minus size={16} color="#717171" /></TouchableOpacity>
-                  <Text style={{ fontSize: 16, width: 20, textAlign: 'center' }}>{childrenCount}</Text>
-                  <TouchableOpacity onPress={() => setChildrenCount(childrenCount + 1)} style={styles.circleBtn}><Plus size={16} color="#717171" /></TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
+
         </View>
 
         {/* Right: Actions */}
@@ -186,19 +203,40 @@ export default function WebHeader({ profile, isGuest }: { profile?: any, isGuest
             <Globe color="#222222" size={18} />
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            style={styles.profileMenu}
-            onPress={() => isGuest ? navigation.navigate('Login') : navigation.navigate('Profile')}
-          >
-            <Menu color="#222222" size={18} />
-            <View style={styles.avatarCircle}>
-              {profile?.avatar_url ? (
-                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-              ) : (
-                <User color="#FFF" size={16} />
-              )}
-            </View>
-          </TouchableOpacity>
+          <View style={{ position: 'relative' }}>
+            <TouchableOpacity 
+              style={styles.profileMenu}
+              onPress={() => isGuest ? navigation.navigate('Login') : setShowProfileDropdown(!showProfileDropdown)}
+            >
+              <Menu color="#222222" size={18} />
+              <View style={styles.avatarCircle}>
+                {profile?.avatar_url ? (
+                  <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                ) : (
+                  <User color="#FFF" size={16} />
+                )}
+              </View>
+            </TouchableOpacity>
+            
+            {/* Absolute Profile Dropdown */}
+            {showProfileDropdown && (
+              <View style={[styles.dropdownMenu, { top: 50, right: 0, left: 'auto', width: 240, padding: 8, zIndex: 999 }]}>
+                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('Profile'); }}>
+                  <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('UserMessages'); }}>
+                  <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages & Notifications</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('HostDashboard'); }}>
+                  <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
+                </TouchableOpacity>
+                <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
+                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('Login'); }}>
+                  <Text style={[styles.dropdownItemText, { color: '#E11D48' }]}>Sign Out</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
       </View>
     </View>

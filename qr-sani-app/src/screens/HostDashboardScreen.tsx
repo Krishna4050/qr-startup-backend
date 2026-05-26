@@ -55,7 +55,7 @@ export default function HostDashboardScreen() {
     <View style={styles.mainContainer}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Host Dashboard</Text>
-        <TouchableOpacity style={styles.iconBtn}>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('HostSettings')}>
           <Settings color="#0A192F" size={22} />
         </TouchableOpacity>
       </View>
