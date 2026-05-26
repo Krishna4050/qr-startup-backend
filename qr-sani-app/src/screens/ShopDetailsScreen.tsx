@@ -6,8 +6,9 @@ import { supabase_lucifer_core } from '../utils/supabase';
 
 export default function ShopDetailsScreen({ route, navigation }: any) {
   const { shopData: initialShopData, id } = route?.params || {};
-  const [shopData, setShopData] = useState<any>(initialShopData);
-  const [isLoading, setIsLoading] = useState(!initialShopData);
+  const isValidShopData = initialShopData && initialShopData.shop_name;
+  const [shopData, setShopData] = useState<any>(isValidShopData ? initialShopData : null);
+  const [isLoading, setIsLoading] = useState(!isValidShopData);
   
   const [isFavorite, setIsFavorite] = useState(false);
   const { user } = useAuth();
@@ -17,7 +18,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
   const isDesktop = width >= 768; 
   
   useEffect(() => {
-    if (!initialShopData && id) {
+    if (!isValidShopData && id) {
       const fetchShop = async () => {
         try {
           const { data, error } = await supabase_lucifer_core
@@ -39,10 +40,10 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
         }
       };
       fetchShop();
-    } else if (!initialShopData && !id) {
+    } else if (!isValidShopData && !id) {
       setIsLoading(false);
     }
-  }, [id, initialShopData]);
+  }, [id, isValidShopData]);
 
   // Reservation State
   const [showReservationModal, setShowReservationModal] = useState(false);

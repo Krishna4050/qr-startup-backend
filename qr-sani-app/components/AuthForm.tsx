@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ScrollView } from 'react-native';
+import { Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ScrollView, useWindowDimensions } from 'react-native';
 import { Mail, Lock, AtSign, Eye, EyeOff, AlertCircle, ShieldCheck, ChevronLeft } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
 import { authStyles as styles } from '../styles/authStyles';
@@ -12,6 +12,8 @@ import { registerForPushNotificationsAsync } from '../src/utils/notifications';
 export default function AuthForm() {
   const navigation = useNavigation<any>();
   const [isLogin, setIsLogin] = useState(true);
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === 'web' && width >= 768;
   
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -269,7 +271,7 @@ export default function AuthForm() {
 
   const FormContent = (
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, width: '100%' }}>
-        {Platform.OS === 'web' ? (
+        {isDesktopWeb ? (
           <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#FFFFFF' }}>
              {/* Left Pane Branding */}
              <View style={{ flex: 1, backgroundColor: '#0F2D4D', justifyContent: 'center', alignItems: 'center', padding: 40, position: 'relative' }}>
