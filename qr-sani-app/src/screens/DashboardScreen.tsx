@@ -46,9 +46,7 @@ export default function DashboardScreen() {
   };
 
   useEffect(() => {
-    if (isFocused) {
-      fetchDashboardData();
-    }
+    fetchDashboardData();
 
     const notifSubscription = supabase_lucifer_core
       .channel(`public:notifications-${Date.now()}`)
@@ -68,6 +66,12 @@ export default function DashboardScreen() {
       supabase_lucifer_core.removeChannel(notifSubscription);
       supabase_lucifer_core.removeChannel(networkSubscription);
     };
+  }, []);
+
+  useEffect(() => {
+    if (isFocused && !loading) {
+      fetchDashboardData();
+    }
   }, [isFocused]);
 
   const fetchDashboardData = async () => {

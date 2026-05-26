@@ -100,7 +100,11 @@ export default function VehicleRepairDirectory() {
 
   // Initial fetch for shops
   useEffect(() => {
-    if (isFocused) {
+    fetchShops();
+  }, []);
+
+  useEffect(() => {
+    if (isFocused && !loading) {
       fetchShops();
     }
   }, [isFocused]);
