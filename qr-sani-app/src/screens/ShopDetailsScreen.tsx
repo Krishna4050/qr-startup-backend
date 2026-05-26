@@ -21,26 +21,18 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
     if (!isValidShopData && id) {
       const fetchShop = async () => {
         try {
-          const { data, error } = await supabase_lucifer_core
-            .from('shop_locations')
-            .select('*, shop_photos(photo_url)')
-            .eq('id', id)
-            .single();
-            
-          if (error) throw error;
-          
-          if (data) {
-            let processedPhotos = (data.shop_photos || []).map((p: any) => {
-              if (p.photo_url.startsWith('http')) return p.photo_url;
-              return supabase_lucifer_core.storage.from('shop_assets').getPublicUrl(p.photo_url).data.publicUrl;
-            });
+          const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+          if (!backendUrl) throw new Error("Backend URL not configured");
 
-            if (processedPhotos.length === 0 && data.verification_doc_url) {
-              const docUrl = data.verification_doc_url.startsWith('http') 
-                ? data.verification_doc_url 
-                : supabase_lucifer_core.storage.from('shop_assets').getPublicUrl(data.verification_doc_url).data.publicUrl;
-              processedPhotos = [docUrl];
-            }
+          const response = await fetch(`${backendUrl}/api/public/shops`);
+          const shopsData = await response.json();
+          const data = shopsData.find((s: any) => s.id === id);
+
+          if (data) {
+            const processedPhotos = (data.photos || []).map((pUrl: string) => {
+              if (pUrl.startsWith('http')) return pUrl;
+              return supabase_lucifer_core.storage.from('shop_assets').getPublicUrl(pUrl).data.publicUrl;
+            });
 
             data.photos = processedPhotos;
             setShopData(data);
