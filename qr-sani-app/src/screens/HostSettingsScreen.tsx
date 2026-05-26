@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, useWind
 import { ArrowLeft, Calendar, Settings } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export default function HostSettingsScreen() {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('availability');
   const [shops, setShops] = useState<any[]>([]);
@@ -22,8 +24,12 @@ export default function HostSettingsScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    fetchShops();
-  }, []);
+    if (user) {
+      fetchShops();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (selectedShopId && selectedDate) {
@@ -32,9 +38,8 @@ export default function HostSettingsScreen() {
   }, [selectedShopId, selectedDate]);
 
   const fetchShops = async () => {
+    if (!user) return;
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
-      if (!user) return;
       const { data } = await supabase_lucifer_core.from('shop_locations').select('id, shop_name').eq('owner_id', user.id);
       if (data && data.length > 0) {
         setShops(data);

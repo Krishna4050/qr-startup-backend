@@ -1,28 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { supabase_lucifer_core } from '../utils/supabase';
 
 import { Settings, Plus, MapPin, Clock, Home, CheckCircle, ChevronRight } from 'lucide-react-native';
-import { supabase_lucifer_core } from '../utils/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export default function HostDashboardScreen() {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
+  const { user } = useAuth();
   const [myShops, setMyShops] = useState<any[]>([]);
   const [userName, setUserName] = useState('Partner');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isFocused) {
+    if (isFocused && user) {
       fetchDashboardData();
+    } else if (isFocused && !user) {
+      setLoading(false);
     }
-  }, [isFocused]);
+  }, [isFocused, user]);
 
   const fetchDashboardData = async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
-      if (!user) return;
 
       // 1. Fetch User's First Name
       const { data: profile } = await supabase_lucifer_core

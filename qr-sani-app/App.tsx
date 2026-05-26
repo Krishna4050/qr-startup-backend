@@ -52,7 +52,17 @@ export default function App() {
     prefixes: ['http://app.krishnaadhikari.com', 'http://localhost:8081', 'exp://'],
     config: {
       screens: {
-        Dashboard: '',
+        Dashboard: {
+          path: '',
+          screens: {
+            Home: '',
+            Services: 'services',
+            Scan: 'scan',
+            Profile: 'profile',
+            Store: 'store',
+            VehicleRepairDirectory: 'repair-directory-tab',
+          }
+        },
         Login: 'login',
         VehicleRepairDirectory: 'repair-directory',
         ShopDetails: 'shop/:id',
