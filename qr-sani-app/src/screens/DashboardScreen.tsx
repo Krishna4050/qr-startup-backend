@@ -162,11 +162,10 @@ export default function DashboardScreen() {
     setIsSearching(true);
     try {
       // Mock search or actual DB fetch based on filters
-      // Let's fetch from public_directory for now
+      // Let's fetch from shop_locations
       const { data, error } = await supabase_lucifer_core
-        .from('public_directory')
+        .from('shop_locations')
         .select('*')
-        .ilike('shop_types', `%${filters.service}%`)
         .ilike('city', `%${filters.location}%`);
         
       if (error) throw error;
