@@ -127,7 +127,15 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
   };
 
   const handleSend = async () => {
-    if (!inputText.trim() || !keyPair || !hostPublicKey) return;
+    if (!inputText.trim() || !keyPair) return;
+    
+    if (!hostPublicKey) {
+      Alert.alert(
+        "Shop Not Ready", 
+        "This shop has not activated their messaging inbox yet. The host must log in at least once to receive encrypted messages."
+      );
+      return;
+    }
     
     if (containsForbiddenContent(inputText)) {
       Alert.alert("Security Warning", "For security reasons, links and URLs are not allowed in messages.");
@@ -208,24 +216,31 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
     const isMe = user ? item.sender_id === user.id : false;
 
     return (
-      <View style={[styles.messageBubble, isMe ? styles.myBubble : styles.theirBubble]}>
-        <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>
-          {item.content}
-        </Text>
-        
-        <View style={styles.messageFooter}>
-          <Text style={styles.timeText}>
-            {new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-            {item.is_edited && " (edited)"}
+      <View style={[styles.messageRow, isMe ? styles.myRow : styles.theirRow]}>
+        {!isMe && (
+          <View style={styles.avatarTiny}>
+            <Text style={styles.avatarTinyText}>{shopName ? shopName.charAt(0) : "S"}</Text>
+          </View>
+        )}
+        <View style={[styles.messageBubble, isMe ? styles.myBubble : styles.theirBubble]}>
+          <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>
+            {item.content}
           </Text>
           
-          {isMe && !item.is_deleted && (
-            <View style={styles.actionIcons}>
-              {item.status === 'read' ? <CheckCheck size={12} color="#10B981" /> : <Check size={12} color="#9CA3AF" />}
-              <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconBtn}><Edit2 size={12} color="#9CA3AF" /></TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(item.id, item.created_at)} style={styles.iconBtn}><Trash2 size={12} color="#EF4444" /></TouchableOpacity>
-            </View>
-          )}
+          <View style={[styles.messageFooter, isMe ? styles.footerRight : styles.footerLeft]}>
+            <Text style={[styles.timeText, isMe ? styles.myTime : styles.theirTime]}>
+              {new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+              {item.is_edited && " (edited)"}
+            </Text>
+            
+            {isMe && !item.is_deleted && (
+              <View style={styles.actionIcons}>
+                {item.status === 'read' ? <CheckCheck size={12} color="#E0F2FE" /> : <Check size={12} color="#BAE6FD" />}
+                <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconBtn}><Edit2 size={12} color="#E0F2FE" /></TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(item.id, item.created_at)} style={styles.iconBtn}><Trash2 size={12} color="#FECACA" /></TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -259,7 +274,7 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
             placeholderTextColor="#9CA3AF"
           />
           <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
-            <Send color="#FFF" size={20} />
+            <Send color="#0084FF" size={24} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -268,26 +283,39 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 20, backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E5E7EB' },
-  backBtn: { marginRight: 16 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: Platform.OS === 'ios' ? 60 : 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: '#E4E6EB' },
+  backBtn: { marginRight: 12, padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#050505' },
   
   listContent: { padding: 16, paddingBottom: 40 },
-  messageBubble: { maxWidth: '80%', padding: 12, borderRadius: 16, marginBottom: 12 },
-  myBubble: { alignSelf: 'flex-end', backgroundColor: '#0F2D4D', borderBottomRightRadius: 4 },
-  theirBubble: { alignSelf: 'flex-start', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderBottomLeftRadius: 4 },
+  messageRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 12 },
+  myRow: { justifyContent: 'flex-end' },
+  theirRow: { justifyContent: 'flex-start' },
+  
+  avatarTiny: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#E4E6EB', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  avatarTinyText: { fontSize: 12, fontWeight: 'bold', color: '#050505' },
+
+  messageBubble: { maxWidth: '75%', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20 },
+  myBubble: { backgroundColor: '#0084FF', borderBottomRightRadius: 4 },
+  theirBubble: { backgroundColor: '#E4E6EB', borderBottomLeftRadius: 4 },
   
   messageText: { fontSize: 15, lineHeight: 20 },
   myText: { color: '#FFFFFF' },
-  theirText: { color: '#111827' },
+  theirText: { color: '#050505' },
   
-  messageFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
-  timeText: { fontSize: 11, color: '#9CA3AF' },
-  actionIcons: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  messageFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  footerRight: { justifyContent: 'flex-end' },
+  footerLeft: { justifyContent: 'flex-start' },
+  
+  timeText: { fontSize: 11 },
+  myTime: { color: '#BAE6FD' },
+  theirTime: { color: '#65676B' },
+  
+  actionIcons: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 8 },
   iconBtn: { padding: 2 },
   
-  inputArea: { flexDirection: 'row', padding: 16, backgroundColor: '#FFF', borderTopWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
-  input: { flex: 1, backgroundColor: '#F3F4F6', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 24, fontSize: 15, marginRight: 12, color: '#111827' },
-  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#0F2D4D', justifyContent: 'center', alignItems: 'center' }
+  inputArea: { flexDirection: 'row', padding: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderColor: '#E4E6EB', alignItems: 'center', paddingBottom: Platform.OS === 'ios' ? 30 : 12 },
+  input: { flex: 1, backgroundColor: '#F0F2F5', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, fontSize: 15, marginRight: 12, color: '#050505' },
+  sendBtn: { padding: 8, justifyContent: 'center', alignItems: 'center' }
 });

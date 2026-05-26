@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking'; // NEW: Deep Linking Engine
 import { supabase_lucifer_core } from '../utils/supabase';
+import { getOrCreateKeyPair } from '../utils/crypto';
 
 type AuthContextType = {
   session: Session | null;
@@ -27,10 +28,20 @@ export const AuthProvider = ({ children }: any) => {
     });
 
     // Standard State Listener
-    const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
       
-      if (event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' && session?.user) {
         set_mayalu_session(session); 
+        // Automatically ensure E2E keys exist and are synced to profile
+        try {
+          const keys = await getOrCreateKeyPair();
+          await supabase_lucifer_core
+            .from('profiles')
+            .update({ chat_public_key: keys.publicKey })
+            .eq('id', session.user.id);
+        } catch (e) {
+          console.error("Failed to sync E2E keys on login:", e);
+        }
       } else if (event === 'SIGNED_OUT') {
         set_mayalu_session(null);
       }
