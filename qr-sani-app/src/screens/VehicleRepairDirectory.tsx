@@ -261,7 +261,7 @@ export default function VehicleRepairDirectory() {
           ) : (
             <View style={Platform.OS === 'web' ? styles.webGridContainer : {}}>
               {filteredShops.map((item) => (
-                <ShopCard key={item.id} item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id, shopData: item })} />
+                <ShopCard key={item.id} item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} />
               ))}
             </View>
           )}

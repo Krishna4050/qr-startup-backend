@@ -90,7 +90,7 @@ export default function HostDashboardScreen() {
                 style={styles.shopCard} 
                 activeOpacity={0.8}
                 // NAVIGATE TO THE NEW DETAILS SCREEN!
-                onPress={() => navigation.navigate('HostShopDetails', { id: shop.id, shopData: shop })}
+                onPress={() => navigation.navigate('HostShopDetails', { id: shop.id })}
               >
                 <View style={styles.cardImageContainer}>
                   <Image source={{ uri: thumbnailUrl }} style={styles.cardImage} />

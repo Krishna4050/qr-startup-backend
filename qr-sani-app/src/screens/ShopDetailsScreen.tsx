@@ -30,7 +30,19 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
           if (error) throw error;
           
           if (data) {
-            data.photos = data.shop_photos?.map((p: any) => p.photo_url) || [];
+            let processedPhotos = (data.shop_photos || []).map((p: any) => {
+              if (p.photo_url.startsWith('http')) return p.photo_url;
+              return supabase_lucifer_core.storage.from('shop_assets').getPublicUrl(p.photo_url).data.publicUrl;
+            });
+
+            if (processedPhotos.length === 0 && data.verification_doc_url) {
+              const docUrl = data.verification_doc_url.startsWith('http') 
+                ? data.verification_doc_url 
+                : supabase_lucifer_core.storage.from('shop_assets').getPublicUrl(data.verification_doc_url).data.publicUrl;
+              processedPhotos = [docUrl];
+            }
+
+            data.photos = processedPhotos;
             setShopData(data);
           }
         } catch (e) {

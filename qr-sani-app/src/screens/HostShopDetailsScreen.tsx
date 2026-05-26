@@ -50,7 +50,7 @@ export default function HostShopDetailsScreen() {
 
   const handlePreview = () => {
     // This will open the shop in the exact same view that normal users see it!
-    navigation.navigate('ShopDetails', { id: shopData.id, shopData: shopData });
+    navigation.navigate('ShopDetails', { id: shopData.id });
   };
 
   const showUnderConstruction = () => {
@@ -124,7 +124,7 @@ export default function HostShopDetailsScreen() {
           <EditRow 
             title="Messages" 
             value="View customer inquiries" 
-            onPress={() => navigation.navigate('HostMessages', { shopId: shopData.id, shopData })} 
+            onPress={() => navigation.navigate('HostMessages', { shopId: shopData.id })} 
           />
           <EditRow 
             title="Photos" 
