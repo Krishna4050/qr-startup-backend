@@ -41,11 +41,19 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
       safeAlert("Sign In Required", "Please sign in to message this shop.");
       return;
     }
-    navigation.navigate("ChatScreen", {
-      shopId: shopData.id,
-      shopName: shopData.shop_name,
-      otherUserId: shopData.owner_id
-    });
+    if (isDesktop) {
+      navigation.navigate("UserMessages", {
+        shopId: shopData.id,
+        shopName: shopData.shop_name,
+        hostId: shopData.owner_id
+      });
+    } else {
+      navigation.navigate("ChatScreen", {
+        shopId: shopData.id,
+        shopName: shopData.shop_name,
+        otherUserId: shopData.owner_id
+      });
+    }
   };
 
   const handleCall = async () => {

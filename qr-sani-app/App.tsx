@@ -22,6 +22,7 @@ import PartnerOnboardingStep4Screen from './src/screens/PartnerOnboardingStep4Sc
 import HostDashboardScreen from './src/screens/HostDashboardScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import HostMessagesScreen from './src/screens/HostMessagesScreen';
+import UserMessagesScreen from './src/screens/UserMessagesScreen';
 //import ServicesScreen from './src/screens/ServicesScreen';
 
 // Providers
@@ -97,6 +98,7 @@ export default function App() {
             <Stack.Screen name="HostDashboard" component={HostDashboardScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ headerShown: false }} />
             <Stack.Screen name="HostMessages" component={HostMessagesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="UserMessages" component={UserMessagesScreen} options={{ headerShown: false }} />
             
           </Stack.Navigator>
         </NavigationContainer>
