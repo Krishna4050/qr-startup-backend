@@ -1,492 +1,248 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Platform, Linking, Alert, useWindowDimensions, Modal, TextInput, ActivityIndicator } from 'react-native';
-import { ArrowLeft, Star, MapPin, Phone, MessageSquare, ShieldCheck, Heart, CheckCircle2, Share, Calendar, X } from 'lucide-react-native';
-import { useAuth } from '../context/AuthContext';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, useWindowDimensions, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { ArrowLeft, Calendar, Settings } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 import { supabase_lucifer_core } from '../utils/supabase';
 
-export default function ShopDetailsScreen({ route, navigation }: any) {
-  const { shopData } = route.params;
-  const [isFavorite, setIsFavorite] = useState(false);
-  const { user } = useAuth();
+export default function HostSettingsScreen() {
+  const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
+
+  const [activeTab, setActiveTab] = useState('availability');
+  const [shops, setShops] = useState<any[]>([]);
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   
-  // Breakpoint for Desktop vs Mobile
-  const isDesktop = width >= 768; 
-  const photos = shopData.photos || [];
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  // Availability State
+  const [capacity, setCapacity] = useState('5');
+  const [isFullyBooked, setIsFullyBooked] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Reservation State
-  const [showReservationModal, setShowReservationModal] = useState(false);
-  const [reservationDate, setReservationDate] = useState('');
-  const [reservationMessage, setReservationMessage] = useState('');
-  const [isBooking, setIsBooking] = useState(false);
+  useEffect(() => {
+    fetchShops();
+  }, []);
 
-  const safeAlert = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}: ${message}`);
-    } else {
-      Alert.alert(title, message);
+  useEffect(() => {
+    if (selectedShopId && selectedDate) {
+      fetchAvailability();
     }
-  };
+  }, [selectedShopId, selectedDate]);
 
-  const handleDirections = () => {
-    if (!user) {
-      safeAlert("Sign In Required", "Please sign in to get directions.");
-      return;
-    }
-    const fullAddress = `${shopData.street}, ${shopData.city}`;
-    const url = Platform.select({
-      ios: `maps:0,0?q=${encodeURIComponent(fullAddress)}`,
-      android: `geo:0,0?q=${encodeURIComponent(fullAddress)}`,
-      web: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
-    });
-    if (url) Linking.openURL(url);
-  };
-
-  const handleMessage = () => {
-    if (!user) {
-      safeAlert("Sign In Required", "Please sign in to message this shop.");
-      return;
-    }
-    if (isDesktop) {
-      navigation.navigate("UserMessages", {
-        shopId: shopData.id,
-        shopName: shopData.shop_name,
-        hostId: shopData.owner_id
-      });
-    } else {
-      navigation.navigate("ChatScreen", {
-        shopId: shopData.id,
-        shopName: shopData.shop_name,
-        otherUserId: shopData.owner_id
-      });
-    }
-  };
-
-  const handleCall = async () => {
-    if (!user) {
-      safeAlert("Sign In Required", "Please sign in to call this shop.");
-      return;
-    }
-
+  const fetchShops = async () => {
     try {
-      const { data: tags, error } = await supabase_lucifer_core.from('qr_tags').select('id').eq('owner_id', user.id).limit(1);
-      if (error) throw error;
-
-      if (!tags || tags.length === 0) {
-        safeAlert("Premium Feature", "You must be an active member of our QR System to use the proxy calling service.");
-        return;
+      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase_lucifer_core.from('shop_locations').select('id, shop_name').eq('owner_id', user.id);
+      if (data && data.length > 0) {
+        setShops(data);
+        setSelectedShopId(data[0].id);
       }
-
-      const { data: profile } = await supabase_lucifer_core.from('profiles').select('phone_number').eq('id', user.id).single();
-      if (!profile?.phone_number) {
-        safeAlert("Profile Incomplete", "Please add a verified phone number to your profile to make calls.");
-        return;
-      }
-
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-      if (!backendUrl) throw new Error("Backend URL missing");
-
-      safeAlert("Connecting...", "You will receive a call from our system shortly connecting you to the shop.");
-      
-      await fetch(`${backendUrl}/api/call-shop`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shop_id: shopData.id, phone_number: profile.phone_number })
-      });
-
-    } catch (err) {
-      console.error(err);
-      safeAlert("Error", "Something went wrong while initiating the call.");
-    }
-  };
-
-  const handleBookReservation = async () => {
-    if (!user) {
-      safeAlert("Sign In Required", "Please sign in to book.");
-      return;
-    }
-    if (!reservationDate) {
-      safeAlert("Missing Info", "Please provide a valid date.");
-      return;
-    }
-
-    setIsBooking(true);
-    try {
-      // 1. Create Reservation
-      const { error } = await supabase_lucifer_core.from('shop_reservations').insert({
-        shop_id: shopData.id,
-        user_id: user.id,
-        reservation_date: reservationDate,
-        message: reservationMessage,
-        status: 'pending'
-      });
-
-      if (error) throw error;
-
-      // 2. Trigger Notification Email via Go Backend
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-      if (backendUrl) {
-        // Fetch host email to notify them
-        const { data: hostProfile } = await supabase_lucifer_core.from('profiles').select('email').eq('id', shopData.owner_id).single();
-        if (hostProfile?.email) {
-          await fetch(`${backendUrl}/api/host/message-notification-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ shop_name: shopData.shop_name, email: hostProfile.email })
-          }).catch(console.error); // Ignore failures, it's just an email
-        }
-      }
-
-      safeAlert("Success", "Reservation requested! The host will review it soon.");
-      setShowReservationModal(false);
-      setReservationDate('');
-      setReservationMessage('');
-    } catch (e: any) {
-      safeAlert("Error", e.message);
+    } catch (e) {
+      console.error(e);
     } finally {
-      setIsBooking(false);
+      setLoading(false);
     }
   };
 
-  const renderDesktopPhotos = () => {
-    if (photos.length === 0) return <View style={styles.noPhoto}><Text>No Photos Available</Text></View>;
-    if (photos.length === 1) return <Image source={{ uri: photos[0] }} style={[styles.heroImage, { borderRadius: 16 }] as any} />;
+  const fetchAvailability = async () => {
+    try {
+      const { data } = await supabase_lucifer_core
+        .from('shop_availability')
+        .select('*')
+        .eq('shop_id', selectedShopId)
+        .eq('available_date', selectedDate)
+        .single();
+        
+      if (data) {
+        setCapacity(data.max_capacity.toString());
+        setIsFullyBooked(data.is_fully_booked);
+      } else {
+        setCapacity('5');
+        setIsFullyBooked(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSaveAvailability = async () => {
+    if (!selectedShopId) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase_lucifer_core
+        .from('shop_availability')
+        .upsert({
+          shop_id: selectedShopId,
+          available_date: selectedDate,
+          max_capacity: parseInt(capacity) || 5,
+          is_fully_booked: isFullyBooked
+        }, { onConflict: 'shop_id, available_date' });
+        
+      if (error) throw error;
+      Alert.alert("Success", "Availability settings saved!");
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderSidebar = () => (
+    <View style={[styles.sidebar, isDesktop && styles.sidebarDesktop]}>
+      {!isDesktop && (
+        <TouchableOpacity style={styles.mobileBackBtn} onPress={() => navigation.goBack()}>
+          <ArrowLeft color="#0A192F" size={24} />
+        </TouchableOpacity>
+      )}
+      <Text style={styles.sidebarTitle}>Settings</Text>
+      
+      <TouchableOpacity 
+        style={[styles.sidebarItem, activeTab === 'availability' && styles.sidebarItemActive]}
+        onPress={() => setActiveTab('availability')}
+      >
+        <Calendar color={activeTab === 'availability' ? "#4A00E0" : "#64748B"} size={20} />
+        <Text style={[styles.sidebarItemText, activeTab === 'availability' && styles.sidebarItemTextActive]}>Availability</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={[styles.sidebarItem, activeTab === 'general' && styles.sidebarItemActive]}
+        onPress={() => setActiveTab('general')}
+      >
+        <Settings color={activeTab === 'general' ? "#4A00E0" : "#64748B"} size={20} />
+        <Text style={[styles.sidebarItemText, activeTab === 'general' && styles.sidebarItemTextActive]}>General Settings</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderContent = () => {
+    if (loading) return <View style={styles.contentArea}><ActivityIndicator size="large" color="#4A00E0" /></View>;
+    if (shops.length === 0) return <View style={styles.contentArea}><Text>No shops found.</Text></View>;
+
+    if (activeTab === 'availability') {
+      return (
+        <View style={styles.contentArea}>
+          <Text style={styles.contentTitle}>Manage Availability</Text>
+          <Text style={styles.contentSubtitle}>Control how many vehicles you can repair each day.</Text>
+          
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Select Shop</Text>
+            <View style={styles.shopSelector}>
+              {shops.map(s => (
+                <TouchableOpacity 
+                  key={s.id} 
+                  style={[styles.shopPill, selectedShopId === s.id && styles.shopPillActive]}
+                  onPress={() => setSelectedShopId(s.id)}
+                >
+                  <Text style={[styles.shopPillText, selectedShopId === s.id && styles.shopPillTextActive]}>{s.shop_name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Select Date (YYYY-MM-DD)</Text>
+            <TextInput 
+              style={styles.input} 
+              value={selectedDate} 
+              onChangeText={setSelectedDate}
+              placeholder="2026-05-26"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Daily Capacity (Number of Vehicles)</Text>
+            <TextInput 
+              style={styles.input} 
+              value={capacity} 
+              onChangeText={setCapacity}
+              keyboardType="number-pad"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Mark as Fully Booked?</Text>
+            <TouchableOpacity 
+              style={[styles.toggleBtn, isFullyBooked && styles.toggleBtnActive]}
+              onPress={() => setIsFullyBooked(!isFullyBooked)}
+            >
+              <Text style={[styles.toggleBtnText, isFullyBooked && styles.toggleBtnTextActive]}>
+                {isFullyBooked ? "Yes, Blocked" : "No, Open for bookings"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSaveAvailability} disabled={saving}>
+            {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>Save Availability</Text>}
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
     return (
-      <View style={styles.desktopGrid}>
-        {/* Large Left Image */}
-        <View style={styles.gridLeft}>
-          <Image source={{ uri: photos[0] }} style={[styles.gridImage, styles.roundedLeft] as any} />
-        </View>
-        
-        {/* Smaller Right Images */}
-        <View style={styles.gridRight}>
-          <View style={styles.gridRightCol}>
-            <Image source={{ uri: photos[1] }} style={[styles.gridImage, styles.marginBottom] as any} />
-            <Image source={{ uri: photos[2] || photos[0] }} style={styles.gridImage as any} />
-          </View>
-          <View style={styles.gridRightCol}>
-            <Image source={{ uri: photos[3] || photos[0] }} style={[styles.gridImage, styles.marginBottom, styles.roundedTopRight] as any} />
-            <Image source={{ uri: photos[4] || photos[1] }} style={[styles.gridImage, styles.roundedBottomRight] as any} />
-          </View>
-        </View>
+      <View style={styles.contentArea}>
+        <Text style={styles.contentTitle}>General Settings</Text>
+        <Text style={styles.contentSubtitle}>More settings coming soon.</Text>
       </View>
     );
   };
 
-  const renderMobilePhotos = () => (
-    <View style={styles.mobilePhotoContainer}>
-      {photos.length > 0 ? (
-        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-          {photos.map((url: string, index: number) => (
-            <Image key={index} source={{ uri: url }} style={{ width, height: width * 0.8, resizeMode: 'cover' }} />
-          ))}
-        </ScrollView>
-      ) : (
-        <View style={styles.noPhoto}><Text>No Photos Available</Text></View>
-      )}
-      <View style={styles.floatingHeader}>
-        <TouchableOpacity style={styles.iconCircle} onPress={() => navigation.goBack()}>
-          <ArrowLeft color="#0A192F" size={24} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.iconCircle} onPress={() => setIsFavorite(!isFavorite)}>
-          <Heart color={isFavorite ? "#EF4444" : "#0A192F"} fill={isFavorite ? "#EF4444" : "transparent"} size={24} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const ContactCard = () => (
-    <View style={styles.contactCard}>
-      <Text style={styles.cardPriceTitle}>Reach Out</Text>
-      <Text style={styles.cardSubText}>Connect instantly via secure systems.</Text>
-      
-      <View style={styles.divider} />
-      
-      {/* @ts-ignore */}
-      <TouchableOpacity style={[styles.btnPrimary, { cursor: Platform.OS === 'web' ? 'pointer' : 'auto' }]} onPress={() => {
-        if (!user) { safeAlert("Sign In Required", "Please sign in to book."); return; }
-        setShowReservationModal(true);
-      }}>
-        <Calendar color="#FFFFFF" size={20} style={styles.btnIcon} />
-        <Text style={styles.btnPrimaryText}>Book a Reservation</Text>
-      </TouchableOpacity>
-      
-      {/* @ts-ignore */}
-      <TouchableOpacity style={[styles.btnOutline, { cursor: Platform.OS === 'web' ? 'pointer' : 'auto', marginBottom: 12 }]} onPress={handleCall}>
-        <Phone color="#FFFFFF" size={20} style={styles.btnIcon} />
-        <Text style={styles.btnOutlineText}>Secure Proxy Call</Text>
-      </TouchableOpacity>
-      
-      {/* @ts-ignore */}
-      <TouchableOpacity style={[styles.btnSecondary, { cursor: Platform.OS === 'web' ? 'pointer' : 'auto' }]} onPress={handleMessage}>
-        <MessageSquare color="#0A192F" size={20} style={styles.btnIcon} />
-        <Text style={styles.btnSecondaryText}>E2E Encrypted Chat</Text>
-      </TouchableOpacity>
-      
-      {/* @ts-ignore */}
-      <TouchableOpacity style={[styles.btnOutline, { cursor: Platform.OS === 'web' ? 'pointer' : 'auto' }]} onPress={handleDirections}>
-        <MapPin color="#0A192F" size={20} style={styles.btnIcon} />
-        <Text style={styles.btnOutlineText}>Get Directions</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.cardFooterText}>You won't be charged for chatting.</Text>
-    </View>
-  );
-
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={isDesktop ? styles.scrollContentDesktop : styles.scrollContentMobile}>
-      
+    <View style={styles.container}>
       {isDesktop && (
-        <View style={styles.desktopNav}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <View style={styles.desktopHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center' }}>
             <ArrowLeft color="#0A192F" size={24} />
+            <Text style={{ marginLeft: 8, fontSize: 16, fontWeight: 'bold' }}>Back to Dashboard</Text>
           </TouchableOpacity>
-          <View style={styles.navActions}>
-            <TouchableOpacity style={styles.navActionBtn}>
-              <Share size={18} color="#0A192F" /><Text style={styles.navActionText}>Share</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navActionBtn} onPress={() => setIsFavorite(!isFavorite)}>
-              <Heart size={18} color={isFavorite ? "#EF4444" : "#0A192F"} fill={isFavorite ? "#EF4444" : "transparent"} /><Text style={styles.navActionText}>Save</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       )}
-
-      {/* Title block (Desktop shows it above photos, Mobile shows it below photos) */}
-      {isDesktop && (
-        <View style={styles.desktopTitleBlock}>
-          <Text style={styles.shopName}>{shopData.shop_name}</Text>
-          <View style={styles.titleSubRow}>
-            <Star color="#111827" fill="#111827" size={16} />
-            <Text style={styles.ratingText}>{shopData.average_rating}</Text>
-            <Text style={styles.dotSeparator}>·</Text>
-            <Text style={styles.locationLinkText} onPress={handleDirections}>{shopData.city}</Text>
-          </View>
-        </View>
-      )}
-
-      {isDesktop ? renderDesktopPhotos() : renderMobilePhotos()}
-
-      <View style={[styles.bodyLayout, isDesktop ? styles.bodyLayoutDesktop : styles.bodyLayoutMobile]}>
-        
-        {/* Left Column (Main Content) */}
-        <View style={isDesktop ? styles.leftColumn : styles.fullWidth}>
-          {!isDesktop && (
-            <View style={styles.mobileTitleBlock}>
-              <Text style={styles.shopName}>{shopData.shop_name}</Text>
-              <View style={styles.titleSubRow}>
-                <Star color="#111827" fill="#111827" size={16} />
-                <Text style={styles.ratingText}>{shopData.average_rating}</Text>
-                <Text style={styles.dotSeparator}>·</Text>
-                <Text style={styles.locationLinkText}>{shopData.city}</Text>
-              </View>
-            </View>
-          )}
-
-          <View style={styles.divider} />
-
-          <View style={styles.hostRow}>
-            <View style={styles.hostInfo}>
-              <Text style={styles.hostedByTitle}>Hosted by QR-Startup Partner</Text>
-              <View style={styles.verifyRow}>
-                <ShieldCheck color="#10B981" size={16} />
-                <Text style={styles.verifyText}>Identity verified</Text>
-              </View>
-            </View>
-            <View style={styles.hostAvatar}>
-              <Text style={styles.avatarText}>{shopData.shop_name?.charAt(0) || 'S'}</Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <Text style={styles.sectionTitle}>What this shop offers</Text>
-          <View style={styles.amenitiesGrid}>
-            {(shopData.shop_types || []).map((type: string, idx: number) => (
-              <View key={`type-${idx}`} style={styles.amenityItem}>
-                <CheckCircle2 color="#0A192F" size={24} />
-                <Text style={styles.amenityLabel}>{type}</Text>
-              </View>
-            ))}
-            {(shopData.amenities || []).map((amenity: string, idx: number) => (
-              <View key={`amenity-${idx}`} style={styles.amenityItem}>
-                <CheckCircle2 color="#0A192F" size={24} />
-                <Text style={styles.amenityLabel}>{amenity}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Map/Location Section */}
-          <View style={styles.divider} />
-          <Text style={styles.sectionTitle}>Where you'll be</Text>
-          <Text style={styles.locationTextMap}>{shopData.street}, {shopData.city}</Text>
-          <View style={styles.mapPlaceholder}>
-            <MapPin color="#0A192F" size={32} />
-            <Text style={styles.mapText}>Map Area</Text>
-            <Text style={styles.mapSubtext}>Coordinates mapping integration coming soon.</Text>
-          </View>
-
-        </View>
-
-        {/* Right Column (Sticky Card) OR Mobile Footer */}
-        {isDesktop ? (
-          <View style={styles.rightColumn}>
-            <View style={styles.stickyWrapper}>
-              <ContactCard />
-            </View>
-          </View>
-        ) : (
-          <View style={styles.mobileContactSection}>
-            <View style={styles.divider} />
-            <ContactCard />
-          </View>
-        )}
-
+      <View style={[styles.layoutWrapper, isDesktop && styles.layoutWrapperDesktop]}>
+        {renderSidebar()}
+        <ScrollView style={{ flex: 1 }}>
+          {renderContent()}
+        </ScrollView>
       </View>
-
-      {/* Reservation Modal */}
-      <Modal visible={showReservationModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#0A192F' }}>Request Booking</Text>
-              <TouchableOpacity onPress={() => setShowReservationModal(false)}>
-                <X color="#0A192F" size={24} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>Date (YYYY-MM-DD) *</Text>
-              <TextInput 
-                style={styles.modalInput} 
-                placeholder="e.g. 2026-05-26" 
-                value={reservationDate} 
-                onChangeText={setReservationDate} 
-              />
-            </View>
-
-            <View style={{ marginBottom: 24 }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>Message to Host (Optional)</Text>
-              <TextInput 
-                style={[styles.modalInput, { height: 100, textAlignVertical: 'top' }]} 
-                placeholder="Describe the issue with your vehicle..." 
-                multiline 
-                value={reservationMessage} 
-                onChangeText={setReservationMessage} 
-              />
-            </View>
-
-            <TouchableOpacity 
-              style={[styles.btnPrimary, { marginBottom: 0 }]} 
-              onPress={handleBookReservation}
-              disabled={isBooking}
-            >
-              {isBooking ? <ActivityIndicator color="#FFF" /> : <Text style={styles.btnPrimaryText}>Confirm Booking Request</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollContentDesktop: { paddingHorizontal: '5%', maxWidth: 1200, alignSelf: 'center', width: '100%', paddingBottom: 100 },
-  scrollContentMobile: { paddingBottom: 40 },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  desktopHeader: { padding: 24, backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E2E8F0' },
+  layoutWrapper: { flex: 1, flexDirection: 'column' },
+  layoutWrapperDesktop: { flexDirection: 'row', maxWidth: 1200, width: '100%', alignSelf: 'center', marginTop: 32, paddingHorizontal: 24 },
   
-  // Desktop Nav & Title
-  desktopNav: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 20 },
-  backBtn: { padding: 8, marginLeft: -8 },
-  navActions: { flexDirection: 'row', gap: 16 },
-  // @ts-ignore
-  navActionBtn: { flexDirection: 'row', alignItems: 'center', padding: 8, gap: 8, cursor: Platform.OS === 'web' ? 'pointer' : 'auto' },
-  navActionText: { fontSize: 14, fontWeight: '600', textDecorationLine: 'underline', color: '#0A192F' },
+  sidebar: { backgroundColor: '#FFF', padding: 24, borderBottomWidth: 1, borderColor: '#E2E8F0' },
+  sidebarDesktop: { width: 280, borderRadius: 12, borderBottomWidth: 0, borderWidth: 1, height: 'auto', marginRight: 24 },
+  mobileBackBtn: { marginBottom: 16 },
+  sidebarTitle: { fontSize: 24, fontWeight: 'bold', color: '#0A192F', marginBottom: 24 },
+  sidebarItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, marginBottom: 8 },
+  sidebarItemActive: { backgroundColor: '#F3F4F6' },
+  sidebarItemText: { fontSize: 16, color: '#64748B', marginLeft: 12, fontWeight: '500' },
+  sidebarItemTextActive: { color: '#0A192F', fontWeight: '600' },
   
-  desktopTitleBlock: { marginBottom: 24 },
-  mobileTitleBlock: { paddingHorizontal: 24, paddingTop: 24 },
-  shopName: { fontSize: 32, fontWeight: '700', color: '#0A192F', marginBottom: 8, letterSpacing: -0.5 },
-  titleSubRow: { flexDirection: 'row', alignItems: 'center' },
-  ratingText: { fontSize: 15, fontWeight: '600', marginLeft: 4, color: '#111827' },
-  dotSeparator: { marginHorizontal: 8, fontSize: 15, color: '#4B5563' },
-  // @ts-ignore
-  locationLinkText: { fontSize: 15, fontWeight: '600', textDecorationLine: 'underline', color: '#0A192F', cursor: Platform.OS === 'web' ? 'pointer' : 'auto' },
+  contentArea: { flex: 1, backgroundColor: '#FFF', padding: 32, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  contentTitle: { fontSize: 24, fontWeight: 'bold', color: '#0A192F', marginBottom: 8 },
+  contentSubtitle: { fontSize: 16, color: '#64748B', marginBottom: 32 },
+  
+  formGroup: { marginBottom: 24 },
+  label: { fontSize: 14, fontWeight: '700', color: '#0A192F', marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, paddingHorizontal: 16, height: 50, fontSize: 16, backgroundColor: '#F8FAFC' },
+  
+  shopSelector: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  shopPill: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
+  shopPillActive: { backgroundColor: '#0A192F', borderColor: '#0A192F' },
+  shopPillText: { color: '#475569', fontWeight: '500' },
+  shopPillTextActive: { color: '#FFF' },
 
-  // Photo Grids
-  noPhoto: { height: 300, backgroundColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center', borderRadius: 16 },
-  heroImage: { width: '100%', height: 400, resizeMode: 'cover' },
+  toggleBtn: { padding: 16, borderRadius: 8, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center' },
+  toggleBtnActive: { backgroundColor: '#FEE2E2', borderColor: '#EF4444' },
+  toggleBtnText: { fontWeight: '600', color: '#475569' },
+  toggleBtnTextActive: { color: '#B91C1C' },
   
-  desktopGrid: { flexDirection: 'row', height: 400, borderRadius: 16, overflow: 'hidden', gap: 8 },
-  gridLeft: { flex: 1 },
-  gridRight: { flex: 1, flexDirection: 'row', gap: 8 },
-  gridRightCol: { flex: 1, gap: 8 },
-  gridImage: { flex: 1, width: '100%', resizeMode: 'cover' },
-  roundedLeft: { borderTopLeftRadius: 16, borderBottomLeftRadius: 16, overflow: 'hidden' },
-  roundedTopRight: { borderTopRightRadius: 16, overflow: 'hidden' },
-  roundedBottomRight: { borderBottomRightRadius: 16, overflow: 'hidden' },
-  marginBottom: { marginBottom: 0 },
-
-  mobilePhotoContainer: { position: 'relative' },
-  floatingHeader: { position: 'absolute', top: 50, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between' },
-  iconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
-
-  // Body Layouts
-  bodyLayout: { flexDirection: 'row', paddingTop: 32 },
-  bodyLayoutDesktop: { justifyContent: 'space-between' },
-  bodyLayoutMobile: { flexDirection: 'column' },
-  leftColumn: { flex: 0.58 },
-  rightColumn: { flex: 0.35, position: 'relative' },
-  fullWidth: { width: '100%' },
-
-  // Host Details
-  hostRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, paddingHorizontal: Platform.OS === 'web' ? 0 : 24 },
-  hostInfo: { flex: 1 },
-  hostedByTitle: { fontSize: 22, fontWeight: '600', color: '#0A192F', marginBottom: 4 },
-  verifyRow: { flexDirection: 'row', alignItems: 'center' },
-  verifyText: { color: '#717171', fontSize: 14, marginLeft: 6 },
-  hostAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#4A00E0', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
-
-  divider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 32, marginHorizontal: Platform.OS === 'web' ? 0 : 24 },
-  
-  sectionTitle: { fontSize: 22, fontWeight: '600', color: '#0A192F', marginBottom: 24, paddingHorizontal: Platform.OS === 'web' ? 0 : 24 },
-  
-  // Amenities
-  amenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: Platform.OS === 'web' ? 0 : 24 },
-  amenityItem: { width: '50%', flexDirection: 'row', alignItems: 'center', marginBottom: 16, paddingRight: 16 },
-  amenityLabel: { fontSize: 16, color: '#222222', marginLeft: 16 },
-
-  // Map
-  locationTextMap: { fontSize: 16, color: '#222222', marginBottom: 24, paddingHorizontal: Platform.OS === 'web' ? 0 : 24 },
-  mapPlaceholder: { height: 300, backgroundColor: '#F3F4F6', borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginHorizontal: Platform.OS === 'web' ? 0 : 24 },
-  mapText: { fontSize: 18, fontWeight: 'bold', color: '#0A192F', marginTop: 12 },
-  mapSubtext: { fontSize: 14, color: '#717171', marginTop: 4 },
-
-  // Sticky Contact Card
-  // @ts-ignore
-  stickyWrapper: { position: Platform.OS === 'web' ? 'sticky' : 'relative', top: 32 },
-  contactCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 24, elevation: 8, borderWidth: 1, borderColor: '#E5E7EB' },
-  mobileContactSection: { padding: 24 },
-  
-  cardPriceTitle: { fontSize: 22, fontWeight: '700', color: '#0A192F' },
-  cardSubText: { fontSize: 15, color: '#717171', marginTop: 4 },
-  
-  btnPrimary: { backgroundColor: '#4A00E0', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, marginBottom: 12 },
-  btnPrimaryText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
-  
-  btnSecondary: { backgroundColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, marginBottom: 12 },
-  btnSecondaryText: { color: '#0A192F', fontSize: 16, fontWeight: 'bold' },
-  
-  btnOutline: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#0A192F', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12 },
-  btnOutlineText: { color: '#0A192F', fontSize: 16, fontWeight: 'bold' },
-  
-  btnIcon: { marginRight: 10 },
-  cardFooterText: { textAlign: 'center', color: '#717171', fontSize: 13, marginTop: 16 },
-
-  // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  modalContent: { width: '100%', maxWidth: 500, backgroundColor: '#FFF', borderRadius: 16, padding: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 24, elevation: 10 },
-  modalInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, paddingHorizontal: 16, height: 50, fontSize: 16 }
+  saveBtn: { backgroundColor: '#4A00E0', padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 16 },
+  saveBtnText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' }
 });

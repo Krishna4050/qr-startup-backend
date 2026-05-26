@@ -149,7 +149,7 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
 
       if (editingId) {
         // Edit existing
-        await supabase_lucifer_core
+        const { error: editError } = await supabase_lucifer_core
           .from('shop_messages')
           .update({ 
             content_nonce: nonce, 
@@ -158,10 +158,12 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
             edited_at: new Date().toISOString() 
           })
           .eq('id', editingId);
+          
+        if (editError) throw editError;
         setEditingId(null);
       } else if (user) {
         // Send new
-        await supabase_lucifer_core.from('shop_messages').insert({
+        const { error: insertError } = await supabase_lucifer_core.from('shop_messages').insert({
           shop_id: shopId,
           sender_id: user.id,
           receiver_id: otherUserId,
@@ -169,11 +171,14 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
           encrypted_content: encrypted,
           status: 'sent'
         });
+        
+        if (insertError) throw insertError;
       }
 
       setInputText('');
-    } catch (err) {
+    } catch (err: any) {
       console.error("Send error", err);
+      Alert.alert("Failed to Send", err.message || "An unknown error occurred.");
     }
   };
 

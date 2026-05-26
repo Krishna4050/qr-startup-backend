@@ -30,19 +30,21 @@ export const AuthProvider = ({ children }: any) => {
     // Standard State Listener
     const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
       
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (session?.user) {
         set_mayalu_session(session); 
         // Automatically ensure E2E keys exist and are synced to profile
-        try {
-          const keys = await getOrCreateKeyPair();
-          await supabase_lucifer_core
-            .from('profiles')
-            .update({ chat_public_key: keys.publicKey })
-            .eq('id', session.user.id);
-        } catch (e) {
-          console.error("Failed to sync E2E keys on login:", e);
+        if (event === 'SIGNED_IN') {
+          try {
+            const keys = await getOrCreateKeyPair();
+            await supabase_lucifer_core
+              .from('profiles')
+              .update({ chat_public_key: keys.publicKey })
+              .eq('id', session.user.id);
+          } catch (e) {
+            console.error("Failed to sync E2E keys on login:", e);
+          }
         }
-      } else if (event === 'SIGNED_OUT') {
+      } else {
         set_mayalu_session(null);
       }
     });
