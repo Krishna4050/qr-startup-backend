@@ -6,7 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { getOrCreateKeyPair, encryptMessage, decryptMessage, KeyPair } from '../utils/crypto';
 
 export default function ChatScreen({ route, navigation, isEmbedded = false }: any) {
-  const { shopId, shopName, otherUserId } = route?.params || {};
+  const { shopId, shopName: initialShopName, otherUserId } = route?.params || {};
+  const [shopName, setShopName] = useState(initialShopName);
   const { user } = useAuth();
   
   const [messages, setMessages] = useState<any[]>([]);
@@ -44,6 +45,12 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
           .from('profiles')
           .update({ chat_public_key: keys.publicKey })
           .eq('id', user.id);
+      }
+
+      // Fetch shopName if missing
+      if (!shopName && shopId) {
+        const { data: shopRes } = await supabase_lucifer_core.from('shop_locations').select('shop_name').eq('id', shopId).single();
+        if (shopRes) setShopName(shopRes.shop_name);
       }
 
       // 2. Get Other User's public key and shop settings

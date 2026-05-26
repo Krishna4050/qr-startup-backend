@@ -5,14 +5,44 @@ import { useAuth } from '../context/AuthContext';
 import { supabase_lucifer_core } from '../utils/supabase';
 
 export default function ShopDetailsScreen({ route, navigation }: any) {
-  const { shopData } = route.params;
+  const { shopData: initialShopData, id } = route?.params || {};
+  const [shopData, setShopData] = useState<any>(initialShopData);
+  const [isLoading, setIsLoading] = useState(!initialShopData);
+  
   const [isFavorite, setIsFavorite] = useState(false);
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   
   // Breakpoint for Desktop vs Mobile
   const isDesktop = width >= 768; 
-  const photos = shopData.photos || [];
+  
+  useEffect(() => {
+    if (!initialShopData && id) {
+      const fetchShop = async () => {
+        try {
+          const { data, error } = await supabase_lucifer_core
+            .from('shop_locations')
+            .select('*, shop_photos(photo_url)')
+            .eq('id', id)
+            .single();
+            
+          if (error) throw error;
+          
+          if (data) {
+            data.photos = data.shop_photos?.map((p: any) => p.photo_url) || [];
+            setShopData(data);
+          }
+        } catch (e) {
+          console.error("Error fetching shop data:", e);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchShop();
+    } else if (!initialShopData && !id) {
+      setIsLoading(false);
+    }
+  }, [id, initialShopData]);
 
   // Reservation State
   const [showReservationModal, setShowReservationModal] = useState(false);
@@ -233,6 +263,21 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
       <Text style={styles.cardFooterText}>You won't be charged for chatting.</Text>
     </View>
   );
+
+  if (isLoading) {
+    return <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><ActivityIndicator size="large" color="#4A00E0" /></View>;
+  }
+
+  if (!shopData) {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF'}}>
+         <Text>Shop not found.</Text>
+         <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.btnPrimary, { marginTop: 16 }]}><Text style={styles.btnPrimaryText}>Go Back</Text></TouchableOpacity>
+      </View>
+    );
+  }
+
+  const photos = shopData.photos || [];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={isDesktop ? styles.scrollContentDesktop : styles.scrollContentMobile}>

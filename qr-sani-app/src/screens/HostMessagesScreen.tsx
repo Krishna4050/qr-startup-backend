@@ -7,7 +7,9 @@ import { useAuth } from '../context/AuthContext';
 import ChatScreen from './ChatScreen'; // Import ChatScreen for embedding
 
 export default function HostMessagesScreen({ route }: any) {
-  const { shopData } = route.params;
+  const { shopData: initialShopData, shopId } = route?.params || {};
+  const [shopData, setShopData] = useState<any>(initialShopData);
+  const [loadingShop, setLoadingShop] = useState(!initialShopData);
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { width } = useWindowDimensions();
@@ -20,8 +22,28 @@ export default function HostMessagesScreen({ route }: any) {
   const [activeConversation, setActiveConversation] = useState<any>(null);
 
   useEffect(() => {
-    fetchConversations();
-  }, []);
+    if (!initialShopData && shopId) {
+      const fetchShop = async () => {
+        try {
+          const { data } = await supabase_lucifer_core.from('shop_locations').select('*').eq('id', shopId).single();
+          if (data) setShopData(data);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoadingShop(false);
+        }
+      };
+      fetchShop();
+    } else {
+      setLoadingShop(false);
+    }
+  }, [shopId, initialShopData]);
+
+  useEffect(() => {
+    if (shopData && user) {
+      fetchConversations();
+    }
+  }, [shopData, user]);
 
   const fetchConversations = async () => {
     setLoading(true);
@@ -92,7 +114,24 @@ export default function HostMessagesScreen({ route }: any) {
     );
   };
 
-  const renderInboxList = () => (
+  const renderInboxList = () => {
+    if (loadingShop) {
+      return (
+        <View style={[isDesktop ? styles.desktopSidebar : styles.fullWidth, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color="#0A192F" />
+        </View>
+      );
+    }
+
+    if (!shopData) {
+      return (
+        <View style={[isDesktop ? styles.desktopSidebar : styles.fullWidth, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text>Shop not found</Text>
+        </View>
+      );
+    }
+
+    return (
     <View style={isDesktop ? styles.desktopSidebar : styles.fullWidth}>
       <View style={styles.header}>
         {!isDesktop && (
@@ -119,7 +158,8 @@ export default function HostMessagesScreen({ route }: any) {
         />
       )}
     </View>
-  );
+    );
+  };
 
   const renderDesktopMiddleColumn = () => {
     if (!activeConversation) {

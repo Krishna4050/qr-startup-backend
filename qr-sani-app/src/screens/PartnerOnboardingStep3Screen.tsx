@@ -34,6 +34,12 @@ export default function PartnerOnboardingStep3Screen() {
   // Bring forward the data from Step 1 & 2
   const { shopData } = route.params || {};
 
+  React.useEffect(() => {
+    if (!shopData) {
+      navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] });
+    }
+  }, [shopData]);
+
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
   const toggleAmenity = (id: string) => {

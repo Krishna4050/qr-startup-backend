@@ -11,6 +11,12 @@ export default function PartnerOnboardingVerificationScreen() {
   const route = useRoute<any>();
   const { shopData } = route.params || {};
 
+  React.useEffect(() => {
+    if (!shopData) {
+      navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] });
+    }
+  }, [shopData]);
+
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
   

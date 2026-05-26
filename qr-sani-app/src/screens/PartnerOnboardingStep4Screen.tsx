@@ -9,6 +9,12 @@ export default function PartnerOnboardingStep4Screen() {
   const route = useRoute<any>();
   const { shopData } = route.params || {};
 
+  React.useEffect(() => {
+    if (!shopData) {
+      navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] });
+    }
+  }, [shopData]);
+
   // Store local URIs. We will upload them all at once in Step 5 for a better UX!
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
 

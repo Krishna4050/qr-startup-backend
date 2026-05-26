@@ -34,6 +34,12 @@ export default function PartnerOnboardingStep2Screen() {
   // Retrieve the data passed from Step 1
   const { shopData } = route.params || {};
 
+  React.useEffect(() => {
+    if (!shopData) {
+      navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] });
+    }
+  }, [shopData]);
+
   // Store multiple selected IDs
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   // Store custom manual inputs
