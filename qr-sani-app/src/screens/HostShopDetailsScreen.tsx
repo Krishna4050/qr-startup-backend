@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, ScrollView, Image, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, ChevronRight, CheckCircle, Clock } from 'lucide-react-native';
+import { supabase_lucifer_core } from '../utils/supabase';
 
 // Reusable List Row Component (To match the Airbnb screenshot style)
 const EditRow = ({ title, value, hasImage, imageUrl, onPress }: any) => (
@@ -20,18 +21,66 @@ const EditRow = ({ title, value, hasImage, imageUrl, onPress }: any) => (
 export default function HostShopDetailsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { shopData } = route.params || {};
+  const { shopData: initialShopData, id } = route.params || {};
+  const [shopData, setShopData] = useState<any>(initialShopData);
+  const [loading, setLoading] = useState(!initialShopData);
+
+  useEffect(() => {
+    if (!initialShopData && id) {
+      const fetchShop = async () => {
+        try {
+          const { data, error } = await supabase_lucifer_core
+            .from('shop_locations')
+            .select('*, shop_photos(photo_url)')
+            .eq('id', id)
+            .single();
+          if (error) throw error;
+          if (data) setShopData(data);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchShop();
+    } else if (!initialShopData && !id) {
+      setLoading(false);
+    }
+  }, [id, initialShopData]);
 
   const handlePreview = () => {
     // This will open the shop in the exact same view that normal users see it!
-    navigation.navigate('ShopDetails', { shopData: shopData });
+    navigation.navigate('ShopDetails', { id: shopData.id, shopData: shopData });
   };
 
   const showUnderConstruction = () => {
     Alert.alert("Coming Soon", "The edit form for this section will be built next!");
   };
 
-  const coverPhoto = shopData.shop_photos?.[0]?.photo_url || 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150';
+  const coverPhoto = shopData?.shop_photos?.[0]?.photo_url || 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150';
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><ActivityIndicator size="large" color="#0A192F" /></View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!shopData) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+            <ArrowLeft color="#0A192F" size={24} />
+          </TouchableOpacity>
+        </View>
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+          <Text>Listing not found.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -75,7 +124,7 @@ export default function HostShopDetailsScreen() {
           <EditRow 
             title="Messages" 
             value="View customer inquiries" 
-            onPress={() => navigation.navigate('HostMessages', { shopData })} 
+            onPress={() => navigation.navigate('HostMessages', { shopId: shopData.id, shopData })} 
           />
           <EditRow 
             title="Photos" 

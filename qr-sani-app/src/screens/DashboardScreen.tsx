@@ -301,7 +301,7 @@ export default function DashboardScreen() {
                     <TouchableOpacity 
                       key={shop.id} 
                       style={[styles.shopCard, Platform.OS === 'web' && { width: '31%', minWidth: 250 }]}
-                      onPress={() => navigation.navigate('ShopDetails', { shopId: shop.id })}
+                      onPress={() => navigation.navigate('ShopDetails', { id: shop.id })}
                     >
                       <Image source={{ uri: shop.banner_url || 'https://images.unsplash.com/photo-1598555231223-f25b29b7a4be' }} style={styles.shopImage} />
                       <View style={styles.shopInfo}>
