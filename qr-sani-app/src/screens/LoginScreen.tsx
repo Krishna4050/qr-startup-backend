@@ -1,18 +1,24 @@
-import { StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import React from 'react';
+import { StyleSheet, KeyboardAvoidingView, Platform, View } from 'react-native';
 import GradientHeader from '../../components/GradientHeader';
 import AuthForm from '../../components/AuthForm';
+import ResponsiveWrapper from '../components/ResponsiveWrapper';
 
-// Notice we added "{ navigation }" here so we can tell it to go to the Dashboard later!
 export default function LoginScreen({ navigation }: any) {
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      {Platform.OS !== 'web' && <GradientHeader />}
-      {/* We will pass the navigation tool into the form next time so the button works */}
-      <AuthForm />
-    </KeyboardAvoidingView>
+    <ResponsiveWrapper bg="#F3F4F6">
+      <KeyboardAvoidingView 
+        style={styles.container} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {Platform.OS !== 'web' && <GradientHeader />}
+        
+        <View style={styles.formContainer}>
+          <AuthForm />
+        </View>
+
+      </KeyboardAvoidingView>
+    </ResponsiveWrapper>
   );
 }
 
@@ -21,4 +27,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  formContainer: {
+    flex: 1,
+  }
 });
