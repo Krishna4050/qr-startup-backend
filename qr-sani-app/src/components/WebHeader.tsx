@@ -1,76 +1,209 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, FlatList, useWindowDimensions } from 'react-native';
-import { Search, Globe, Menu, User, ShieldCheck, ChevronDown, Plus, Minus } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView } from 'react-native';
+import { Search, Globe, Menu, User, ShieldCheck, ChevronDown, Plus, Minus, X, ArrowLeft } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import WebLink from './WebLink';
+import { useAuth } from '../context/AuthContext';
+import { supabase_lucifer_core } from '../utils/supabase';
 
-export default function WebHeader({ profile, isGuest, onSearch, defaultService = 'Vehicle Repair' }: { profile?: any, isGuest?: boolean, onSearch?: (filters: any) => void, defaultService?: string }) {
+export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defaultService?: string }) {
   const navigation = useNavigation<any>();
-  const [selectedService, setSelectedService] = useState(defaultService);
-  const [showServiceDropdown, setShowServiceDropdown] = useState(false);
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState('Helsinki');
-  const [showDateDropdown, setShowDateDropdown] = useState(false);
-  const [showGuestDropdown, setShowGuestDropdown] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<number | null>(null);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [adults, setAdults] = useState(0);
-  const [childrenCount, setChildrenCount] = useState(0);
-
   const { width } = useWindowDimensions();
   const isMobileWeb = width < 768;
 
+  // --- AUTHENTICATION STATE ---
+  const { user } = useAuth();
+  const isGuest = !user;
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      supabase_lucifer_core.from('profiles').select('avatar_url').eq('id', user.id).maybeSingle().then(({data}) => {
+        if (data) setProfile(data);
+      });
+    } else {
+      setProfile(null);
+    }
+  }, [user]);
+
+  const handleSignOut = async () => {
+    setShowProfileDropdown(false);
+    await supabase_lucifer_core.auth.signOut();
+    navigation.navigate('Login');
+  };
+
+  // --- DESKTOP DROPDOWN STATES ---
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [showGuestDropdown, setShowGuestDropdown] = useState(false);
+
+  // --- MOBILE MODAL STATE ---
+  const [showMobileSearchModal, setShowMobileSearchModal] = useState(false);
+
+  // --- SEARCH FORM STATE ---
+  const [selectedService, setSelectedService] = useState(defaultService);
+  const [selectedLocation, setSelectedLocation] = useState('Helsinki');
+  const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [adults, setAdults] = useState(0);
+  const [childrenCount, setChildrenCount] = useState(0);
+
   if (Platform.OS !== 'web') return null;
 
+  const servicesList = ['Vehicle Repair', 'Bike Repair', 'Pay Parking', 'Hotels & Stays', 'City Transit', 'Train Tickets', 'Flights'];
+  
+  // Smart Search Context Checks
+  const requiresGuests = ['Hotels & Stays', 'Train Tickets', 'Flights'].includes(selectedService);
+  const isTravel = ['Flights', 'City Transit', 'Train Tickets'].includes(selectedService);
+  
+  const handleSearchExecute = () => {
+    setShowServiceDropdown(false);
+    setShowLocationDropdown(false);
+    setShowDateDropdown(false);
+    setShowGuestDropdown(false);
+    setShowMobileSearchModal(false);
+
+    if (selectedService === 'Vehicle Repair') {
+      navigation.navigate('VehicleRepairDirectory', { location: selectedLocation });
+    } else if (selectedService === 'Hotels & Stays') {
+      alert(`Hotel search for ${selectedLocation} starting soon!`);
+    } else {
+      alert(`Search results for ${selectedService} in ${selectedLocation}`);
+    }
+  };
+
+  // ================= MOBILE HEADER =================
   if (isMobileWeb) {
     return (
-      <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <WebLink style={styles.logoSection} screen="Dashboard">
-            <ShieldCheck color="#E11D48" size={28} />
-            <Text style={[styles.logoText, { fontSize: 18 }]}>smarttags</Text>
-          </WebLink>
-          <View style={{ position: 'relative' }}>
-            <TouchableOpacity 
-              style={styles.profileMenu}
-              onPress={() => isGuest ? navigation.navigate('Login') : setShowProfileDropdown(!showProfileDropdown)}
-            >
-              <Menu color="#222222" size={16} />
-              <View style={[styles.avatarCircle, { width: 28, height: 28 }]}>
-                {profile?.avatar_url ? (
-                  <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-                ) : (
-                  <User color="#FFF" size={14} />
-                )}
-              </View>
-            </TouchableOpacity>
-            {showProfileDropdown && (
-              <View style={[styles.dropdownMenu, { top: 40, right: 0, left: 'auto', width: 200, padding: 8 }]}>
-                <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Profile</Text></WebLink>
-                <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Messages</Text></WebLink>
-                <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Host Dashboard</Text></WebLink>
-                <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 4 }} />
-                <WebLink style={styles.dropdownItem} screen="Login" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Sign Out</Text></WebLink>
-              </View>
-            )}
+      <>
+        <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <WebLink style={styles.logoSection} screen="Dashboard">
+              <ShieldCheck color="#E11D48" size={28} />
+              <Text style={[styles.logoText, { fontSize: 18 }]}>smarttags</Text>
+            </WebLink>
+            <View style={{ position: 'relative' }}>
+              <TouchableOpacity 
+                style={styles.profileMenu}
+                onPress={() => isGuest ? navigation.navigate('Login') : setShowProfileDropdown(!showProfileDropdown)}
+              >
+                <Menu color="#222222" size={16} />
+                <View style={[styles.avatarCircle, { width: 28, height: 28 }]}>
+                  {profile?.avatar_url ? (
+                    <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                  ) : (
+                    <User color="#FFF" size={14} />
+                  )}
+                </View>
+              </TouchableOpacity>
+              {showProfileDropdown && (
+                <View style={[styles.dropdownMenu, { top: 40, right: 0, left: 'auto', width: 200, padding: 8 }]}>
+                  <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Profile</Text></WebLink>
+                  <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Messages</Text></WebLink>
+                  <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Host Dashboard</Text></WebLink>
+                  <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 4 }} />
+                  <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}><Text style={[styles.dropdownItemText, {color: '#E11D48'}]}>Sign Out</Text></TouchableOpacity>
+                </View>
+              )}
+            </View>
           </View>
+          
+          {/* Airbnb-style Mobile Search Pill */}
+          <TouchableOpacity 
+            style={styles.mobileSearchPill}
+            onPress={() => setShowMobileSearchModal(true)}
+          >
+              <Search color="#E11D48" size={18} />
+              <View style={{ marginLeft: 12 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#222222' }}>{selectedLocation}</Text>
+                <Text style={{ fontSize: 12, color: '#717171' }}>{selectedService} • {selectedDate ? `May ${selectedDate}` : 'Any week'} {requiresGuests ? `• ${adults + childrenCount || 'Add'} guests` : ''}</Text>
+              </View>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={{ marginTop: 16, backgroundColor: '#F7F7F7', borderRadius: 24, padding: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#DDDDDD' }}>
-            <Search color="#E11D48" size={18} />
-            <Text style={{ marginLeft: 12, fontSize: 14, fontWeight: '500', color: '#222222' }}>Where to?</Text>
-        </TouchableOpacity>
-      </View>
+
+        {/* Full-screen Mobile Search Modal */}
+        <Modal visible={showMobileSearchModal} animationType="slide" transparent={false}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F7F7' }}>
+            <View style={styles.mobileModalHeader}>
+              <TouchableOpacity onPress={() => setShowMobileSearchModal(false)} style={styles.mobileCloseBtn}>
+                <X color="#222" size={24} />
+              </TouchableOpacity>
+              <View style={styles.mobileServiceToggleRow}>
+                 <Text style={{fontSize: 16, fontWeight: 'bold'}}>{selectedService}</Text>
+              </View>
+            </View>
+
+            <ScrollView style={{ padding: 20 }}>
+              {/* Service Selection Card */}
+              <View style={styles.mobileCard}>
+                <Text style={styles.mobileCardTitle}>What are you looking for?</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
+                  {servicesList.map(srv => (
+                    <TouchableOpacity 
+                      key={srv} 
+                      onPress={() => setSelectedService(srv)}
+                      style={[styles.mobileServicePill, selectedService === srv && styles.mobileServicePillActive]}
+                    >
+                      <Text style={{ color: selectedService === srv ? '#FFF' : '#222', fontWeight: '500' }}>{srv}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Location Selection Card */}
+              <View style={styles.mobileCard}>
+                <Text style={styles.mobileCardTitle}>{isTravel ? 'Where to?' : 'Select City'}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
+                  {['Helsinki', 'Espoo', 'Vantaa', 'Tampere', 'Turku'].map(loc => (
+                    <TouchableOpacity 
+                      key={loc}
+                      onPress={() => setSelectedLocation(loc)}
+                      style={[styles.mobileLocBtn, selectedLocation === loc && { borderColor: '#222', borderWidth: 2 }]}
+                    >
+                      <Text style={{ fontWeight: selectedLocation === loc ? 'bold' : 'normal' }}>{loc}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Guests Card */}
+              {requiresGuests && (
+                <View style={styles.mobileCard}>
+                  <Text style={styles.mobileCardTitle}>Who's coming?</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                    <Text style={{ fontSize: 16 }}>Adults</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                      <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#717171" /></TouchableOpacity>
+                      <Text style={{ fontSize: 16, minWidth: 20, textAlign: 'center' }}>{adults}</Text>
+                      <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#717171" /></TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.mobileFooterBar}>
+              <TouchableOpacity onPress={() => setShowMobileSearchModal(false)}>
+                <Text style={{ fontSize: 16, fontWeight: '600', textDecorationLine: 'underline' }}>Clear all</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.mobileSearchExecuteBtn} onPress={handleSearchExecute}>
+                <Search color="#FFF" size={18} />
+                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold', marginLeft: 8 }}>Search</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </Modal>
+      </>
     );
   }
 
-  const servicesList = ['Vehicle Repair', 'Bike Repair', 'Pay Parking', 'Hotels & Stays', 'City Transit', 'Train Tickets', 'Flights'];
-  const requiresGuests = ['Hotels & Stays', 'Train Tickets', 'Flights'].includes(selectedService);
-
+  // ================= DESKTOP HEADER =================
   return (
     <View style={styles.headerContainer}>
       <View style={styles.headerContent}>
         {/* Left: Logo */}
-        <WebLink style={styles.logoSection} screen="Home">
+        <WebLink style={styles.logoSection} screen="Dashboard">
           <ShieldCheck color="#E11D48" size={32} />
           <Text style={styles.logoText}>smarttags</Text>
         </WebLink>
@@ -79,11 +212,11 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
         <View style={styles.searchPill}>
           <TouchableOpacity 
             style={[styles.searchSection, showServiceDropdown && styles.activeSection]} 
-            onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); }}
+            onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View>
-                <Text style={styles.searchTitle}>Which service</Text>
+                <Text style={styles.searchTitle}>Service</Text>
                 <Text style={styles.searchSub}>{selectedService}</Text>
               </View>
               <ChevronDown color="#717171" size={16} />
@@ -94,9 +227,9 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
           
           <TouchableOpacity 
             style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
-            onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); }}
+            onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
           >
-            <Text style={styles.searchTitle}>Where</Text>
+            <Text style={styles.searchTitle}>{isTravel ? 'Destination' : 'Where'}</Text>
             <Text style={styles.searchSub}>{selectedLocation}</Text>
           </TouchableOpacity>
           
@@ -106,7 +239,7 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
             style={[styles.searchSection, showDateDropdown && styles.activeSection]}
             onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
           >
-            <Text style={styles.searchTitle}>When</Text>
+            <Text style={styles.searchTitle}>{isTravel ? 'Departure' : 'When'}</Text>
             <Text style={styles.searchSub}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
           </TouchableOpacity>
           
@@ -123,30 +256,8 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
             </>
           )}
           
-
-          
-          {/* Search Button Container */}
           <View style={styles.searchButtonContainer}>
-            <TouchableOpacity 
-              style={styles.searchIconBg}
-              onPress={() => {
-                setShowServiceDropdown(false);
-                setShowLocationDropdown(false);
-                setShowDateDropdown(false);
-                setShowGuestDropdown(false);
-                if (onSearch) {
-                  onSearch({ service: selectedService, location: selectedLocation, date: selectedDate, guests: adults + childrenCount });
-                } else {
-                  if (selectedService === 'Vehicle Repair') {
-                    navigation.navigate('VehicleRepairDirectory', { location: selectedLocation });
-                  } else if (selectedService === 'Hotels & Stays') {
-                    navigation.navigate('HotelSearch', { location: selectedLocation, guests: adults + childrenCount });
-                  } else {
-                    alert(`Search for ${selectedService} is coming soon!`);
-                  }
-                }
-              }}
-            >
+            <TouchableOpacity style={styles.searchIconBg} onPress={handleSearchExecute}>
               <Search color="#FFF" size={16} />
               <Text style={{ color: '#FFF', fontWeight: 'bold', marginLeft: 6 }}>Search</Text>
             </TouchableOpacity>
@@ -159,14 +270,9 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
                 <TouchableOpacity 
                   key={idx} 
                   style={[styles.dropdownItem, selectedService === service && styles.dropdownItemActive]}
-                  onPress={() => {
-                    setSelectedService(service);
-                    setShowServiceDropdown(false);
-                  }}
+                  onPress={() => { setSelectedService(service); setShowServiceDropdown(false); }}
                 >
-                  <Text style={[styles.dropdownItemText, selectedService === service && styles.dropdownItemTextActive]}>
-                    {service}
-                  </Text>
+                  <Text style={[styles.dropdownItemText, selectedService === service && styles.dropdownItemTextActive]}>{service}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -179,15 +285,9 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
                 <TouchableOpacity 
                   key={idx} 
                   style={[styles.dropdownItem, selectedLocation === loc && styles.dropdownItemActive]}
-                  onPress={() => {
-                    setSelectedLocation(loc);
-                    setShowLocationDropdown(false);
-                    setShowDateDropdown(true);
-                  }}
+                  onPress={() => { setSelectedLocation(loc); setShowLocationDropdown(false); setShowDateDropdown(true); }}
                 >
-                  <Text style={[styles.dropdownItemText, selectedLocation === loc && styles.dropdownItemTextActive]}>
-                    {loc}
-                  </Text>
+                  <Text style={[styles.dropdownItemText, selectedLocation === loc && styles.dropdownItemTextActive]}>{loc}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -242,8 +342,6 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
               </View>
             </View>
           )}
-
-
         </View>
 
         {/* Right: Actions */}
@@ -283,9 +381,9 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
                   <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
                 </WebLink>
                 <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
-                <WebLink style={styles.dropdownItem} screen="Login" onPress={() => setShowProfileDropdown(false)}>
+                <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}>
                   <Text style={[styles.dropdownItemText, { color: '#E11D48' }]}>Sign Out</Text>
-                </WebLink>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -324,6 +422,96 @@ const styles = StyleSheet.create({
     color: '#E11D48',
     marginLeft: 6,
     letterSpacing: -0.5,
+  },
+  mobileSearchPill: {
+    marginTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    padding: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#EBEBEB'
+  },
+  mobileModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EBEBEB',
+  },
+  mobileCloseBtn: {
+    position: 'absolute',
+    left: 20,
+    padding: 8,
+    backgroundColor: '#F7F7F7',
+    borderRadius: 20,
+  },
+  mobileServiceToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+  },
+  mobileCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  mobileCardTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#222',
+  },
+  mobileServicePill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#F7F7F7',
+    borderRadius: 20,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#EBEBEB',
+  },
+  mobileServicePillActive: {
+    backgroundColor: '#222',
+    borderColor: '#222',
+  },
+  mobileLocBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#EBEBEB',
+  },
+  mobileFooterBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#FFF',
+    borderTopWidth: 1,
+    borderTopColor: '#EBEBEB',
+  },
+  mobileSearchExecuteBtn: {
+    backgroundColor: '#E11D48',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   searchPill: {
     flexDirection: 'row',

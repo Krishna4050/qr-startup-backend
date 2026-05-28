@@ -6,7 +6,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
-import WebHeader from '../components/WebHeader';
+import WebLayout from '../components/WebLayout';
+import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -282,8 +283,8 @@ export default function DashboardScreen() {
 
   if (isGuest) {
     return (
+      <WebLayout defaultService="Vehicle Repair">
       <View style={[styles.container]}>
-        <WebHeader profile={profile} isGuest={true} onSearch={handleSearch} />
         {Platform.OS !== 'web' && (
           <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.headerGradient}>
             <SafeAreaView>
@@ -303,7 +304,8 @@ export default function DashboardScreen() {
           </LinearGradient>
         )}
         
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[{ padding: 24, gap: 32 }, styles.webMaxWidth]}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={[{ padding: 24, gap: 32 }, styles.webMaxWidth]}>
           
           {searchFilters ? (
             <View style={styles.searchResultsContainer}>
@@ -404,9 +406,11 @@ export default function DashboardScreen() {
           </View>
           </>
           )}
-
+          </View>
+          <WebFooter />
         </ScrollView>
       </View>
+      </WebLayout>
     );
   }
 
@@ -424,8 +428,8 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={[styles.container, styles.webMaxWidth]}>
-      <WebHeader profile={profile} isGuest={false} onSearch={handleSearch} />
+    <WebLayout defaultService="Vehicle Repair">
+    <View style={styles.container}>
       {Platform.OS !== 'web' && (
         <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.headerGradient}>
           <SafeAreaView>
@@ -469,7 +473,7 @@ export default function DashboardScreen() {
       )}
 
       <RefreshableScroll onRefreshAction={fetchDashboardData} style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        
+        <View style={styles.webMaxWidth}>
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.sectionTitle}>Active Tags</Text>
@@ -566,9 +570,11 @@ export default function DashboardScreen() {
             <Text style={styles.overviewCardNumber}>{pausedTagsCount}</Text>
           </TouchableOpacity>
         </GridOrScroll>
-
+        </View>
+        <WebFooter />
       </RefreshableScroll>
     </View>
+    </WebLayout>
   );
 }
 

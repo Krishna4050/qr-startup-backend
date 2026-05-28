@@ -29,7 +29,6 @@ export const AuthProvider = ({ children }: any) => {
 
     // Standard State Listener
     const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
-      
       if (session?.user) {
         set_mayalu_session(session); 
         // Automatically ensure E2E keys exist and are synced to profile
@@ -47,6 +46,7 @@ export const AuthProvider = ({ children }: any) => {
       } else {
         set_mayalu_session(null);
       }
+      set_is_sani_loading(false); // ALWAYS UNLOCK APP!
     });
     // --- MNSKB Deep Link Interceptor ---
     const handleDeepLink = async ({ url }: { url: string }) => {

@@ -5,7 +5,8 @@ import { ArrowLeft, Star, Search, Heart, Clock, Settings } from 'lucide-react-na
 import { supabase_lucifer_core } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
 import RefreshableScroll from '../components/RefreshableScroll';
-import WebHeader from '../components/WebHeader';
+import WebLayout from '../components/WebLayout';
+import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
 
 const { width } = Dimensions.get('window');
@@ -192,9 +193,8 @@ export default function VehicleRepairDirectory() {
     : shops.filter(shop => shop.city.toLowerCase() === activeFilter.toLowerCase());
 
   return (
+    <WebLayout defaultService="Vehicle Repair">
     <View style={styles.container}>
-      <WebHeader isGuest={isGuest} profile={userProfile} defaultService="Vehicle Repair" />
-      
       {/* TOP ROW: Back Button & Search Bar */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -283,9 +283,11 @@ export default function VehicleRepairDirectory() {
             </View>
           )}
           <View style={{ height: 60 }} />
+          <WebFooter />
         </RefreshableScroll>
       )}
     </View>
+    </WebLayout>
   );
 }
 

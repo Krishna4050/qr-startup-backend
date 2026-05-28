@@ -15,8 +15,8 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import RefreshableScroll from '../components/RefreshableScroll';
-import WebHeader from '../components/WebHeader';
-import ResponsiveWrapper from '../components/ResponsiveWrapper';
+import WebLayout from '../components/WebLayout';
+import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
 import { useAuth } from '../context/AuthContext';
 
@@ -56,8 +56,8 @@ export default function ServicesScreen() {
   const mobileCardWidth = (width - 48 - 16) / 2;
 
   return (
-    <ResponsiveWrapper bg="#FAFAFC">
-      <WebHeader isGuest={!user} />
+    <View style={{ flex: 1, backgroundColor: '#FAFAFC' }}>
+      <WebLayout defaultService="Vehicle Repair">
       
       {/* Mobile App Header (Hidden on Web) */}
       {!isWeb && (
@@ -157,8 +157,10 @@ export default function ServicesScreen() {
               })}
           </View>
         </View>
+        <WebFooter />
       </RefreshableScroll>
-    </ResponsiveWrapper>
+      </WebLayout>
+    </View>
   );
 }
 
