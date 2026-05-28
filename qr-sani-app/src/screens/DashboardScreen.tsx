@@ -77,7 +77,8 @@ export default function DashboardScreen() {
 
   const fetchDashboardData = async () => {
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
+      const { data: { session } } = await supabase_lucifer_core.auth.getSession();
+      const user = session?.user || null;
       if (!user) {
         setIsGuest(true);
         setLoading(false);

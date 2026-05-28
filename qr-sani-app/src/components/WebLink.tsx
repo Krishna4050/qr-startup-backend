@@ -74,6 +74,7 @@ export default function WebLink({ screen, params, style, children, activeOpacity
   }
 
   const href = getHref(screen, params);
+  const flatStyle = StyleSheet.flatten(style) || {};
 
   const webProps = Platform.OS === 'web' ? {
     href,
@@ -86,7 +87,17 @@ export default function WebLink({ screen, params, style, children, activeOpacity
       }
       e.preventDefault();
       handleNavigate();
-    }
+    },
+    style: {
+      textDecoration: 'none',
+      color: 'inherit',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      boxSizing: 'border-box',
+      cursor: 'pointer',
+      ...flatStyle,
+    } as any
   } : {};
 
   return (
