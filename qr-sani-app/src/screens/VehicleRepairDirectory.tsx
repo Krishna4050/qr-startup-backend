@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Dimensions, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Dimensions, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { ArrowLeft, Star, Search, Heart, Clock, Settings } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
@@ -11,11 +11,11 @@ const { width } = Dimensions.get('window');
 const CARD_MARGIN = 24;
 const CARD_WIDTH = width - (CARD_MARGIN * 2); 
 
-const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
+const ShopCard = ({ item, onPress, cardWidth }: { item: any, onPress: () => void, cardWidth?: number }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const actualCardWidth = Platform.OS === 'web' ? 300 : CARD_WIDTH;
+  const actualCardWidth = cardWidth || (Platform.OS === 'web' ? 300 : CARD_WIDTH);
 
   const handleScroll = (event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
@@ -69,6 +69,7 @@ const ShopCard = ({ item, onPress }: { item: any, onPress: () => void }) => {
 export default function VehicleRepairDirectory() {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused(); // Triggers a re-check when returning to this screen
+  const { width } = useWindowDimensions();
   
   const [shops, setShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +84,13 @@ export default function VehicleRepairDirectory() {
   const [hostStatus, setHostStatus] = useState<'none' | 'pending' | 'active'>('none');
 
   const filters = ['All', 'Helsinki', 'Espoo', 'Vantaa', 'Tampere'];
+
+  const isMobileWeb = Platform.OS === 'web' && width < 768;
+  const webGridGap = 24;
+  const horizontalPadding = CARD_MARGIN * 2;
+  const webCardWidth = isMobileWeb 
+    ? (width - horizontalPadding - webGridGap) / 2 
+    : 300;
 
   // Reactive effect for auth state
   useEffect(() => {
@@ -184,17 +192,19 @@ export default function VehicleRepairDirectory() {
 
   return (
     <View style={styles.container}>
-      <WebHeader isGuest={isGuest} profile={userProfile} />
+      <WebHeader isGuest={isGuest} profile={userProfile} defaultService="Vehicle Repair" />
       
       {/* TOP ROW: Back Button & Search Bar */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowLeft color="#0A192F" size={24} strokeWidth={2.5} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.searchBar}>
-          <Search color="#4A00E0" size={18} strokeWidth={2.5} />
-          <Text style={styles.searchText}>Discover Finland</Text>
-        </TouchableOpacity>
+        {Platform.OS !== 'web' && (
+          <TouchableOpacity style={styles.searchBar}>
+            <Search color="#4A00E0" size={18} strokeWidth={2.5} />
+            <Text style={styles.searchText}>Discover Finland</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* DYNAMIC HOST BANNER */}
@@ -265,7 +275,7 @@ export default function VehicleRepairDirectory() {
           ) : (
             <View style={Platform.OS === 'web' ? styles.webGridContainer : {}}>
               {filteredShops.map((item) => (
-                <ShopCard key={item.id} item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} />
+                <ShopCard key={item.id} item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={Platform.OS === 'web' ? webCardWidth : undefined} />
               ))}
             </View>
           )}

@@ -179,9 +179,9 @@ export default function AuthForm() {
   };
 
   const renderForm = () => (
-    <View style={[styles.formContainer, Platform.OS === 'web' && { backgroundColor: 'transparent', shadowOpacity: 0, padding: 0 }]}>
-      <Text style={[styles.formTitle, Platform.OS === 'web' && { color: '#0F2D4D', fontSize: 32 }]}>{isLogin ? 'Welcome back' : 'Create an account'}</Text>
-      {Platform.OS === 'web' && (
+    <View style={[styles.formContainer, isDesktopWeb && { backgroundColor: 'transparent', shadowOpacity: 0, padding: 0 }]}>
+      <Text style={[styles.formTitle, isDesktopWeb && { color: '#0F2D4D', fontSize: 32 }]}>{isLogin ? 'Welcome back' : 'Create an account'}</Text>
+      {isDesktopWeb && (
         <Text style={{ color: '#4B5563', marginBottom: 32, fontSize: 16 }}>{isLogin ? 'Please enter your details to sign in.' : 'Sign up to get started.'}</Text>
       )}
 
@@ -260,9 +260,9 @@ export default function AuthForm() {
               </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={[styles.footerText, Platform.OS === 'web' && { color: '#4B5563' }]}>{isLogin ? "Don't have an account? " : "Already have an account? "}</Text>
+          <Text style={[styles.footerText, isDesktopWeb && { color: '#4B5563' }]}>{isLogin ? "Don't have an account? " : "Already have an account? "}</Text>
           <TouchableOpacity onPress={() => { setIsLogin(!isLogin); setErrors({ username: '', email: '', password: '', confirm: '', auth: '' }); }}>
-            <Text style={[styles.toggleText, Platform.OS === 'web' && { color: '#E11D48' }]}>{isLogin ? 'Create Account' : 'Login'}</Text>
+            <Text style={[styles.toggleText, isDesktopWeb && { color: '#E11D48' }]}>{isLogin ? 'Create Account' : 'Login'}</Text>
           </TouchableOpacity>
         </View>
         
@@ -301,7 +301,7 @@ export default function AuthForm() {
             end={{ x: 1, y: 1 }} 
             style={{ flex: 1 }}
           >
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }} keyboardShouldPersistTaps="handled">
               {renderForm()}
             </ScrollView>
           </LinearGradient>

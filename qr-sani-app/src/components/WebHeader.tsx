@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, FlatL
 import { Search, Globe, Menu, User, ShieldCheck, ChevronDown, Plus, Minus } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 
-export default function WebHeader({ profile, isGuest, onSearch }: { profile?: any, isGuest?: boolean, onSearch?: (filters: any) => void }) {
+export default function WebHeader({ profile, isGuest, onSearch, defaultService = 'Vehicle Repair' }: { profile?: any, isGuest?: boolean, onSearch?: (filters: any) => void, defaultService?: string }) {
   const navigation = useNavigation<any>();
-  const [selectedService, setSelectedService] = useState('Vehicle Repair');
+  const [selectedService, setSelectedService] = useState(defaultService);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('Helsinki');

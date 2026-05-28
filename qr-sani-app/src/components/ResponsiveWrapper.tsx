@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Platform, useWindowDimensions, StyleSheet } from 'react-native';
 
-export default function ResponsiveWrapper({ children, bg = '#F3F4F6' }: { children: React.ReactNode, bg?: string }) {
+export default function ResponsiveWrapper({ children, bg = '#F3F4F6', maxWidth = 1440 }: { children: React.ReactNode, bg?: string, maxWidth?: number }) {
   const { width, height } = useWindowDimensions();
   const isDesktop = width > 768;
 
@@ -13,7 +13,7 @@ export default function ResponsiveWrapper({ children, bg = '#F3F4F6' }: { childr
   // On Web Desktop, constrain the width so it looks elegant and not stretched
   return (
     <View style={[styles.webBackground, { backgroundColor: bg, minHeight: height }]}>
-      <View style={styles.webContainer}>
+      <View style={[styles.webContainer, { maxWidth }]}>
         {children}
       </View>
     </View>
@@ -28,7 +28,6 @@ const styles = StyleSheet.create({
   },
   webContainer: {
     width: '100%',
-    maxWidth: 480, // Mobile-pro width. (Increase to 1024 for a wider dashboard layout later)
     height: '100%',
     maxHeight: 900,
     backgroundColor: '#FFFFFF',
