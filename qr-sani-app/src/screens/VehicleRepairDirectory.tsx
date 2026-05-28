@@ -5,7 +5,6 @@ import { ArrowLeft, Star, Search, Heart, Clock, Settings } from 'lucide-react-na
 import { supabase_lucifer_core } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
 import RefreshableScroll from '../components/RefreshableScroll';
-import WebLayout from '../components/WebLayout';
 import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
 
@@ -221,7 +220,6 @@ export default function VehicleRepairDirectory() {
   }
 
   return (
-    <WebLayout defaultService={targetService}>
     <View style={styles.container}>
       {/* TOP ROW: Back Button & Search Bar */}
       <View style={styles.header}>
@@ -322,7 +320,6 @@ export default function VehicleRepairDirectory() {
         </RefreshableScroll>
       )}
     </View>
-    </WebLayout>
   );
 }
 

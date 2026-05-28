@@ -9,6 +9,7 @@ import { ContentProvider } from './src/context/ContentContext';
 import { AuthProvider } from './src/context/AuthContext'; 
 
 // Screens
+import WebLayout from './src/components/WebLayout';
 import MainTabs from './src/navigation/MainTabs';
 import LoginScreen from './src/screens/LoginScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
@@ -86,47 +87,49 @@ export default function App() {
       <ContentProvider>
         {/* WE INJECT THE LINKING CONFIGURATION HERE */}
         <NavigationContainer linking={linking} onReady={handleNavigationReady}>
-          <Stack.Navigator initialRouteName={initialRoute}>
-            
-            {/* PUBLIC / GUEST ROUTES */}
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
-            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false, gestureEnabled: false }} />
-            <Stack.Screen name="Dashboard" component={MainTabs} options={{ headerShown: false, gestureEnabled: false }} />
-            
-            {/* DIRECTORY & SHOPS */}
-            <Stack.Screen name="ServiceDirectory" component={VehicleRepairDirectory} options={{ headerShown: false }} />
-            <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
-            
-            {/* CHAT MESSAGING */}
-            <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="UserMessages" component={UserMessagesScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="HostMessages" component={HostMessagesScreen} options={{ headerShown: false }} />
+          <WebLayout>
+            <Stack.Navigator initialRouteName={initialRoute}>
+              
+              {/* PUBLIC / GUEST ROUTES */}
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
+              <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false, gestureEnabled: false }} />
+              <Stack.Screen name="Dashboard" component={MainTabs} options={{ headerShown: false, gestureEnabled: false }} />
+              
+              {/* DIRECTORY & SHOPS */}
+              <Stack.Screen name="ServiceDirectory" component={VehicleRepairDirectory} options={{ headerShown: false }} />
+              <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
+              
+              {/* CHAT MESSAGING */}
+              <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="UserMessages" component={UserMessagesScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="HostMessages" component={HostMessagesScreen} options={{ headerShown: false }} />
 
-            {/* PROTECTED USER ROUTES */}
-            <Stack.Screen name="VerificationWaiting" component={VerificationWaitingScreen} options={{ headerShown: false, gestureEnabled: false }} />
-            <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ headerShown: false, gestureEnabled: false }} />
-            <Stack.Screen name="TrustedNetwork" component={TrustedNetworkScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="TagRegistration" component={TagRegistrationScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
-            <Stack.Screen name="FilteredTags" component={FilteredTagsScreen} options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="TagManage" component={TagManageScreen} options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="ContactManager" component={ContactManagerScreen} options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="SharedTags" component={SharedTagsScreen} options={{ headerShown: false, presentation: 'modal'}} />
-            <Stack.Screen name="HostShopDetails" component={HostShopDetailsScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} options={{ headerShown: false, gestureEnabled: false }} />
-            
-            {/* PARTNER / HOST ROUTES */}
-            <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="PartnerOnboardingStep1" component={PartnerOnboardingStep1Screen} options={{ headerShown: false }} />
-            <Stack.Screen name="PartnerOnboardingStep3" component={PartnerOnboardingStep3Screen} options={{ headerShown: false }} />
-            <Stack.Screen name="PartnerOnboardingVerification" component={PartnerOnboardingVerificationScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="PartnerOnboardingStep2" component={PartnerOnboardingStep2Screen} options={{ headerShown: false }} />
-            <Stack.Screen name="PartnerOnboardingStep4" component={PartnerOnboardingStep4Screen} options={{ headerShown: false }} />
-            <Stack.Screen name="HostDashboard" component={HostDashboardScreen} options={{ headerShown: false }} />
-            
-          </Stack.Navigator>
+              {/* PROTECTED USER ROUTES */}
+              <Stack.Screen name="VerificationWaiting" component={VerificationWaitingScreen} options={{ headerShown: false, gestureEnabled: false }} />
+              <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ headerShown: false, gestureEnabled: false }} />
+              <Stack.Screen name="TrustedNetwork" component={TrustedNetworkScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="TagRegistration" component={TagRegistrationScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+              <Stack.Screen name="FilteredTags" component={FilteredTagsScreen} options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="TagManage" component={TagManageScreen} options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="ContactManager" component={ContactManagerScreen} options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="SharedTags" component={SharedTagsScreen} options={{ headerShown: false, presentation: 'modal'}} />
+              <Stack.Screen name="HostShopDetails" component={HostShopDetailsScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} options={{ headerShown: false, gestureEnabled: false }} />
+              
+              {/* PARTNER / HOST ROUTES */}
+              <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="PartnerOnboardingStep1" component={PartnerOnboardingStep1Screen} options={{ headerShown: false }} />
+              <Stack.Screen name="PartnerOnboardingStep3" component={PartnerOnboardingStep3Screen} options={{ headerShown: false }} />
+              <Stack.Screen name="PartnerOnboardingVerification" component={PartnerOnboardingVerificationScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="PartnerOnboardingStep2" component={PartnerOnboardingStep2Screen} options={{ headerShown: false }} />
+              <Stack.Screen name="PartnerOnboardingStep4" component={PartnerOnboardingStep4Screen} options={{ headerShown: false }} />
+              <Stack.Screen name="HostDashboard" component={HostDashboardScreen} options={{ headerShown: false }} />
+              
+            </Stack.Navigator>
+          </WebLayout>
         </NavigationContainer>
       </ContentProvider>
     </AuthProvider>

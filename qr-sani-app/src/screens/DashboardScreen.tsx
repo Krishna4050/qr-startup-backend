@@ -6,7 +6,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
-import WebLayout from '../components/WebLayout';
 import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
 import { useAuth } from '../context/AuthContext';
@@ -283,7 +282,6 @@ export default function DashboardScreen() {
 
   if (isGuest) {
     return (
-      <WebLayout defaultService="Vehicle Repair">
       <View style={[styles.container]}>
         {Platform.OS !== 'web' && (
           <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.headerGradient}>
@@ -410,7 +408,6 @@ export default function DashboardScreen() {
           <WebFooter />
         </ScrollView>
       </View>
-      </WebLayout>
     );
   }
 
@@ -428,7 +425,6 @@ export default function DashboardScreen() {
   };
 
   return (
-    <WebLayout defaultService="Vehicle Repair">
     <View style={styles.container}>
       {Platform.OS !== 'web' && (
         <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.headerGradient}>
@@ -574,7 +570,6 @@ export default function DashboardScreen() {
         <WebFooter />
       </RefreshableScroll>
     </View>
-    </WebLayout>
   );
 }
 
