@@ -64,13 +64,13 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     setShowGuestDropdown(false);
     setShowMobileSearchModal(false);
 
-    if (selectedService === 'Vehicle Repair') {
-      navigation.navigate('VehicleRepairDirectory', { location: selectedLocation });
-    } else if (selectedService === 'Hotels & Stays') {
-      alert(`Hotel search for ${selectedLocation} starting soon!`);
-    } else {
-      alert(`Search results for ${selectedService} in ${selectedLocation}`);
-    }
+    // Route dynamically to the Service Directory with the selected context
+    navigation.navigate('ServiceDirectory', { 
+      service: selectedService, 
+      location: selectedLocation,
+      guests: adults + childrenCount,
+      date: selectedDate
+    });
   };
 
   // ================= MOBILE HEADER =================
@@ -84,19 +84,25 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               <Text style={[styles.logoText, { fontSize: 18 }]}>smarttags</Text>
             </WebLink>
             <View style={{ position: 'relative' }}>
-              <TouchableOpacity 
-                style={styles.profileMenu}
-                onPress={() => isGuest ? navigation.navigate('Login') : setShowProfileDropdown(!showProfileDropdown)}
-              >
-                <Menu color="#222222" size={16} />
-                <View style={[styles.avatarCircle, { width: 28, height: 28 }]}>
-                  {profile?.avatar_url ? (
-                    <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-                  ) : (
-                    <User color="#FFF" size={14} />
-                  )}
-                </View>
-              </TouchableOpacity>
+              {isGuest ? (
+                <WebLink screen="Login" style={{ backgroundColor: '#E11D48', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}>
+                  <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 14 }}>Log In</Text>
+                </WebLink>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.profileMenu}
+                  onPress={() => setShowProfileDropdown(!showProfileDropdown)}
+                >
+                  <Menu color="#222222" size={16} />
+                  <View style={[styles.avatarCircle, { width: 28, height: 28 }]}>
+                    {profile?.avatar_url ? (
+                      <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                    ) : (
+                      <User color="#FFF" size={14} />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              )}
               {showProfileDropdown && (
                 <View style={[styles.dropdownMenu, { top: 40, right: 0, left: 'auto', width: 200, padding: 8 }]}>
                   <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Profile</Text></WebLink>
@@ -354,37 +360,50 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
           </TouchableOpacity>
           
           <View style={{ position: 'relative' }}>
-            <TouchableOpacity 
-              style={styles.profileMenu}
-              onPress={() => isGuest ? navigation.navigate('Login') : setShowProfileDropdown(!showProfileDropdown)}
-            >
-              <Menu color="#222222" size={18} />
-              <View style={styles.avatarCircle}>
-                {profile?.avatar_url ? (
-                  <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-                ) : (
-                  <User color="#FFF" size={16} />
-                )}
+            {isGuest ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <WebLink screen="Login" style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
+                  <Text style={{ fontWeight: '600', color: '#222', fontSize: 15 }}>Log In</Text>
+                </WebLink>
+                <WebLink screen="Login" style={{ backgroundColor: '#E11D48', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24 }}>
+                  <Text style={{ fontWeight: 'bold', color: '#FFF', fontSize: 15 }}>Sign Up</Text>
+                </WebLink>
               </View>
-            </TouchableOpacity>
-            
-            {/* Absolute Profile Dropdown */}
-            {showProfileDropdown && (
-              <View style={[styles.dropdownMenu, { top: 50, right: 0, left: 'auto', width: 240, padding: 8, zIndex: 999 }]}>
-                <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
-                  <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
-                </WebLink>
-                <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}>
-                  <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages & Notifications</Text>
-                </WebLink>
-                <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}>
-                  <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
-                </WebLink>
-                <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
-                <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}>
-                  <Text style={[styles.dropdownItemText, { color: '#E11D48' }]}>Sign Out</Text>
+            ) : (
+              <>
+                <TouchableOpacity 
+                  style={styles.profileMenu}
+                  onPress={() => setShowProfileDropdown(!showProfileDropdown)}
+                >
+                  <Menu color="#222222" size={18} />
+                  <View style={styles.avatarCircle}>
+                    {profile?.avatar_url ? (
+                      <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                    ) : (
+                      <User color="#FFF" size={16} />
+                    )}
+                  </View>
                 </TouchableOpacity>
-              </View>
+                
+                {/* Absolute Profile Dropdown */}
+                {showProfileDropdown && (
+                  <View style={[styles.dropdownMenu, { top: 50, right: 0, left: 'auto', width: 240, padding: 8, zIndex: 999 }]}>
+                    <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
+                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages</Text>
+                    </WebLink>
+                    <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
+                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
+                    </WebLink>
+                    <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}>
+                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
+                    </WebLink>
+                    <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
+                    <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}>
+                      <Text style={[styles.dropdownItemText, { color: '#E11D48' }]}>Sign Out</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
             )}
           </View>
         </View>

@@ -58,7 +58,7 @@ const linking = {
           Store: 'Store'
         }
       },
-      VehicleRepairDirectory: 'directory',
+      ServiceDirectory: 'directory',
       ShopDetails: 'shop/:id',
       ChatScreen: 'chat/:shopId/:otherUserId',
       HostDashboard: 'host',
@@ -94,7 +94,7 @@ export default function App() {
             <Stack.Screen name="Dashboard" component={MainTabs} options={{ headerShown: false, gestureEnabled: false }} />
             
             {/* DIRECTORY & SHOPS */}
-            <Stack.Screen name="VehicleRepairDirectory" component={VehicleRepairDirectory} options={{ headerShown: false }} />
+            <Stack.Screen name="ServiceDirectory" component={VehicleRepairDirectory} options={{ headerShown: false }} />
             <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
             
             {/* CHAT MESSAGING */}

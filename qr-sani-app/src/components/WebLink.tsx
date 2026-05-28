@@ -21,7 +21,7 @@ const SCREEN_URL_MAP: Record<string, (params?: any) => string> = {
   Services: () => '/dashboard/Services',
   Profile: () => '/dashboard/Profile',
   Scan: () => '/dashboard/Scan',
-  VehicleRepairDirectory: (p) => `/directory${p?.location ? `?location=${p.location}` : ''}`,
+  ServiceDirectory: (p) => `/directory${p?.location ? `?location=${p.location}&service=${p.service}` : ''}`,
   ShopDetails: (p) => `/shop/${p?.id || ''}`,
   ChatScreen: (p) => `/chat/${p?.shopId || ''}/${p?.otherUserId || ''}`,
   HostDashboard: () => '/host',

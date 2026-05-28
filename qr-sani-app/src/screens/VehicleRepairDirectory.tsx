@@ -75,6 +75,7 @@ export default function VehicleRepairDirectory() {
   const { width } = useWindowDimensions();
   
   const initialLocation = route.params?.location;
+  const targetService = route.params?.service || 'Vehicle Repair';
 
   const [shops, setShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -202,14 +203,17 @@ export default function VehicleRepairDirectory() {
     }
   };
 
+  // Filter by service type (assuming legacy shops without service_type are Vehicle Repair)
+  const serviceFilteredShops = shops.filter(shop => (shop.service_type || 'Vehicle Repair') === targetService);
+
   const filteredShops = activeFilter === 'All' 
-    ? shops 
-    : shops.filter(shop => shop.city.toLowerCase() === activeFilter.toLowerCase());
+    ? serviceFilteredShops 
+    : serviceFilteredShops.filter(shop => shop.city?.toLowerCase() === activeFilter.toLowerCase());
 
   // Group shops by city for 'All' view
   const groupedShops: { [city: string]: any[] } = {};
   if (activeFilter === 'All') {
-    shops.forEach(shop => {
+    serviceFilteredShops.forEach(shop => {
       const city = shop.city.charAt(0).toUpperCase() + shop.city.slice(1).toLowerCase();
       if (!groupedShops[city]) groupedShops[city] = [];
       groupedShops[city].push(shop);
@@ -217,7 +221,7 @@ export default function VehicleRepairDirectory() {
   }
 
   return (
-    <WebLayout defaultService="Vehicle Repair">
+    <WebLayout defaultService={targetService}>
     <View style={styles.container}>
       {/* TOP ROW: Back Button & Search Bar */}
       <View style={styles.header}>
@@ -295,7 +299,7 @@ export default function VehicleRepairDirectory() {
         <RefreshableScroll onRefreshAction={fetchShops} style={styles.listContent} showsVerticalScrollIndicator={false}>
           {filteredShops.length === 0 ? (
             <View style={styles.centerScreen}>
-              <Text style={styles.emptyText}>No repair shops found.</Text>
+              <Text style={styles.emptyText}>No {targetService.toLowerCase()} found.</Text>
             </View>
           ) : activeFilter === 'All' ? (
             <View>

@@ -17,15 +17,28 @@ export const AuthProvider = ({ children }: any) => {
   const [is_sani_loading, set_is_sani_loading] = useState(true);
 
   useEffect(() => {
-    // Standard Startup Check
-    supabase_lucifer_core.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.log("Normal auth background check failed, user needs to log in.");
-        // We just log it instead of letting it throw a red screen
+    // Standard Startup Check (Safely Wrapped)
+    let isMounted = true;
+    
+    const initSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase_lucifer_core.auth.getSession();
+        if (error) {
+          console.log("Normal auth background check failed, user needs to log in.");
+        }
+        if (isMounted) {
+          set_mayalu_session(session);
+          set_is_sani_loading(false);
+        }
+      } catch (e) {
+        console.error("Auth session restore failed:", e);
+        if (isMounted) {
+          set_mayalu_session(null);
+          set_is_sani_loading(false);
+        }
       }
-      set_mayalu_session(session);
-      set_is_sani_loading(false);
-    });
+    };
+    initSession();
 
     // Standard State Listener
     const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
@@ -44,9 +57,9 @@ export const AuthProvider = ({ children }: any) => {
           }
         }
       } else {
-        set_mayalu_session(null);
+        if (isMounted) set_mayalu_session(null);
       }
-      set_is_sani_loading(false); // ALWAYS UNLOCK APP!
+      if (isMounted) set_is_sani_loading(false); // ALWAYS UNLOCK APP!
     });
     // --- MNSKB Deep Link Interceptor ---
     const handleDeepLink = async ({ url }: { url: string }) => {
@@ -83,6 +96,7 @@ export const AuthProvider = ({ children }: any) => {
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
       linkingSubscription.remove();
     };
