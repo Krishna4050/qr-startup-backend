@@ -18,6 +18,21 @@ export const AuthProvider = ({ children }: any) => {
 
   useEffect(() => {
     let isMounted = true;
+
+    // Safety initialization: forcefully check session because INITIAL_SESSION might have already fired
+    const initSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase_lucifer_core.auth.getSession();
+        if (isMounted) {
+          set_mayalu_session(session);
+          set_is_sani_loading(false);
+        }
+      } catch (e) {
+        if (isMounted) set_is_sani_loading(false);
+      }
+    };
+    initSession();
+
     const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         set_mayalu_session(session); 

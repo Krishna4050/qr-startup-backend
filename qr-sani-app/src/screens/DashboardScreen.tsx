@@ -93,7 +93,8 @@ export default function DashboardScreen() {
   const fetchDashboardData = async () => {
     if (!user) return;
     console.log("[DEBUG] fetchDashboardData started. loading state:", loading);
-    try {
+    
+    const fetchPromise = async () => {
       console.log("[DEBUG] Fetching profile...");
       const { data: profileData } = await supabase_lucifer_core
         .from('profiles')
@@ -172,6 +173,11 @@ export default function DashboardScreen() {
       setNetworkMembers(memberCount || 0);
 
       console.log("[DEBUG] Dashboard fetch complete.");
+    };
+
+    try {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Network request timed out')), 8000));
+      await Promise.race([fetchPromise(), timeoutPromise]);
     } catch (error) {
       console.error("[DEBUG] Error fetching dashboard:", error);
     } finally {
