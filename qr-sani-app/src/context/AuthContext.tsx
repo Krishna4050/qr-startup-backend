@@ -17,30 +17,7 @@ export const AuthProvider = ({ children }: any) => {
   const [is_sani_loading, set_is_sani_loading] = useState(true);
 
   useEffect(() => {
-    // Standard Startup Check (Safely Wrapped)
     let isMounted = true;
-    
-    const initSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase_lucifer_core.auth.getSession();
-        if (error) {
-          console.log("Normal auth background check failed, user needs to log in.");
-        }
-        if (isMounted) {
-          set_mayalu_session(session);
-          set_is_sani_loading(false);
-        }
-      } catch (e) {
-        console.error("Auth session restore failed:", e);
-        if (isMounted) {
-          set_mayalu_session(null);
-          set_is_sani_loading(false);
-        }
-      }
-    };
-    initSession();
-
-    // Standard State Listener
     const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         set_mayalu_session(session); 

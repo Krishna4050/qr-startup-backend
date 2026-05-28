@@ -237,19 +237,11 @@ export default function VehicleRepairDirectory() {
       </View>
 
       {/* DYNAMIC HOST BANNER */}
-      {isGuest ? (
-        <TouchableOpacity style={styles.hostBanner} activeOpacity={0.8} onPress={() => navigation.navigate('Login')}>
+      {hostStatus === 'none' && (
+        <TouchableOpacity style={styles.hostBanner} activeOpacity={0.8} onPress={() => isGuest ? navigation.navigate('Login') : navigation.navigate('PartnerOnboardingIntro')}>
           <View style={styles.hostBannerTextContainer}>
             <Text style={styles.hostBannerTitle}>Own a repair shop?</Text>
-            <Text style={styles.hostBannerSub}>Sign in or create an account to host your shop.</Text>
-          </View>
-          <Image source={{ uri: 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150' }} style={styles.hostBannerImage} />
-        </TouchableOpacity>
-      ) : hostStatus === 'none' && (
-        <TouchableOpacity style={styles.hostBanner} activeOpacity={0.8} onPress={() => navigation.navigate('PartnerOnboardingIntro')}>
-          <View style={styles.hostBannerTextContainer}>
-            <Text style={styles.hostBannerTitle}>Own a repair shop?</Text>
-            <Text style={styles.hostBannerSub}>Partner with us and list your services.</Text>
+            <Text style={styles.hostBannerSub}>{isGuest ? 'Sign in or create an account to host your shop.' : 'Partner with us and list your services.'}</Text>
           </View>
           <Image source={{ uri: 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150' }} style={styles.hostBannerImage} />
         </TouchableOpacity>
