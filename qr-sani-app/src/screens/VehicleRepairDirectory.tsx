@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Dimensions, ScrollView, Platform, useWindowDimensions } from 'react-native';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useIsFocused, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Star, Search, Heart, Clock, Settings } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -71,11 +71,14 @@ const ShopCard = ({ item, onPress, cardWidth }: { item: any, onPress: () => void
 export default function VehicleRepairDirectory() {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused(); // Triggers a re-check when returning to this screen
+  const route = useRoute<any>();
   const { width } = useWindowDimensions();
   
+  const initialLocation = route.params?.location;
+
   const [shops, setShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [activeFilter, setActiveFilter] = useState(initialLocation || 'All');
   
   // Reactively track auth state instead of one-time fetch
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -85,7 +88,10 @@ export default function VehicleRepairDirectory() {
   // STATE TO TRACK IF THEY ARE A HOST
   const [hostStatus, setHostStatus] = useState<'none' | 'pending' | 'active'>('none');
 
-  const filters = ['All', 'Helsinki', 'Espoo', 'Vantaa', 'Tampere'];
+  // Dynamically create filters based on data (with hardcoded fallbacks until loaded)
+  const uniqueCities = Array.from(new Set(shops.map(shop => shop.city?.toUpperCase() || 'UNKNOWN')));
+  const loadedFilters = uniqueCities.map(c => c.charAt(0) + c.slice(1).toLowerCase());
+  const filters = ['All', ...(loadedFilters.length > 0 ? loadedFilters : ['Helsinki', 'Espoo', 'Vantaa', 'Tampere'])];
 
   const isMobileWeb = Platform.OS === 'web' && width < 768;
   const webGridGap = 24;
@@ -112,6 +118,14 @@ export default function VehicleRepairDirectory() {
   useEffect(() => {
     fetchShops();
   }, []);
+
+  useEffect(() => {
+    if (route.params?.location) {
+      setActiveFilter(route.params.location);
+    } else {
+      setActiveFilter('All');
+    }
+  }, [route.params?.location]);
 
   useEffect(() => {
     if (isFocused && !loading) {
@@ -191,6 +205,16 @@ export default function VehicleRepairDirectory() {
   const filteredShops = activeFilter === 'All' 
     ? shops 
     : shops.filter(shop => shop.city.toLowerCase() === activeFilter.toLowerCase());
+
+  // Group shops by city for 'All' view
+  const groupedShops: { [city: string]: any[] } = {};
+  if (activeFilter === 'All') {
+    shops.forEach(shop => {
+      const city = shop.city.charAt(0).toUpperCase() + shop.city.slice(1).toLowerCase();
+      if (!groupedShops[city]) groupedShops[city] = [];
+      groupedShops[city].push(shop);
+    });
+  }
 
   return (
     <WebLayout defaultService="Vehicle Repair">
@@ -273,6 +297,21 @@ export default function VehicleRepairDirectory() {
             <View style={styles.centerScreen}>
               <Text style={styles.emptyText}>No repair shops found.</Text>
             </View>
+          ) : activeFilter === 'All' ? (
+            <View>
+              {Object.keys(groupedShops).map((city) => (
+                <View key={city} style={styles.citySection}>
+                  <Text style={styles.citySectionTitle}>{city} Shops</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalCityScroll}>
+                    {groupedShops[city].map((item) => (
+                      <WebLink key={item.id} screen="ShopDetails" params={{ id: item.id }} style={{ marginRight: 24 }}>
+                        <ShopCard item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={300} />
+                      </WebLink>
+                    ))}
+                  </ScrollView>
+                </View>
+              ))}
+            </View>
           ) : (
             <View style={Platform.OS === 'web' ? styles.webGridContainer : {}}>
               {filteredShops.map((item) => (
@@ -306,7 +345,11 @@ const styles = StyleSheet.create({
 
   listContent: { paddingHorizontal: CARD_MARGIN, paddingTop: 16 },
   
-  shopCard: { marginBottom: 36 },
+  citySection: { marginBottom: 32 },
+  citySectionTitle: { fontSize: 22, fontWeight: '800', color: '#0A192F', marginBottom: 16 },
+  horizontalCityScroll: { paddingRight: 24, paddingBottom: 16 },
+  
+  shopCard: { marginBottom: 20 },
   imageContainer: { width: CARD_WIDTH, aspectRatio: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#E2E8F0', position: 'relative' },
   shopImage: { width: CARD_WIDTH, height: '100%', resizeMode: 'cover' },
   noImagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
