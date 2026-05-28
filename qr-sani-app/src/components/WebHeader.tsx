@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, FlatList, useWindowDimensions } from 'react-native';
 import { Search, Globe, Menu, User, ShieldCheck, ChevronDown, Plus, Minus } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import WebLink from './WebLink';
 
 export default function WebHeader({ profile, isGuest, onSearch, defaultService = 'Vehicle Repair' }: { profile?: any, isGuest?: boolean, onSearch?: (filters: any) => void, defaultService?: string }) {
   const navigation = useNavigation<any>();
@@ -10,6 +11,7 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('Helsinki');
   const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [showGuestDropdown, setShowGuestDropdown] = useState(false);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [adults, setAdults] = useState(0);
@@ -24,10 +26,10 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
     return (
       <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <TouchableOpacity style={styles.logoSection} onPress={() => navigation.navigate('Dashboard')}>
+          <WebLink style={styles.logoSection} screen="Dashboard">
             <ShieldCheck color="#E11D48" size={28} />
             <Text style={[styles.logoText, { fontSize: 18 }]}>smarttags</Text>
-          </TouchableOpacity>
+          </WebLink>
           <View style={{ position: 'relative' }}>
             <TouchableOpacity 
               style={styles.profileMenu}
@@ -44,11 +46,11 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
             </TouchableOpacity>
             {showProfileDropdown && (
               <View style={[styles.dropdownMenu, { top: 40, right: 0, left: 'auto', width: 200, padding: 8 }]}>
-                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('Profile'); }}><Text style={styles.dropdownItemText}>Profile</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('UserMessages'); }}><Text style={styles.dropdownItemText}>Messages</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('HostDashboard'); }}><Text style={styles.dropdownItemText}>Host Dashboard</Text></TouchableOpacity>
+                <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Profile</Text></WebLink>
+                <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Messages</Text></WebLink>
+                <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Host Dashboard</Text></WebLink>
                 <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 4 }} />
-                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('Login'); }}><Text style={styles.dropdownItemText}>Sign Out</Text></TouchableOpacity>
+                <WebLink style={styles.dropdownItem} screen="Login" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Sign Out</Text></WebLink>
               </View>
             )}
           </View>
@@ -68,10 +70,10 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
     <View style={styles.headerContainer}>
       <View style={styles.headerContent}>
         {/* Left: Logo */}
-        <TouchableOpacity style={styles.logoSection} onPress={() => navigation.navigate('Home')}>
+        <WebLink style={styles.logoSection} screen="Home">
           <ShieldCheck color="#E11D48" size={32} />
           <Text style={styles.logoText}>smarttags</Text>
-        </TouchableOpacity>
+        </WebLink>
 
         {/* Center: Search Pill */}
         <View style={styles.searchPill}>
@@ -102,11 +104,24 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
           
           <TouchableOpacity 
             style={[styles.searchSection, showDateDropdown && styles.activeSection]}
-            onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
+            onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
           >
             <Text style={styles.searchTitle}>When</Text>
             <Text style={styles.searchSub}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
           </TouchableOpacity>
+          
+          {requiresGuests && (
+            <>
+              <View style={styles.divider} />
+              <TouchableOpacity 
+                style={[styles.searchSection, showGuestDropdown && styles.activeSection]}
+                onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
+              >
+                <Text style={styles.searchTitle}>Who</Text>
+                <Text style={styles.searchSub}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
+              </TouchableOpacity>
+            </>
+          )}
           
 
           
@@ -118,8 +133,17 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
                 setShowServiceDropdown(false);
                 setShowLocationDropdown(false);
                 setShowDateDropdown(false);
+                setShowGuestDropdown(false);
                 if (onSearch) {
-                  onSearch({ service: selectedService, location: selectedLocation, date: selectedDate });
+                  onSearch({ service: selectedService, location: selectedLocation, date: selectedDate, guests: adults + childrenCount });
+                } else {
+                  if (selectedService === 'Vehicle Repair') {
+                    navigation.navigate('VehicleRepairDirectory', { location: selectedLocation });
+                  } else if (selectedService === 'Hotels & Stays') {
+                    navigation.navigate('HotelSearch', { location: selectedLocation, guests: adults + childrenCount });
+                  } else {
+                    alert(`Search for ${selectedService} is coming soon!`);
+                  }
                 }
               }}
             >
@@ -191,14 +215,42 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
             </View>
           )}
 
+          {/* Absolute Guest Dropdown */}
+          {showGuestDropdown && (
+            <View style={[styles.dropdownMenu, { right: 120, left: 'auto', width: 320, padding: 24 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <View>
+                  <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Adults</Text>
+                  <Text style={{ color: '#717171', fontSize: 14 }}>Ages 13 or above</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                  <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#717171" /></TouchableOpacity>
+                  <Text style={{ fontSize: 16 }}>{adults}</Text>
+                  <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#717171" /></TouchableOpacity>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View>
+                  <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Children</Text>
+                  <Text style={{ color: '#717171', fontSize: 14 }}>Ages 2-12</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                  <TouchableOpacity onPress={() => setChildrenCount(Math.max(0, childrenCount - 1))} style={styles.circleBtn}><Minus size={16} color="#717171" /></TouchableOpacity>
+                  <Text style={{ fontSize: 16 }}>{childrenCount}</Text>
+                  <TouchableOpacity onPress={() => setChildrenCount(childrenCount + 1)} style={styles.circleBtn}><Plus size={16} color="#717171" /></TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+
 
         </View>
 
         {/* Right: Actions */}
         <View style={styles.rightActions}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Services')}>
+          <WebLink style={styles.actionBtn} screen="Services">
             <Text style={styles.hostText}>Explore Services</Text>
-          </TouchableOpacity>
+          </WebLink>
           <TouchableOpacity style={[styles.actionBtn, styles.globeIcon]}>
             <Globe color="#222222" size={18} />
           </TouchableOpacity>
@@ -221,19 +273,19 @@ export default function WebHeader({ profile, isGuest, onSearch, defaultService =
             {/* Absolute Profile Dropdown */}
             {showProfileDropdown && (
               <View style={[styles.dropdownMenu, { top: 50, right: 0, left: 'auto', width: 240, padding: 8, zIndex: 999 }]}>
-                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('Profile'); }}>
+                <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
                   <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('UserMessages'); }}>
+                </WebLink>
+                <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}>
                   <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages & Notifications</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('HostDashboard'); }}>
+                </WebLink>
+                <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}>
                   <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
-                </TouchableOpacity>
+                </WebLink>
                 <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
-                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('Login'); }}>
+                <WebLink style={styles.dropdownItem} screen="Login" onPress={() => setShowProfileDropdown(false)}>
                   <Text style={[styles.dropdownItemText, { color: '#E11D48' }]}>Sign Out</Text>
-                </TouchableOpacity>
+                </WebLink>
               </View>
             )}
           </View>

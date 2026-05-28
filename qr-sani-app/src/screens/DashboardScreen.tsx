@@ -7,6 +7,7 @@ import { decode } from 'base64-arraybuffer';
 import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
 import WebHeader from '../components/WebHeader';
+import WebLink from '../components/WebLink';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
@@ -302,10 +303,11 @@ export default function DashboardScreen() {
               ) : (
                 <View style={Platform.OS === 'web' ? [styles.webGridContainer, { paddingHorizontal: 0 }] : { gap: 16 }}>
                   {searchResults?.map(shop => (
-                    <TouchableOpacity 
+                    <WebLink 
                       key={shop.id} 
+                      screen="ShopDetails"
+                      params={{ id: shop.id }}
                       style={[styles.shopCard, Platform.OS === 'web' && { width: '31%', minWidth: 250 }]}
-                      onPress={() => navigation.navigate('ShopDetails', { id: shop.id })}
                     >
                       <Image source={{ uri: shop.banner_url || 'https://images.unsplash.com/photo-1598555231223-f25b29b7a4be' }} style={styles.shopImage} />
                       <View style={styles.shopInfo}>
@@ -313,7 +315,7 @@ export default function DashboardScreen() {
                         <Text style={styles.shopAddress}>{shop.street}, {shop.city}</Text>
                         <Text style={styles.shopRating}>★ 4.9 (120 reviews)</Text>
                       </View>
-                    </TouchableOpacity>
+                    </WebLink>
                   ))}
                   {searchResults?.length === 0 && (
                      <View style={[styles.emptyCard, { width: '100%', padding: 48 }]}><Text style={styles.emptyCardText}>No shops available for these dates.</Text></View>
@@ -363,22 +365,22 @@ export default function DashboardScreen() {
             <View style={Platform.OS === 'web' ? [styles.webGridContainer, { paddingHorizontal: 0, marginTop: 16 }] : { gap: 16, marginTop: 16 }}>
                {[
                 { title: "Vehicle Repair", desc: "Trusted mechanics near you", bg: '#EEF2FF', color: '#4338CA', icon: <Wrench color="#4338CA" size={24} />, route: 'VehicleRepairDirectory' },
-                { title: "Bike Repair", desc: "Fix your bike quickly", bg: '#ECFDF5', color: '#047857', icon: <Bike color="#047857" size={24} /> },
-                { title: "Pay Parking", desc: "Find and pay for parking", bg: '#FFFBEB', color: '#B45309', icon: <Car color="#B45309" size={24} /> },
-                { title: "Hotels & Stays", desc: "Find a place to stay", bg: '#F5F3FF', color: '#6D28D9', icon: <Bed color="#6D28D9" size={24} /> },
-                { title: "City Transit", desc: "Get around the city", bg: '#FDF2F8', color: '#BE185D', icon: <BusFront color="#BE185D" size={24} /> },
-                { title: "Train Tickets", desc: "Travel across cities", bg: '#ECFEFF', color: '#0369A1', icon: <Train color="#0369A1" size={24} /> },
-                { title: "Flights", desc: "Book your next flight", bg: '#EEF2FF', color: '#4338CA', icon: <Plane color="#4338CA" size={24} /> },
+                { title: "Bike Repair", desc: "Fix your bike quickly", bg: '#ECFDF5', color: '#047857', icon: <Bike color="#047857" size={24} />, route: 'Services' },
+                { title: "Pay Parking", desc: "Find and pay for parking", bg: '#FFFBEB', color: '#B45309', icon: <Car color="#B45309" size={24} />, route: 'Services' },
+                { title: "Hotels & Stays", desc: "Find a place to stay", bg: '#F5F3FF', color: '#6D28D9', icon: <Bed color="#6D28D9" size={24} />, route: 'Services' },
+                { title: "City Transit", desc: "Get around the city", bg: '#FDF2F8', color: '#BE185D', icon: <BusFront color="#BE185D" size={24} />, route: 'Services' },
+                { title: "Train Tickets", desc: "Travel across cities", bg: '#ECFEFF', color: '#0369A1', icon: <Train color="#0369A1" size={24} />, route: 'Services' },
+                { title: "Flights", desc: "Book your next flight", bg: '#EEF2FF', color: '#4338CA', icon: <Plane color="#4338CA" size={24} />, route: 'Services' },
               ].map((item, idx) => (
-                <TouchableOpacity 
+                <WebLink 
                   key={idx} 
+                  screen={item.route}
                   style={[styles.serviceCard, { backgroundColor: item.bg }, Platform.OS === 'web' && { width: '23%', minWidth: 200 }]}
-                  onPress={() => navigation.navigate(item.route || 'Services')}
                 >
                   <View style={{ marginBottom: 8 }}>{item.icon}</View>
                   <Text style={{ fontSize: 16, fontWeight: 'bold', color: item.color, marginBottom: 4 }}>{item.title}</Text>
                   <Text style={{ fontSize: 13, color: '#4B5563' }}>{item.desc}</Text>
-                </TouchableOpacity>
+                </WebLink>
               ))}
             </View>
           </View>

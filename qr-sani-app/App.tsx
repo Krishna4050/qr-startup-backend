@@ -54,15 +54,26 @@ export default function App() {
       initialRouteName: Platform.OS === 'web' ? 'Dashboard' : ('Onboarding' as any),
       screens: {
         Login: 'login',
-        Dashboard: 'dashboard',
+        Dashboard: {
+          path: 'dashboard',
+          screens: {
+            Home: 'Home',
+            Services: 'Services',
+            Scan: 'Scan',
+            Profile: 'Profile',
+            Store: 'Store'
+          }
+        },
         VehicleRepairDirectory: 'directory',
-        // By adding /:shopId, refreshing the page won't lose the shop data!
-        ShopDetails: 'shop/:shopId', 
-        ChatScreen: 'chat/:shopId/:otherUserId', // Preserves chat keys on refresh
+        ShopDetails: 'shop/:id',
+        ChatScreen: 'chat/:shopId/:otherUserId',
         HostDashboard: 'host',
+        HostShopDetails: 'host/shop/:id',
         Onboarding: 'welcome',
         UserMessages: 'messages',
         HostMessages: 'host/messages',
+        PartnerOnboardingIntro: 'partner/start',
+        Settings: 'settings',
       }
     }
   };

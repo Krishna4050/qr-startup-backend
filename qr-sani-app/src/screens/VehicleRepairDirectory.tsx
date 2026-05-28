@@ -6,6 +6,7 @@ import { supabase_lucifer_core } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
 import RefreshableScroll from '../components/RefreshableScroll';
 import WebHeader from '../components/WebHeader';
+import WebLink from '../components/WebLink';
 
 const { width } = Dimensions.get('window');
 const CARD_MARGIN = 24;
@@ -275,7 +276,9 @@ export default function VehicleRepairDirectory() {
           ) : (
             <View style={Platform.OS === 'web' ? styles.webGridContainer : {}}>
               {filteredShops.map((item) => (
-                <ShopCard key={item.id} item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={Platform.OS === 'web' ? webCardWidth : undefined} />
+                <WebLink key={item.id} screen="ShopDetails" params={{ id: item.id }} style={Platform.OS === 'web' ? { width: webCardWidth } : {}}>
+                  <ShopCard item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={Platform.OS === 'web' ? webCardWidth : undefined} />
+                </WebLink>
               ))}
             </View>
           )}

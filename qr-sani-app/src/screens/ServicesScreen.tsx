@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import RefreshableScroll from '../components/RefreshableScroll';
 import WebHeader from '../components/WebHeader';
 import ResponsiveWrapper from '../components/ResponsiveWrapper';
+import WebLink from '../components/WebLink';
 import { useAuth } from '../context/AuthContext';
 
 export default function ServicesScreen() {
@@ -104,34 +105,56 @@ export default function ServicesScreen() {
           <Text style={[styles.sectionHeading, isDesktopWeb && { fontSize: 24, marginBottom: 24 }]}>Categories</Text>
           
           <View style={[styles.gridContainer, isDesktopWeb && { gap: 24 }]}>
-            {services.map((item) => (
-              <TouchableOpacity 
-                key={item.id} 
-                style={[
-                  styles.serviceBox, 
-                  isDesktopWeb ? { width: '23%', minWidth: 220, padding: 24 } : { width: isWeb ? '47%' : mobileCardWidth }
-                ]}
-                activeOpacity={0.7}
-                onPress={() => {
-                  if (item.id === 'repair') {
-                    navigation.navigate('VehicleRepairDirectory');
-                  } else {
-                    Alert.alert("Coming Soon", `The ${item.title} directory is being built next!`);
-                  }
-                }}
-              >
-                <View style={styles.serviceBoxTop}>
-                  <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
-                    {item.icon}
-                  </View>
-                  {isDesktopWeb && <ChevronRight color="#CBD5E1" size={24} />}
-                </View>
-                <View style={styles.serviceBoxBottom}>
-                  <Text style={[styles.serviceTitle, isDesktopWeb && { fontSize: 18, textAlign: 'left' }]}>{item.title}</Text>
-                  {isDesktopWeb && <Text style={styles.serviceDesc}>{item.desc}</Text>}
-                </View>
-              </TouchableOpacity>
-            ))}
+              {services.map((item) => {
+                // Vehicle Repair is the only active route — use WebLink for it
+                if (item.id === 'repair') {
+                  return (
+                    <WebLink
+                      key={item.id}
+                      screen="VehicleRepairDirectory"
+                      style={[
+                        styles.serviceBox, 
+                        isDesktopWeb ? { width: '23%', minWidth: 220, padding: 24 } : { width: isWeb ? '47%' : mobileCardWidth }
+                      ]}
+                    >
+                      <View style={styles.serviceBoxTop}>
+                        <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
+                          {item.icon}
+                        </View>
+                        {isDesktopWeb && <ChevronRight color="#CBD5E1" size={24} />}
+                      </View>
+                      <View style={styles.serviceBoxBottom}>
+                        <Text style={[styles.serviceTitle, isDesktopWeb && { fontSize: 18, textAlign: 'left' }]}>{item.title}</Text>
+                        {isDesktopWeb && <Text style={styles.serviceDesc}>{item.desc}</Text>}
+                      </View>
+                    </WebLink>
+                  );
+                }
+                return (
+                  <TouchableOpacity 
+                    key={item.id} 
+                    style={[
+                      styles.serviceBox, 
+                      isDesktopWeb ? { width: '23%', minWidth: 220, padding: 24 } : { width: isWeb ? '47%' : mobileCardWidth }
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      Alert.alert("Coming Soon", `The ${item.title} directory is being built next!`);
+                    }}
+                  >
+                    <View style={styles.serviceBoxTop}>
+                      <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
+                        {item.icon}
+                      </View>
+                      {isDesktopWeb && <ChevronRight color="#CBD5E1" size={24} />}
+                    </View>
+                    <View style={styles.serviceBoxBottom}>
+                      <Text style={[styles.serviceTitle, isDesktopWeb && { fontSize: 18, textAlign: 'left' }]}>{item.title}</Text>
+                      {isDesktopWeb && <Text style={styles.serviceDesc}>{item.desc}</Text>}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
           </View>
         </View>
       </RefreshableScroll>
