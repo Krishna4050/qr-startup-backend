@@ -8,6 +8,7 @@ import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
 import WebHeader from '../components/WebHeader';
 import WebLink from '../components/WebLink';
+import { useAuth } from '../context/AuthContext';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
@@ -15,6 +16,7 @@ const { width } = Dimensions.get('window');
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused(); 
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -47,19 +49,38 @@ export default function DashboardScreen() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    if (isAuthLoading) return;
+    
+    if (!user) {
+      setIsGuest(true);
+      setLoading(false);
+      return;
+    }
+
+    setIsGuest(false);
+    fetchDashboardData(user);
+  }, [user?.id, isAuthLoading]);
+
+  useEffect(() => {
+    if (isFocused && !loading && user) {
+      fetchDashboardData(user);
+    }
+  }, [isFocused]);
+
+  useEffect(() => {
+    if (!user) return;
 
     const notifSubscription = supabase_lucifer_core
       .channel(`public:notifications-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-        fetchDashboardData(); 
+        fetchDashboardData(user); 
       })
       .subscribe();
 
     const networkSubscription = supabase_lucifer_core
       .channel(`public:trusted_network-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trusted_network' }, () => {
-        fetchDashboardData(); 
+        fetchDashboardData(user); 
       })
       .subscribe();
 
@@ -67,43 +88,25 @@ export default function DashboardScreen() {
       supabase_lucifer_core.removeChannel(notifSubscription);
       supabase_lucifer_core.removeChannel(networkSubscription);
     };
-  }, []);
+  }, [user?.id]);
 
-  useEffect(() => {
-    if (isFocused && !loading) {
-      fetchDashboardData();
-    }
-  }, [isFocused]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (currentUser: any) => {
     console.log("[DEBUG] fetchDashboardData started. loading state:", loading);
     try {
-      console.log("[DEBUG] Fetching session...");
-      const { data: { session } } = await supabase_lucifer_core.auth.getSession();
-      const user = session?.user || null;
-      console.log("[DEBUG] Session fetched. User:", !!user);
-      
-      if (!user) {
-        setIsGuest(true);
-        setLoading(false);
-        return;
-      }
-      setIsGuest(false);
-
       console.log("[DEBUG] Fetching profile...");
       const { data: profileData } = await supabase_lucifer_core
         .from('profiles')
         .select('display_name, username, avatar_url')
-        .eq('id', user.id)
+        .eq('id', currentUser.id)
         .maybeSingle();
       
-      setProfile(profileData || { display_name: user.user_metadata?.username });
+      setProfile(profileData || { display_name: currentUser.user_metadata?.username });
 
       console.log("[DEBUG] Fetching my tags...");
       const { data: myTagsData } = await supabase_lucifer_core
         .from('qr_tags')
         .select('*')
-        .eq('owner_id', user.id)
+        .eq('owner_id', currentUser.id)
         .order('created_at', { ascending: false });
       
       let myVisibleTags: any[] = [];
@@ -118,7 +121,7 @@ export default function DashboardScreen() {
       const { data: sharedIdsData } = await supabase_lucifer_core
         .from('shared_tags')
         .select('tag_id, owner_id')
-        .eq('shared_with_id', user.id);
+        .eq('shared_with_id', currentUser.id);
 
       let sharedVisibleTags: any[] = [];
       let sharedPausedCount = 0;
@@ -155,16 +158,16 @@ export default function DashboardScreen() {
       setPausedTagsCount(myPausedCount + sharedPausedCount);
 
       console.log("[DEBUG] Fetching alerts...");
-      const { data: alertsData } = await supabase_lucifer_core.from('alerts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
+      const { data: alertsData } = await supabase_lucifer_core.from('alerts').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(5);
       if (alertsData) setAlerts(alertsData);
 
       console.log("[DEBUG] Fetching notif count...");
-      const { count: notifCount } = await supabase_lucifer_core.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false);
+      const { count: notifCount } = await supabase_lucifer_core.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('is_read', false);
       setUnreadNotifications(notifCount || 0);
 
       console.log("[DEBUG] Fetching member count...");
-      const emailQuery = user.email ? `,member_email.ilike.${user.email}` : '';
-      const { count: memberCount } = await supabase_lucifer_core.from('trusted_network').select('*', { count: 'exact', head: true }).eq('status', 'accepted').or(`owner_id.eq.${user.id}${emailQuery}`); 
+      const emailQuery = currentUser.email ? `,member_email.ilike.${currentUser.email}` : '';
+      const { count: memberCount } = await supabase_lucifer_core.from('trusted_network').select('*', { count: 'exact', head: true }).eq('status', 'accepted').or(`owner_id.eq.${currentUser.id}${emailQuery}`); 
       setNetworkMembers(memberCount || 0);
 
       console.log("[DEBUG] Dashboard fetch complete.");
