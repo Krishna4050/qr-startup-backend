@@ -58,12 +58,12 @@ export default function DashboardScreen() {
     }
 
     setIsGuest(false);
-    fetchDashboardData(user);
+    fetchDashboardData();
   }, [user?.id, isAuthLoading]);
 
   useEffect(() => {
     if (isFocused && !loading && user) {
-      fetchDashboardData(user);
+      fetchDashboardData();
     }
   }, [isFocused]);
 
@@ -73,14 +73,14 @@ export default function DashboardScreen() {
     const notifSubscription = supabase_lucifer_core
       .channel(`public:notifications-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-        fetchDashboardData(user); 
+        fetchDashboardData(); 
       })
       .subscribe();
 
     const networkSubscription = supabase_lucifer_core
       .channel(`public:trusted_network-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trusted_network' }, () => {
-        fetchDashboardData(user); 
+        fetchDashboardData(); 
       })
       .subscribe();
 
@@ -90,23 +90,24 @@ export default function DashboardScreen() {
     };
   }, [user?.id]);
 
-  const fetchDashboardData = async (currentUser: any) => {
+  const fetchDashboardData = async () => {
+    if (!user) return;
     console.log("[DEBUG] fetchDashboardData started. loading state:", loading);
     try {
       console.log("[DEBUG] Fetching profile...");
       const { data: profileData } = await supabase_lucifer_core
         .from('profiles')
         .select('display_name, username, avatar_url')
-        .eq('id', currentUser.id)
+        .eq('id', user.id)
         .maybeSingle();
       
-      setProfile(profileData || { display_name: currentUser.user_metadata?.username });
+      setProfile(profileData || { display_name: user.user_metadata?.username });
 
       console.log("[DEBUG] Fetching my tags...");
       const { data: myTagsData } = await supabase_lucifer_core
         .from('qr_tags')
         .select('*')
-        .eq('owner_id', currentUser.id)
+        .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
       
       let myVisibleTags: any[] = [];
@@ -121,7 +122,7 @@ export default function DashboardScreen() {
       const { data: sharedIdsData } = await supabase_lucifer_core
         .from('shared_tags')
         .select('tag_id, owner_id')
-        .eq('shared_with_id', currentUser.id);
+        .eq('shared_with_id', user.id);
 
       let sharedVisibleTags: any[] = [];
       let sharedPausedCount = 0;
@@ -158,16 +159,16 @@ export default function DashboardScreen() {
       setPausedTagsCount(myPausedCount + sharedPausedCount);
 
       console.log("[DEBUG] Fetching alerts...");
-      const { data: alertsData } = await supabase_lucifer_core.from('alerts').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(5);
+      const { data: alertsData } = await supabase_lucifer_core.from('alerts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
       if (alertsData) setAlerts(alertsData);
 
       console.log("[DEBUG] Fetching notif count...");
-      const { count: notifCount } = await supabase_lucifer_core.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('is_read', false);
+      const { count: notifCount } = await supabase_lucifer_core.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false);
       setUnreadNotifications(notifCount || 0);
 
       console.log("[DEBUG] Fetching member count...");
-      const emailQuery = currentUser.email ? `,member_email.ilike.${currentUser.email}` : '';
-      const { count: memberCount } = await supabase_lucifer_core.from('trusted_network').select('*', { count: 'exact', head: true }).eq('status', 'accepted').or(`owner_id.eq.${currentUser.id}${emailQuery}`); 
+      const emailQuery = user.email ? `,member_email.ilike.${user.email}` : '';
+      const { count: memberCount } = await supabase_lucifer_core.from('trusted_network').select('*', { count: 'exact', head: true }).eq('status', 'accepted').or(`owner_id.eq.${user.id}${emailQuery}`); 
       setNetworkMembers(memberCount || 0);
 
       console.log("[DEBUG] Dashboard fetch complete.");
