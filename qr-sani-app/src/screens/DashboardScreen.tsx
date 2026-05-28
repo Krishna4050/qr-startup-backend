@@ -76,9 +76,13 @@ export default function DashboardScreen() {
   }, [isFocused]);
 
   const fetchDashboardData = async () => {
+    console.log("[DEBUG] fetchDashboardData started. loading state:", loading);
     try {
+      console.log("[DEBUG] Fetching session...");
       const { data: { session } } = await supabase_lucifer_core.auth.getSession();
       const user = session?.user || null;
+      console.log("[DEBUG] Session fetched. User:", !!user);
+      
       if (!user) {
         setIsGuest(true);
         setLoading(false);
@@ -86,6 +90,7 @@ export default function DashboardScreen() {
       }
       setIsGuest(false);
 
+      console.log("[DEBUG] Fetching profile...");
       const { data: profileData } = await supabase_lucifer_core
         .from('profiles')
         .select('display_name, username, avatar_url')
@@ -94,6 +99,7 @@ export default function DashboardScreen() {
       
       setProfile(profileData || { display_name: user.user_metadata?.username });
 
+      console.log("[DEBUG] Fetching my tags...");
       const { data: myTagsData } = await supabase_lucifer_core
         .from('qr_tags')
         .select('*')
@@ -108,6 +114,7 @@ export default function DashboardScreen() {
         myPausedCount = myTagsData.filter(t => t.status === 'paused').length;
       }
 
+      console.log("[DEBUG] Fetching shared tags...");
       const { data: sharedIdsData } = await supabase_lucifer_core
         .from('shared_tags')
         .select('tag_id, owner_id')
@@ -147,18 +154,24 @@ export default function DashboardScreen() {
       setSharedWithMe(sharedVisibleTags);
       setPausedTagsCount(myPausedCount + sharedPausedCount);
 
+      console.log("[DEBUG] Fetching alerts...");
       const { data: alertsData } = await supabase_lucifer_core.from('alerts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
       if (alertsData) setAlerts(alertsData);
 
+      console.log("[DEBUG] Fetching notif count...");
       const { count: notifCount } = await supabase_lucifer_core.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false);
       setUnreadNotifications(notifCount || 0);
 
-      const { count: memberCount } = await supabase_lucifer_core.from('trusted_network').select('*', { count: 'exact', head: true }).eq('status', 'accepted').or(`owner_id.eq.${user.id},member_email.ilike.${user.email}`); 
+      console.log("[DEBUG] Fetching member count...");
+      const emailQuery = user.email ? `,member_email.ilike.${user.email}` : '';
+      const { count: memberCount } = await supabase_lucifer_core.from('trusted_network').select('*', { count: 'exact', head: true }).eq('status', 'accepted').or(`owner_id.eq.${user.id}${emailQuery}`); 
       setNetworkMembers(memberCount || 0);
 
+      console.log("[DEBUG] Dashboard fetch complete.");
     } catch (error) {
-      console.error("Error fetching dashboard:", error);
+      console.error("[DEBUG] Error fetching dashboard:", error);
     } finally {
+      console.log("[DEBUG] Calling setLoading(false)");
       setLoading(false);
     }
   };

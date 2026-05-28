@@ -42,40 +42,40 @@ import HostMessagesScreen from './src/screens/HostMessagesScreen';
 
 const Stack = createNativeStackNavigator();
 
+const linking = {
+  prefixes: ['https://ats.krishnaadhikari.com', 'qr-sani-app://'],
+  config: {
+    initialRouteName: Platform.OS === 'web' ? 'Dashboard' : ('Onboarding' as any),
+    screens: {
+      Login: 'login',
+      Dashboard: {
+        path: 'dashboard',
+        screens: {
+          Home: 'Home',
+          Services: 'Services',
+          Scan: 'Scan',
+          Profile: 'Profile',
+          Store: 'Store'
+        }
+      },
+      VehicleRepairDirectory: 'directory',
+      ShopDetails: 'shop/:id',
+      ChatScreen: 'chat/:shopId/:otherUserId',
+      HostDashboard: 'host',
+      HostShopDetails: 'host/shop/:id',
+      Onboarding: 'welcome',
+      UserMessages: 'messages',
+      HostMessages: 'host/messages',
+      PartnerOnboardingIntro: 'partner/start',
+      Settings: 'settings',
+    }
+  }
+};
+
 export default function App() {
+  console.log("[DEBUG] App component rendering!");
   const handleNavigationReady = () => {
     console.log(`[Core] Routing Initialized for ${Platform.OS}`);
-  };
-
-  // WEB MAGIC: This tells React exactly how to create real Web URLs!
-  const linking = {
-    prefixes: ['https://ats.krishnaadhikari.com', 'qr-sani-app://'],
-    config: {
-      initialRouteName: Platform.OS === 'web' ? 'Dashboard' : ('Onboarding' as any),
-      screens: {
-        Login: 'login',
-        Dashboard: {
-          path: 'dashboard',
-          screens: {
-            Home: 'Home',
-            Services: 'Services',
-            Scan: 'Scan',
-            Profile: 'Profile',
-            Store: 'Store'
-          }
-        },
-        VehicleRepairDirectory: 'directory',
-        ShopDetails: 'shop/:id',
-        ChatScreen: 'chat/:shopId/:otherUserId',
-        HostDashboard: 'host',
-        HostShopDetails: 'host/shop/:id',
-        Onboarding: 'welcome',
-        UserMessages: 'messages',
-        HostMessages: 'host/messages',
-        PartnerOnboardingIntro: 'partner/start',
-        Settings: 'settings',
-      }
-    }
   };
 
   // INTELLIGENT ROUTING: 
