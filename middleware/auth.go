@@ -2,15 +2,42 @@ package middleware
 
 import (
 	"context"
-	"crypto/x509"
-	"encoding/pem"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+type JWKS struct {
+	Keys []JWK `json:"keys"`
+}
+
+type JWK struct {
+	Kty string `json:"kty"`
+	Crv string `json:"crv"`
+	X   string `json:"x"`
+	Y   string `json:"y"`
+}
+
+// Decode base64url string to big.Int
+func decodeBase64URL(s string) (*big.Int, error) {
+	// Add padding if missing
+	if pad := len(s) % 4; pad != 0 {
+		s += strings.Repeat("=", 4-pad)
+	}
+	bytes, err := base64.URLEncoding.DecodeString(s)
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(bytes), nil
+}
 
 //RequireAuth is a middleware that check for a valid database JWT token
 func RequireAuth(next http.HandlerFunc) http.HandlerFunc{
@@ -26,21 +53,38 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc{
 		tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 		// Parse and Verify the cryptographic signature using our database Secret or Public Key
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			// Try ECC (P-256) Public Key First (The new Supabase Standard)
-			pubKeyStr := os.Getenv("SUPABASE_JWT_PUBLIC_KEY")
-			if pubKeyStr != "" {
+			// Try ECC (P-256) JWKS JSON First (The new Supabase Standard)
+			jwksJsonStr := os.Getenv("SUPABASE_JWKS_JSON")
+			if jwksJsonStr != "" {
 				if _, ok := token.Method.(*jwt.SigningMethodECDSA); ok {
-					// Some environments escape newlines, so we replace them just in case
-					pubKeyStr = strings.ReplaceAll(pubKeyStr, "\\n", "\n")
-					block, _ := pem.Decode([]byte(pubKeyStr))
-					if block == nil {
-						return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+					var jwks JWKS
+					if err := json.Unmarshal([]byte(jwksJsonStr), &jwks); err != nil {
+						return nil, fmt.Errorf("failed to parse JWKS JSON")
 					}
-					pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+					if len(jwks.Keys) == 0 {
+						return nil, fmt.Errorf("no keys found in JWKS")
+					}
+
+					jwk := jwks.Keys[0] // Use the first key
+					if jwk.Kty != "EC" || jwk.Crv != "P-256" {
+						return nil, fmt.Errorf("unsupported key type or curve in JWKS")
+					}
+
+					xInt, err := decodeBase64URL(jwk.X)
 					if err != nil {
-						return nil, err
+						return nil, fmt.Errorf("invalid x coordinate")
 					}
-					return pub, nil
+					yInt, err := decodeBase64URL(jwk.Y)
+					if err != nil {
+						return nil, fmt.Errorf("invalid y coordinate")
+					}
+
+					pubKey := &ecdsa.PublicKey{
+						Curve: elliptic.P256(),
+						X:     xInt,
+						Y:     yInt,
+					}
+					return pubKey, nil
 				}
 			}
 
