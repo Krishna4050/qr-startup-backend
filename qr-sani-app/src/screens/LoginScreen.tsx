@@ -6,7 +6,7 @@ import ResponsiveWrapper from '../components/ResponsiveWrapper';
 
 export default function LoginScreen({ navigation }: any) {
   return (
-    <ResponsiveWrapper bg="#F3F4F6">
+    <ResponsiveWrapper bg="#F3F4F6" maxWidth={480}>
       <KeyboardAvoidingView 
         style={styles.container} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
