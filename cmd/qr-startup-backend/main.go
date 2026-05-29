@@ -102,6 +102,7 @@ func main(){
 	mux.HandleFunc("GET /api/public/shops", handlers.GetPublicDirectoryHandler)
 	mux.HandleFunc("POST /api/call-shop", handlers.CallShop)
 	mux.HandleFunc("POST /api/call-shop-webhook", handlers.CallShopWebhook)
+	mux.HandleFunc("GET /api/dashboard", middleware.RequireAuth(handlers.GetDashboardData))
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost:%s\n", port)

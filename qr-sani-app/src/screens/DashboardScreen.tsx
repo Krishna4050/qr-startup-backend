@@ -95,89 +95,35 @@ export default function DashboardScreen() {
     console.log("[DEBUG] fetchDashboardData started. loading state:", loading);
     
     const fetchPromise = async () => {
-      // CRITICAL HYDRATION FIX:
-      // Even though AuthContext says we are logged in, the Supabase REST client (postgrest)
-      // might still be 1 millisecond behind in attaching the token to headers.
-      // Awaiting getSession() here guarantees the token is injected into the request headers,
-      // preventing "anonymous" requests that return empty arrays due to RLS!
-      await supabase_lucifer_core.auth.getSession();
-
-      console.log("[DEBUG] Fetching profile...");
-      const { data: profileData } = await supabase_lucifer_core
-        .from('profiles')
-        .select('display_name, username, avatar_url')
-        .eq('id', user.id)
-        .maybeSingle();
+      console.log("[DEBUG] Fetching dashboard from Go backend...");
       
-      setProfile(profileData || { display_name: user.user_metadata?.username });
+      const { data: { session } } = await supabase_lucifer_core.auth.getSession();
+      if (!session) throw new Error("No session available");
 
-      console.log("[DEBUG] Fetching my tags...");
-      const { data: myTagsData } = await supabase_lucifer_core
-        .from('qr_tags')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      let myVisibleTags: any[] = [];
-      let myPausedCount = 0;
-      
-      if (myTagsData) {
-        myVisibleTags = myTagsData.filter(t => t.status === 'active' || t.status === 'lost');
-        myPausedCount = myTagsData.filter(t => t.status === 'paused').length;
-      }
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      if (!backendUrl) throw new Error("Backend URL not configured");
 
-      console.log("[DEBUG] Fetching shared tags...");
-      const { data: sharedIdsData } = await supabase_lucifer_core
-        .from('shared_tags')
-        .select('tag_id, owner_id')
-        .eq('shared_with_id', user.id);
-
-      let sharedVisibleTags: any[] = [];
-      let sharedPausedCount = 0;
-
-      if (sharedIdsData && sharedIdsData.length > 0) {
-        const sharedIds = sharedIdsData.map(row => row.tag_id);
-        const { data: sharedTagsData } = await supabase_lucifer_core
-          .from('qr_tags')
-          .select('*')
-          .in('id', sharedIds);
-
-        const ownerIds = [...new Set(sharedIdsData.map(row => row.owner_id))];
-        const { data: owners } = await supabase_lucifer_core.from('profiles').select('id, display_name, username').in('id', ownerIds);
-
-        if (sharedTagsData) {
-          sharedPausedCount = sharedTagsData.filter(t => t.status === 'paused').length;
-
-          sharedVisibleTags = sharedTagsData
-            .filter(t => t.status === 'active' || t.status === 'lost')
-            .map(tag => {
-              const shareRecord = sharedIdsData.find(s => s.tag_id === tag.id);
-              const owner = owners?.find((o: any) => o.id === shareRecord?.owner_id);
-              return {
-                ...tag,
-                is_shared: true,
-                owner_name: owner?.display_name || owner?.username || 'A Friend'
-              };
-            });
+      const res = await fetch(`${backendUrl}/api/dashboard`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         }
+      });
+
+      if (!res.ok) {
+        throw new Error(`Backend returned status ${res.status}`);
       }
 
-      setTags([...myVisibleTags, ...sharedVisibleTags]);
-      setSharedWithMe(sharedVisibleTags);
-      setPausedTagsCount(myPausedCount + sharedPausedCount);
+      const data = await res.json();
 
-      console.log("[DEBUG] Fetching alerts...");
-      const { data: alertsData } = await supabase_lucifer_core.from('alerts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
-      if (alertsData) setAlerts(alertsData);
-
-      console.log("[DEBUG] Fetching notif count...");
-      const { count: notifCount } = await supabase_lucifer_core.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false);
-      setUnreadNotifications(notifCount || 0);
-
-      console.log("[DEBUG] Fetching member count...");
-      const emailQuery = user.email ? `,member_email.ilike.${user.email}` : '';
-      const { count: memberCount } = await supabase_lucifer_core.from('trusted_network').select('*', { count: 'exact', head: true }).eq('status', 'accepted').or(`owner_id.eq.${user.id}${emailQuery}`); 
-      setNetworkMembers(memberCount || 0);
+      setProfile(data.profile || { display_name: user.user_metadata?.username });
+      setTags([...(data.my_visible_tags || []), ...(data.shared_visible_tags || [])]);
+      setSharedWithMe(data.shared_visible_tags || []);
+      setPausedTagsCount(data.paused_tags_count || 0);
+      setAlerts(data.alerts || []);
+      setUnreadNotifications(data.unread_notifications || 0);
+      setNetworkMembers(data.network_members || 0);
 
       console.log("[DEBUG] Dashboard fetch complete.");
     };
