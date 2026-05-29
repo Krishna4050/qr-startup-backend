@@ -100,8 +100,12 @@ export default function DashboardScreen() {
       const { data: { session } } = await supabase_lucifer_core.auth.getSession();
       if (!session) throw new Error("No session available");
 
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-      if (!backendUrl) throw new Error("Backend URL not configured");
+      let backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+        console.error("CRITICAL ERROR: EXPO_PUBLIC_BACKEND_URL is not set in Vercel Environment Variables!");
+        throw new Error("Backend URL not configured");
+      }
+      backendUrl = backendUrl.replace(/\/$/, ""); // Remove trailing slash if user added it accidentally
 
       const res = await fetch(`${backendUrl}/api/dashboard`, {
         method: 'GET',
