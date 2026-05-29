@@ -2,7 +2,10 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import 'react-native-url-polyfill/auto';
+// Conditionally require the URL polyfill so it doesn't break Web APIs
+if (Platform.OS !== 'web') {
+  require('react-native-url-polyfill/auto');
+}
 
 // Providers
 import { ContentProvider } from './src/context/ContentContext';

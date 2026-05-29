@@ -95,6 +95,13 @@ export default function DashboardScreen() {
     console.log("[DEBUG] fetchDashboardData started. loading state:", loading);
     
     const fetchPromise = async () => {
+      // CRITICAL HYDRATION FIX:
+      // Even though AuthContext says we are logged in, the Supabase REST client (postgrest)
+      // might still be 1 millisecond behind in attaching the token to headers.
+      // Awaiting getSession() here guarantees the token is injected into the request headers,
+      // preventing "anonymous" requests that return empty arrays due to RLS!
+      await supabase_lucifer_core.auth.getSession();
+
       console.log("[DEBUG] Fetching profile...");
       const { data: profileData } = await supabase_lucifer_core
         .from('profiles')
