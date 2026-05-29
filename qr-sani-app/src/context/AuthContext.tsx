@@ -19,8 +19,25 @@ export const AuthProvider = ({ children }: any) => {
   useEffect(() => {
     let isMounted = true;
 
-    // Rely exclusively on onAuthStateChange which fires INITIAL_SESSION automatically.
-    // Calling getSession() simultaneously causes a lock contention bug in gotrue-js.
+    // Bulletproof initialization: try to get the session, but strictly cap it at 2.5 seconds.
+    // If Supabase hangs (which happens in some browser contexts), we just unlock the app.
+    // We never forcefully wipe localStorage anymore to prevent accidental logouts.
+    const initSession = async () => {
+      try {
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500));
+        const sessionPromise = supabase_lucifer_core.auth.getSession();
+        
+        const result = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        if (isMounted && result?.data?.session) {
+          set_mayalu_session(result.data.session);
+        }
+      } catch (e) {
+        console.warn("Supabase getSession timed out or failed. Falling back to onAuthStateChange.");
+      } finally {
+        if (isMounted) set_is_sani_loading(false);
+      }
+    };
+    initSession();
 
     const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
