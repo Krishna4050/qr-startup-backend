@@ -20,8 +20,8 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc{
 			return
 		}
 
-		// Extract the token string
-		tokenString := strings.TrimPrefix(authHeader, "Bearer")
+		// Extract the token string (and remove the space that comes after 'Bearer ')
+		tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 		jwtSecret := os.Getenv("SUPABASE_JWT_SECRET")
 
 		// Parse and Verify the cryptographic signature using our database Secret
