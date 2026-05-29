@@ -91,14 +91,15 @@ export default function DashboardScreen() {
   }, [user?.id]);
 
   const fetchDashboardData = async () => {
-    if (!user) return;
+    if (!user || !session) {
+      console.log("[DEBUG] User or session is missing. Skipping fetch.");
+      return;
+    }
+    
     console.log("[DEBUG] fetchDashboardData started. loading state:", loading);
     
     const fetchPromise = async () => {
       console.log("[DEBUG] Fetching dashboard from Go backend...");
-      
-      const { data: { session } } = await supabase_lucifer_core.auth.getSession();
-      if (!session) throw new Error("No session available");
 
       let backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
       if (!backendUrl) {

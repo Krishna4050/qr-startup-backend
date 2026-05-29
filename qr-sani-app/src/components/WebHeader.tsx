@@ -18,11 +18,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
   useEffect(() => {
     if (user) {
-      // Force REST client hydration before fetching to prevent RLS anonymous blocking on refresh
-      supabase_lucifer_core.auth.getSession().then(() => {
-        supabase_lucifer_core.from('profiles').select('avatar_url').eq('id', user.id).maybeSingle().then(({data}) => {
-          if (data) setProfile(data);
-        });
+      supabase_lucifer_core.from('profiles').select('avatar_url').eq('id', user.id).maybeSingle().then(({data}) => {
+        if (data) setProfile(data);
       });
     } else {
       setProfile(null);
