@@ -81,8 +81,10 @@ const GuestStack = () => (
   <Stack.Navigator initialRouteName={Platform.OS === 'web' ? 'Dashboard' : 'Onboarding'}>
     <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
     <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false, gestureEnabled: false }} />
+    <Stack.Screen name="Dashboard" component={MainTabs} options={{ headerShown: false, gestureEnabled: false }} />
+    <Stack.Screen name="ServiceDirectory" component={VehicleRepairDirectory} options={{ headerShown: false }} />
+    <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
-    {/* Notice: Dashboard is NOT here! Guests can only onboard or login */}
   </Stack.Navigator>
 );
 
