@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/Krishna4050/qr-startup-backend/database"
@@ -88,9 +87,10 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 		for rows.Next() {
 			var tag DashboardTag
 			if err := rows.Scan(&tag.ID, &tag.OwnerID, &tag.Status, &tag.Name, &tag.TagType, &tag.CreatedAt); err == nil {
-				if tag.Status == "active" || tag.Status == "lost" {
+				switch tag.Status {
+				case "active", "lost":
 					response.MyVisibleTags = append(response.MyVisibleTags, tag)
-				} else if tag.Status == "paused" {
+				case "paused":
 					response.PausedTagsCount++
 				}
 			}
@@ -112,9 +112,10 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 			var tag DashboardTag
 			tag.IsShared = true
 			if err := sharedRows.Scan(&tag.ID, &tag.OwnerID, &tag.Status, &tag.Name, &tag.TagType, &tag.CreatedAt, &tag.OwnerName); err == nil {
-				if tag.Status == "active" || tag.Status == "lost" {
+				switch tag.Status {
+				case "active", "lost":
 					response.SharedVisibleTags = append(response.SharedVisibleTags, tag)
-				} else if tag.Status == "paused" {
+				case "paused":
 					response.PausedTagsCount++
 				}
 			}
