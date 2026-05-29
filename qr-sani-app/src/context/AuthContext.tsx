@@ -22,12 +22,22 @@ export const AuthProvider = ({ children }: any) => {
     // Safety initialization: forcefully check session because INITIAL_SESSION might have already fired
     const initSession = async () => {
       try {
-        const { data: { session }, error } = await supabase_lucifer_core.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Deadlock timeout')), 3000));
+        const sessionPromise = supabase_lucifer_core.auth.getSession();
+        
+        const result = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        
         if (isMounted) {
-          set_mayalu_session(session);
+          set_mayalu_session(result?.data?.session || null);
           set_is_sani_loading(false);
         }
-      } catch (e) {
+      } catch (e: any) {
+        if (e.message === 'Deadlock timeout') {
+          console.warn("Supabase auth deadlocked. Forcing logout state to clear corrupted token.");
+          if (Platform.OS === 'web') {
+            localStorage.clear(); // Clear all corrupted states
+          }
+        }
         if (isMounted) set_is_sani_loading(false);
       }
     };
