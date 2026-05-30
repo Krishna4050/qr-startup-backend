@@ -7,6 +7,43 @@ import { useAuth } from '../context/AuthContext';
 import { supabase_lucifer_core } from '../utils/supabase';
 import apiClient from '../utils/apiClient';
 
+const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedDate, setShowDateDropdown, setSelectedDate, styles }: any) => {
+  return (
+    <View style={[styles.dropdownMenu, { left: 180, width: 320, padding: 20 }]}>
+      <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 16, textAlign: 'center', color: '#E2E8F0' }}>{currentMonth} {currentYear}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <Text key={d} style={{ color: '#94A3B8', width: 40, textAlign: 'center', fontSize: 14 }}>{d}</Text>)}
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0 }}>
+        {[1, 2, 3, 4, 5].map((_, i) => <View key={`e-${i}`} style={{ width: 40, height: 40 }} />)}
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31].map(d => {
+          const isToday = d === todayDate;
+          const isSelected = selectedDate === d;
+          const bg = isSelected ? '#00E5FF' : isToday ? 'rgba(0, 229, 255, 0.1)' : 'transparent';
+          const bw = isToday && !isSelected ? 1 : 0;
+          const txtColor = isSelected ? '#0A192F' : isToday ? '#00E5FF' : '#E2E8F0';
+          const fw = isToday ? 'bold' : 'normal';
+          
+          return (
+            <TouchableOpacity 
+              key={d} 
+              onPress={() => { setShowDateDropdown(false); setSelectedDate(d); }}
+              style={{ 
+                width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 20, 
+                backgroundColor: bg,
+                borderWidth: bw,
+                borderColor: '#00E5FF'
+              }}
+            >
+              <Text style={{ color: txtColor, fontWeight: fw as 'bold' | 'normal' }}>{d}</Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+    </View>
+  );
+};
+
 export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defaultService?: string }) {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
@@ -292,6 +329,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               <Text style={{ color: '#0A192F', fontWeight: 'bold', marginLeft: 6 }}>Search</Text>
             </TouchableOpacity>
           </View>
+        </View>
 
           {/* Absolute Service Dropdown */}
           {showServiceDropdown && (
@@ -325,32 +363,15 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
         {/* Absolute Date Dropdown (Modern Calendar) */}
         {showDateDropdown && (
-          <View style={[styles.dropdownMenu, { left: 180, width: 320, padding: 20 }]}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 16, textAlign: 'center', color: '#E2E8F0' }}>{currentMonth} {currentYear}</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <Text key={d} style={{ color: '#94A3B8', width: 40, textAlign: 'center', fontSize: 14 }}>{d}</Text>)}
-            </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0 }}>
-              {Array.from({length: 5}).map((_, i) => <View key={`e-${i}`} style={{ width: 40, height: 40 }} />)}
-              {Array.from({length: 31}, (_, i) => i + 1).map(d => {
-                const isToday = d === todayDate;
-                return (
-                  <TouchableOpacity 
-                    key={d} 
-                    onPress={() => { setShowDateDropdown(false); setSelectedDate(d); }}
-                    style={{ 
-                      width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 20, 
-                      backgroundColor: selectedDate === d ? '#00E5FF' : isToday ? 'rgba(0, 229, 255, 0.1)' : 'transparent',
-                      borderWidth: isToday && selectedDate !== d ? 1 : 0,
-                      borderColor: '#00E5FF'
-                    }}
-                  >
-                    <Text style={{ color: selectedDate === d ? '#0A192F' : isToday ? '#00E5FF' : '#E2E8F0', fontWeight: isToday ? 'bold' : 'normal' }}>{d}</Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-          </View>
+          <DateDropdownComponent 
+             currentMonth={currentMonth} 
+             currentYear={currentYear} 
+             todayDate={todayDate} 
+             selectedDate={selectedDate} 
+             setShowDateDropdown={setShowDateDropdown} 
+             setSelectedDate={setSelectedDate} 
+             styles={styles} 
+          />
         )}
 
         {/* Absolute Guest Dropdown */}
