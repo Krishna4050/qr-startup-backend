@@ -168,7 +168,13 @@ export default function App() {
   return (
     <AuthProvider>
       <ContentProvider>
-        <NavigationContainer linking={linking} onReady={handleNavigationReady}>
+        <NavigationContainer 
+          linking={linking} 
+          onReady={handleNavigationReady}
+          documentTitle={{
+            formatter: (options, route) => options?.title ?? 'ATS finland'
+          }}
+        >
           <WebLayout>
             <Router />
           </WebLayout>
