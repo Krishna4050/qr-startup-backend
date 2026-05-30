@@ -49,6 +49,7 @@ import PartnerOnboardingStep2Screen from './src/screens/PartnerOnboardingStep2Sc
 import PartnerOnboardingStep3Screen from './src/screens/PartnerOnboardingStep3Screen';
 import PartnerOnboardingStep4Screen from './src/screens/PartnerOnboardingStep4Screen';
 import HostDashboardScreen from './src/screens/HostDashboardScreen';
+import PricingScreen from './src/screens/PricingScreen';
 
 // Chat Screens
 import ChatScreen from './src/screens/ChatScreen';
@@ -89,6 +90,7 @@ const linking = {
       HostMessages: 'host/messages',
       PartnerOnboardingIntro: 'partner/start',
       Settings: 'settings',
+      Pricing: 'pricing',
     }
   }
 };
@@ -108,6 +110,7 @@ const GuestStack = () => (
     <Stack.Screen name="FlightSearch" component={FlightSearch} options={{ headerShown: false }} />
     <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
+    <Stack.Screen name="Pricing" component={PricingScreen} options={{ headerShown: false }} />
   </Stack.Navigator>
 );
 
@@ -128,6 +131,7 @@ const AuthStack = () => (
     <Stack.Screen name="SharedTags" component={SharedTagsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="ServiceDirectory" component={VehicleRepairDirectory} options={{ headerShown: false }} />
     <Stack.Screen name="BikeRepairDirectory" component={BikeRepairDirectory} options={{ headerShown: false }} />
+    <Stack.Screen name="Pricing" component={PricingScreen} options={{ headerShown: false }} />
     <Stack.Screen name="ParkingMap" component={ParkingMap} options={{ headerShown: false }} />
     <Stack.Screen name="HotelSearch" component={HotelSearch} options={{ headerShown: false }} />
     <Stack.Screen name="TransitPass" component={TransitPass} options={{ headerShown: false }} />
