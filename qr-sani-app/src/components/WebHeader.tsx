@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView } from 'react-native';
 import { Search, Globe, Menu, User, ShieldCheck, ChevronDown, Plus, Minus, X, ArrowLeft } from 'lucide-react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import WebLink from './WebLink';
 import { useAuth } from '../context/AuthContext';
 import { supabase_lucifer_core } from '../utils/supabase';
@@ -9,7 +9,6 @@ import apiClient from '../utils/apiClient';
 
 export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defaultService?: string }) {
   const navigation = useNavigation<any>();
-  const route = useRoute();
   const { width } = useWindowDimensions();
   const isMobileWeb = width < 768;
 
