@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "qr-sani-app",
-    "slug": "qr-sani-app",
-    "scheme": "securefind",
+    "name": "ATS finland",
+    "slug": "ats-finland",
+    "scheme": "ats-finland",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

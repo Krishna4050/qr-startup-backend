@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
-import { ShieldCheck, Globe, MessageCircle, Camera, Briefcase } from 'lucide-react-native';
+import { Building2, Globe, MessageCircle, Camera, Briefcase } from 'lucide-react-native';
 import WebLink from './WebLink';
 
 export default function WebFooter() {
@@ -13,8 +13,8 @@ export default function WebFooter() {
           {/* Brand Column */}
           <View style={styles.column}>
             <View style={styles.brandRow}>
-              <ShieldCheck color="#E11D48" size={28} />
-              <Text style={styles.brandText}>smarttags</Text>
+              <Building2 color="#E11D48" size={28} />
+              <Text style={styles.brandText}>ATS finland</Text>
             </View>
             <Text style={styles.description}>
               Protecting your most valuable belongings with smart, community-driven QR tags.

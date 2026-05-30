@@ -15,6 +15,11 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import WebLayout from './src/components/WebLayout';
 import MainTabs from './src/navigation/MainTabs';
 import LoginScreen from './src/screens/LoginScreen';
+
+if (Platform.OS === 'web') {
+  document.title = 'ATS finland';
+}
+
 import SettingsScreen from './src/screens/SettingsScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import ProfileSetupScreen from './src/screens/ProfileSetupScreen';
@@ -69,6 +74,12 @@ const linking = {
         }
       },
       ServiceDirectory: 'directory',
+      BikeRepairDirectory: 'bike-repair',
+      ParkingMap: 'parking',
+      HotelSearch: 'hotels',
+      TransitPass: 'transit',
+      TrainSearch: 'trains',
+      FlightSearch: 'flights',
       ShopDetails: 'shop/:id',
       ChatScreen: 'chat/:shopId/:otherUserId',
       HostDashboard: 'host',

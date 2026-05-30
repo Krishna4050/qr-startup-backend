@@ -134,8 +134,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
         <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <WebLink style={styles.logoSection} screen="Dashboard">
-              <ShieldCheck color="#00E5FF" size={28} />
-              <Text style={[styles.logoText, { fontSize: 18 }]}>smarttags</Text>
+              <Building2 color="#00E5FF" size={28} />
+              <Text style={[styles.logoText, { fontSize: 18 }]}>ATS finland</Text>
             </WebLink>
             <View style={{ position: 'relative' }}>
               {isGuest ? (
@@ -270,8 +270,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
       <View style={styles.headerContent}>
         {/* Left: Logo */}
         <WebLink style={styles.logoSection} screen="Dashboard">
-          <ShieldCheck color="#00E5FF" size={32} />
-          <Text style={styles.logoText}>smarttags</Text>
+          <Building2 color="#00E5FF" size={32} />
+          <Text style={styles.logoText}>ATS finland</Text>
         </WebLink>
 
         {/* Center: Search Pill */}
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   logoSection: {
-    flex: 1,
+    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -492,8 +492,17 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: '#00E5FF',
-    marginLeft: 6,
+    marginLeft: 8,
     letterSpacing: -0.5,
+  },
+  searchPillContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'box-none',
+    zIndex: 5,
   },
   mobileSearchPill: {
     marginTop: 16,
@@ -576,11 +585,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  searchPillContainer: {
-    flex: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   searchPill: {
     flexDirection: 'row',
