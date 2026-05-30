@@ -515,6 +515,7 @@ const styles = StyleSheet.create({
     height: 48,
     color: '#0A192F',
     fontSize: 16,
+    // @ts-ignore: web only
     outlineStyle: 'none',
   },
   textArea: {
