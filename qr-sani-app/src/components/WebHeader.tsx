@@ -209,11 +209,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             </View>
 
             <ScrollView style={{ padding: 20, backgroundColor: '#0B1120' }}>
-              {/* Explore Services Link */}
-              <WebLink screen="Services" style={{ marginBottom: 20, padding: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                 <Text style={{ color: '#00E5FF', fontWeight: 'bold', fontSize: 16 }}>Explore All Services</Text>
-                 <Globe color="#00E5FF" size={20} />
-              </WebLink>
+
 
               {/* Service Selection Card */}
               <View style={styles.mobileCard}>
@@ -315,9 +311,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
         {/* Right: Actions */}
         <View style={styles.rightActions}>
-          <WebLink style={styles.actionBtn} screen="Services">
-            <Text style={styles.hostText}>Explore Services</Text>
-          </WebLink>
+          <TouchableOpacity style={[styles.actionBtn, styles.globeIcon]}>
+            <Globe color="#E2E8F0" size={18} />
+          </TouchableOpacity>
           
           <View style={{ position: 'relative' }}>
             {isGuest ? (
