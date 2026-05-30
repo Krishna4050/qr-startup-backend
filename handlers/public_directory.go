@@ -93,3 +93,33 @@ func GetPublicDirectoryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(shops)
 }
+
+// GetHostStatus securely fetches the logged in user's shop verification status
+func GetHostStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, ok := r.Context().Value("userID").(string)
+	if !ok || userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var status string
+	err := database.DB.QueryRow(`
+		SELECT verification_status FROM public.shop_locations WHERE owner_id = $1 LIMIT 1
+	`, userID).Scan(&status)
+
+	if err != nil {
+		status = "none"
+	} else if status == "pending" {
+		status = "pending"
+	} else {
+		status = "active"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": status})
+}

@@ -114,6 +114,9 @@ func main(){
 	mux.HandleFunc("GET /api/tags/filter", middleware.RequireAuth(handlers.GetFilteredTags))
 	mux.HandleFunc("GET /api/tags/shared/{friendId}", middleware.RequireAuth(handlers.GetSharedTagsWithFriend))
 
+	// Shops API
+	mux.HandleFunc("GET /api/shops/status", middleware.RequireAuth(handlers.GetHostStatus))
+
 	// Network API
 	mux.HandleFunc("GET /api/network", middleware.RequireAuth(handlers.GetTrustedNetwork))
 	mux.HandleFunc("POST /api/network/invite", middleware.RequireAuth(handlers.FinalizeNetworkInvite))

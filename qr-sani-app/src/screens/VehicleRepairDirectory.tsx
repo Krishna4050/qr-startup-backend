@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Dim
 import { useNavigation, useIsFocused, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Star, Search, Heart, Clock, Settings } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
 import RefreshableScroll from '../components/RefreshableScroll';
 import WebFooter from '../components/WebFooter';
@@ -135,27 +136,8 @@ export default function VehicleRepairDirectory() {
 
   const checkUserHostStatus = async (userId: string) => {
     try {
-      const { data: profileData, error: profileError } = await supabase_lucifer_core
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-        
-      if (profileData) {
-        setUserProfile(profileData);
-      }
-
-      const { data, error } = await supabase_lucifer_core
-        .from('shop_locations')
-        .select('verification_status')
-        .eq('owner_id', userId);
-
-      if (data && data.length > 0) {
-        const isPending = data.some(shop => shop.verification_status === 'pending');
-        setHostStatus(isPending ? 'pending' : 'active');
-      } else {
-        setHostStatus('none');
-      }
+      const res = await apiClient.get('/api/shops/status');
+      setHostStatus(res.data.status);
     } catch (err) {
       console.error("Error checking host status:", err);
       setHostStatus('none');
