@@ -2,15 +2,21 @@ package handlers
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"os"
-
-	"github.com/google/uuid"
 )
+
+// generateRandomHex generates a securely random hex string
+func generateRandomHex(n int) string {
+	b := make([]byte, n)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
 
 // UploadAssetHandler securely proxies file uploads to Supabase Storage via REST
 func UploadAssetHandler(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +79,7 @@ func UploadAssetHandler(w http.ResponseWriter, r *http.Request) {
 			ext = header.Filename[len(header.Filename)-4:]
 		}
 	}
-	path := fmt.Sprintf("%s/%s%s", userID, uuid.New().String(), ext)
+	path := fmt.Sprintf("%s/%s%s", userID, generateRandomHex(16), ext)
 
 	uploadURL := fmt.Sprintf("%s/storage/v1/object/%s/%s", supabaseURL, bucket, path)
 
