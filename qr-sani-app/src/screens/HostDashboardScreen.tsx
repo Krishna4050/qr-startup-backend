@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 
 import { Settings, Plus, MapPin, Clock, Home, CheckCircle, ChevronRight } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
@@ -26,27 +27,9 @@ export default function HostDashboardScreen() {
     if (!user) return;
     setLoading(true);
     try {
-
-      // 1. Fetch User's First Name
-      const { data: profile } = await supabase_lucifer_core
-        .from('profiles')
-        .select('first_name, display_name')
-        .eq('id', user.id)
-        .single();
-      
-      if (profile?.first_name || profile?.display_name) {
-        setUserName(profile.first_name || profile.display_name);
-      }
-
-      // 2. Fetch User's Shops
-      const { data, error } = await supabase_lucifer_core
-        .from('shop_locations')
-        .select('*, shop_photos(photo_url)') // Fetch photos too!
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (data) setMyShops(data);
+      const res = await apiClient.get('/api/host/dashboard');
+      setUserName(res.data.first_name || 'Partner');
+      setMyShops(res.data.shops || []);
     } catch (err) {
       console.error("Error fetching dashboard:", err);
     } finally {
@@ -82,7 +65,7 @@ export default function HostDashboardScreen() {
 
           {myShops.map((shop) => {
             // Get the first photo to show as a thumbnail, or fallback to a placeholder
-            const thumbnailUrl = shop.shop_photos?.[0]?.photo_url || 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150';
+            const thumbnailUrl = shop.shop_photos?.[0] || 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150';
 
             return (
               <TouchableOpacity 

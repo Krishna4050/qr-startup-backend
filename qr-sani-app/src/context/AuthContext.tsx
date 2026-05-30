@@ -8,9 +8,10 @@ type AuthContextType = {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
+  logout: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextType>({ session: null, user: null, isLoading: true });
+const AuthContext = createContext<AuthContextType>({ session: null, user: null, isLoading: true, logout: async () => {} });
 
 export const AuthProvider = ({ children }: any) => {
   const [mayalu_session, set_mayalu_session] = useState<Session | null>(null);
@@ -100,8 +101,21 @@ export const AuthProvider = ({ children }: any) => {
     };
   }, []);
 
+  const logout = async () => {
+    set_is_sani_loading(true);
+    try {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000));
+      await Promise.race([supabase_lucifer_core.auth.signOut(), timeoutPromise]);
+    } catch (e) {
+      console.warn("Signout timed out, forcefully clearing session");
+    } finally {
+      set_mayalu_session(null);
+      set_is_sani_loading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ session: mayalu_session, user: mayalu_session?.user || null, isLoading: is_sani_loading }}>
+    <AuthContext.Provider value={{ session: mayalu_session, user: mayalu_session?.user || null, isLoading: is_sani_loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

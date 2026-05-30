@@ -116,6 +116,7 @@ func main(){
 
 	// Shops API
 	mux.HandleFunc("GET /api/shops/status", middleware.RequireAuth(handlers.GetHostStatus))
+	mux.HandleFunc("GET /api/host/dashboard", middleware.RequireAuth(handlers.GetHostDashboardData))
 
 	// Network API
 	mux.HandleFunc("GET /api/network", middleware.RequireAuth(handlers.GetTrustedNetwork))

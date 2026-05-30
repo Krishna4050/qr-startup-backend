@@ -167,3 +167,73 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+
+// GetHostDashboardData fetches host's basic profile and all shop listings.
+func GetHostDashboardData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, ok := r.Context().Value("userID").(string)
+	if !ok || userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// 1. Fetch Profile Name
+	var firstName string
+	database.DB.QueryRow(`
+		SELECT COALESCE(first_name, display_name, 'Partner') 
+		FROM public.profiles WHERE id = $1
+	`, userID).Scan(&firstName)
+
+	// 2. Fetch Shops
+	rows, err := database.DB.Query(`
+		SELECT 
+			id::text, 
+			verification_status, 
+			COALESCE(shop_name, ''), 
+			COALESCE(city, ''),
+			COALESCE((SELECT array_agg(photo_url) FROM shop_photos WHERE location_id = shop_locations.id), '{}'::text[]) as photos
+		FROM public.shop_locations 
+		WHERE owner_id = $1
+		ORDER BY created_at DESC
+	`, userID)
+
+	if err != nil {
+		fmt.Printf("Database error fetching host dashboard: %v\n", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type HostShop struct {
+		ID                 string   `json:"id"`
+		VerificationStatus string   `json:"verification_status"`
+		ShopName           string   `json:"shop_name"`
+		City               string   `json:"city"`
+		ShopPhotos         []string `json:"shop_photos"`
+	}
+
+	var shops []HostShop
+	for rows.Next() {
+		var s HostShop
+		var photos pq.StringArray
+		if err := rows.Scan(&s.ID, &s.VerificationStatus, &s.ShopName, &s.City, &photos); err == nil {
+			s.ShopPhotos = photos
+			shops = append(shops, s)
+		}
+	}
+	if shops == nil {
+		shops = []HostShop{}
+	}
+
+	response := map[string]interface{}{
+		"first_name": firstName,
+		"shops":      shops,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}

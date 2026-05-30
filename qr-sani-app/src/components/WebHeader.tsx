@@ -9,11 +9,12 @@ import apiClient from '../utils/apiClient';
 
 export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defaultService?: string }) {
   const navigation = useNavigation<any>();
+  const route = useRoute();
   const { width } = useWindowDimensions();
   const isMobileWeb = width < 768;
 
   // --- AUTHENTICATION STATE ---
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const isGuest = !user;
   const [profile, setProfile] = useState<any>(null);
 
@@ -37,9 +38,12 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   }, [user]);
 
   const handleSignOut = async () => {
-    setShowProfileDropdown(false);
-    await supabase_lucifer_core.auth.signOut();
-    navigation.navigate('Login');
+    try {
+      await logout();
+      navigation.navigate('Dashboard');
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // --- DESKTOP DROPDOWN STATES ---

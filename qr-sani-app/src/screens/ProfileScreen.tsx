@@ -12,7 +12,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
   const [completionPercentage, setCompletionPercentage] = useState(0);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // Local UI States
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -55,11 +55,11 @@ export default function ProfileScreen() {
   }, [user?.id]);
 
   const handleLogout = async () => {
-    const { error } = await supabase_lucifer_core.auth.signOut();
-    if (error) {
+    try {
+      await logout();
+      navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
+    } catch (error: any) {
       Alert.alert('Logout Error', error.message);
-    } else {
-      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
     }
   };
 
