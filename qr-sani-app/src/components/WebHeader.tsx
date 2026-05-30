@@ -103,6 +103,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const [adults, setAdults] = useState(0);
   const [childrenCount, setChildrenCount] = useState(0);
 
+  // --- NEW: CATEGORY TABS STATE ---
+  const [activeTab, setActiveTab] = useState('Explore');
+
   if (Platform.OS !== 'web') return null;
 
   const servicesList = ['Vehicle Repair', 'Bike Repair', 'Pay Parking', 'Hotels & Stays', 'City Transit', 'Train Tickets', 'Flights'];
@@ -132,9 +135,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     return (
       <>
         <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16 }}>
             <WebLink style={styles.logoSection} screen="Dashboard">
-              <Building2 color="#00E5FF" size={28} />
+              <Image source={require('../../assets/icon.png')} style={{ width: 28, height: 28, borderRadius: 6 }} />
               <Text style={[styles.logoText, { fontSize: 18 }]}>ATS finland</Text>
             </WebLink>
             <View style={{ position: 'relative' }}>
@@ -174,12 +177,27 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             style={styles.mobileSearchPill}
             onPress={() => setShowMobileSearchModal(true)}
           >
-              <Search color="#00E5FF" size={18} />
+              <Search color="#00E5FF" size={20} />
               <View style={{ marginLeft: 12 }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#E2E8F0' }}>{selectedLocation}</Text>
-                <Text style={{ fontSize: 12, color: '#94A3B8' }}>{selectedService} • {selectedDate ? `May ${selectedDate}` : 'Any week'} {requiresGuests ? `• ${adults + childrenCount || 'Add'} guests` : ''}</Text>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#F8FAFC' }}>Start your search</Text>
               </View>
           </TouchableOpacity>
+
+          {/* Airbnb-style Mobile Tabs */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 16, marginHorizontal: -20, paddingBottom: 8 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 32 }}>
+            <TouchableOpacity onPress={() => setActiveTab('Explore')} style={[styles.mobileTab, activeTab === 'Explore' && styles.mobileTabActive]}>
+                <Globe color={activeTab === 'Explore' ? '#00E5FF' : '#94A3B8'} size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />
+                <Text style={[styles.mobileTabText, activeTab === 'Explore' && styles.mobileTabTextActive]}>Explore</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setActiveTab('Services')} style={[styles.mobileTab, activeTab === 'Services' && styles.mobileTabActive]}>
+                <Menu color={activeTab === 'Services' ? '#00E5FF' : '#94A3B8'} size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />
+                <Text style={[styles.mobileTabText, activeTab === 'Services' && styles.mobileTabTextActive]}>Services</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setActiveTab('Store')} style={[styles.mobileTab, activeTab === 'Store' && styles.mobileTabActive]}>
+                <Building2 color={activeTab === 'Store' ? '#00E5FF' : '#94A3B8'} size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />
+                <Text style={[styles.mobileTabText, activeTab === 'Store' && styles.mobileTabTextActive]}>Store</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         {/* Full-screen Mobile Search Modal */}
@@ -270,13 +288,82 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
       <View style={styles.headerContent}>
         {/* Left: Logo */}
         <WebLink style={styles.logoSection} screen="Dashboard">
-          <Building2 color="#00E5FF" size={32} />
+          <Image source={require('../../assets/icon.png')} style={{ width: 32, height: 32, borderRadius: 8 }} />
           <Text style={styles.logoText}>ATS finland</Text>
         </WebLink>
 
-        {/* Center: Search Pill */}
-        <View style={styles.searchPillContainer}>
-          <View style={styles.searchPill}>
+        {/* Center: Top Tabs */}
+        <View style={styles.topTabsContainer}>
+          <TouchableOpacity onPress={() => setActiveTab('Explore')} style={[styles.topTab, activeTab === 'Explore' && styles.topTabActive]}>
+            <Text style={[styles.topTabText, activeTab === 'Explore' && styles.topTabTextActive]}>Explore</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setActiveTab('Services')} style={[styles.topTab, activeTab === 'Services' && styles.topTabActive]}>
+            <Text style={[styles.topTabText, activeTab === 'Services' && styles.topTabTextActive]}>Services</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setActiveTab('Store')} style={[styles.topTab, activeTab === 'Store' && styles.topTabActive]}>
+            <Text style={[styles.topTabText, activeTab === 'Store' && styles.topTabTextActive]}>Store</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Right: Actions */}
+        <View style={styles.rightActions}>
+          <TouchableOpacity style={[styles.actionBtn, styles.globeIcon]}>
+            <Globe color="#E2E8F0" size={18} />
+          </TouchableOpacity>
+          
+          <View style={{ position: 'relative' }}>
+            {isGuest ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <WebLink screen="Login" style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
+                  <Text style={{ fontWeight: '600', color: '#E2E8F0', fontSize: 15 }}>Log In</Text>
+                </WebLink>
+                <WebLink screen="Login" style={{ backgroundColor: '#00E5FF', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24 }}>
+                  <Text style={{ fontWeight: 'bold', color: '#0A192F', fontSize: 15 }}>Sign Up</Text>
+                </WebLink>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity 
+                  style={styles.profileMenu}
+                  onPress={() => setShowProfileDropdown(!showProfileDropdown)}
+                >
+                  <Menu color="#E2E8F0" size={16} />
+                  <View style={styles.avatarCircle}>
+                    {profile?.avatar_url ? (
+                      <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                    ) : (
+                      <User color="#FFF" size={16} />
+                    )}
+                  </View>
+                </TouchableOpacity>
+
+                {/* Profile Dropdown */}
+                {showProfileDropdown && (
+                  <View style={styles.profileDropdown}>
+                    <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
+                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages</Text>
+                    </WebLink>
+                    <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
+                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
+                    </WebLink>
+                    <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}>
+                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
+                    </WebLink>
+                    <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
+                    <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}>
+                      <Text style={[styles.dropdownItemText, { color: '#E11D48' }]}>Sign Out</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* Bottom Row: Search Pill */}
+      <View style={styles.searchPillContainer}>
+        <View style={styles.searchPill}>
           <TouchableOpacity 
             style={[styles.searchSection, showServiceDropdown && styles.activeSection]} 
             onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
@@ -502,11 +589,35 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   searchPillContainer: {
-    flex: 2,
+    paddingBottom: 24,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 5,
-    paddingHorizontal: 16,
+  },
+  topTabsContainer: {
+    flex: 2,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 24,
+  },
+  topTab: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  topTabActive: {
+    borderBottomColor: '#00E5FF',
+  },
+  topTabText: {
+    fontSize: 16,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  topTabTextActive: {
+    color: '#F8FAFC',
+    fontWeight: 'bold',
   },
   rightActions: {
     flex: 1,
@@ -525,6 +636,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)'
+  },
+  mobileTab: {
+    paddingBottom: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    alignItems: 'center',
+  },
+  mobileTabActive: {
+    borderBottomColor: '#00E5FF',
+  },
+  mobileTabText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  mobileTabTextActive: {
+    color: '#F8FAFC',
+    fontWeight: 'bold',
   },
   mobileModalHeader: {
     flexDirection: 'row',

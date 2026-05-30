@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, LayoutGrid, Plus, User, ShoppingBag } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -82,6 +82,8 @@ const CustomTabBarButton = ({ children }: any) => {
 export default function MainTabs() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isMobileWeb = width < 1024;
   
   return (
     <Tab.Navigator
@@ -91,7 +93,7 @@ export default function MainTabs() {
         tabBarActiveTintColor: '#0F2D4D',
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarStyle: {
-          display: Platform.OS === 'web' ? 'none' : 'flex',
+          display: Platform.OS === 'web' && !isMobileWeb ? 'none' : 'flex',
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#F3F4F6',
