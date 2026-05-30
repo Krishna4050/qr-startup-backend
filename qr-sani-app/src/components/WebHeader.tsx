@@ -18,9 +18,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
   useEffect(() => {
     if (user) {
-      supabase_lucifer_core.from('profiles').select('avatar_url').eq('id', user.id).maybeSingle().then(({data}) => {
-        if (data) setProfile(data);
-      });
+      // Enterprise standard: use the metadata instantly available in Context.
+      // Do not make a direct Supabase DB call from the header component.
+      setProfile({ avatar_url: user.user_metadata?.avatar_url || null });
     } else {
       setProfile(null);
     }

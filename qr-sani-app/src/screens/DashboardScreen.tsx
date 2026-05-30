@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 import RefreshableScroll from '../components/RefreshableScroll';
 import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
@@ -99,28 +100,10 @@ export default function DashboardScreen() {
     console.log("[DEBUG] fetchDashboardData started. loading state:", loading);
     
     const fetchPromise = async () => {
-      console.log("[DEBUG] Fetching dashboard from Go backend...");
-
-      let backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-      if (!backendUrl) {
-        console.error("CRITICAL ERROR: EXPO_PUBLIC_BACKEND_URL is not set in Vercel Environment Variables!");
-        throw new Error("Backend URL not configured");
-      }
-      backendUrl = backendUrl.replace(/\/$/, ""); // Remove trailing slash if user added it accidentally
-
-      const res = await fetch(`${backendUrl}/api/dashboard`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error(`Backend returned status ${res.status}`);
-      }
-
-      const data = await res.json();
+      console.log("[DEBUG] Fetching dashboard from Go backend using Interceptor...");
+      
+      const res = await apiClient.get('/api/dashboard');
+      const data = res.data;
 
       setProfile(data.profile || { display_name: user.user_metadata?.username });
       setTags([...(data.my_visible_tags || []), ...(data.shared_visible_tags || [])]);
