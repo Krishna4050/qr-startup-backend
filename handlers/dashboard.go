@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Krishna4050/qr-startup-backend/database"
+	"github.com/lib/pq"
 )
 
 type DashboardProfile struct {
