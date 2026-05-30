@@ -88,7 +88,7 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 			var tag DashboardTag
 			if err := rows.Scan(&tag.ID, &tag.OwnerID, &tag.Status, &tag.Name, &tag.TagType, &tag.CreatedAt); err == nil {
 				switch tag.Status {
-				case "active", "lost":
+				case "active", "lost", "found":
 					response.MyVisibleTags = append(response.MyVisibleTags, tag)
 				case "paused":
 					response.PausedTagsCount++
