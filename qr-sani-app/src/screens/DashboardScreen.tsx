@@ -16,7 +16,7 @@ const { width } = Dimensions.get('window');
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused(); 
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user, session, isLoading: isAuthLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
