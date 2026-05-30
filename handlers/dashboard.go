@@ -77,7 +77,11 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Fetch My Tags
 	rows, err := database.DB.Query(`
-		SELECT id::text, owner_id::text, status, COALESCE(name, ''), COALESCE(tag_type, ''), created_at::text
+		SELECT id::text, owner_id::text, 
+		       CASE WHEN is_active THEN 'active' ELSE 'paused' END as status, 
+		       COALESCE(item_name, '') as name, 
+		       'general' as tag_type, 
+		       created_at::text
 		FROM public.qr_tags
 		WHERE owner_id = $1
 		ORDER BY created_at DESC
@@ -95,11 +99,17 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+	} else {
+		fmt.Println("Error fetching qr_tags:", err)
 	}
 
 	// 3. Fetch Shared Tags
 	sharedRows, err := database.DB.Query(`
-		SELECT q.id::text, q.owner_id::text, q.status, COALESCE(q.name, ''), COALESCE(q.tag_type, ''), q.created_at::text,
+		SELECT q.id::text, q.owner_id::text, 
+		       CASE WHEN q.is_active THEN 'active' ELSE 'paused' END as status, 
+		       COALESCE(q.item_name, '') as name, 
+		       'general' as tag_type, 
+		       q.created_at::text,
 		       COALESCE(p.display_name, p.username, 'A Friend')
 		FROM public.shared_tags s
 		JOIN public.qr_tags q ON s.tag_id = q.id
@@ -120,6 +130,8 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+	} else {
+		fmt.Println("Error fetching shared_tags:", err)
 	}
 
 	// 4. Fetch Alerts (limit 5)
@@ -137,6 +149,8 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 				response.Alerts = append(response.Alerts, alert)
 			}
 		}
+	} else {
+		fmt.Println("Error fetching alerts:", err)
 	}
 
 	// 5. Fetch Unread Notifications
