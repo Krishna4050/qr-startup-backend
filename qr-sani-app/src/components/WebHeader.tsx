@@ -137,8 +137,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
         <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16 }}>
             <WebLink style={styles.logoSection} screen="Dashboard">
-              <Image source={require('../../assets/icon.png')} style={{ width: 28, height: 28, borderRadius: 6 }} />
-              <Text style={[styles.logoText, { fontSize: 18 }]}>ATS finland</Text>
+              <Image source={require('../../assets/icon.png')} style={{ width: 36, height: 36, borderRadius: 8 }} />
+              <Text style={[styles.logoText, { fontSize: 20 }]}>ATS finland</Text>
             </WebLink>
             <View style={{ position: 'relative' }}>
               {isGuest ? (
@@ -189,7 +189,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 <Menu color={activeTab === 'Services' ? '#00E5FF' : '#94A3B8'} size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />
                 <Text style={[styles.mobileTabText, activeTab === 'Services' && styles.mobileTabTextActive]}>Services</Text>
             </WebLink>
-            <WebLink screen="Store" onPress={() => setActiveTab('Pricing')} style={[styles.mobileTab, activeTab === 'Pricing' && styles.mobileTabActive]}>
+            <WebLink screen="ShopDetails" onPress={() => setActiveTab('Pricing')} style={[styles.mobileTab, activeTab === 'Pricing' && styles.mobileTabActive]}>
                 <Building2 color={activeTab === 'Pricing' ? '#00E5FF' : '#94A3B8'} size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />
                 <Text style={[styles.mobileTabText, activeTab === 'Pricing' && styles.mobileTabTextActive]}>Pricing</Text>
             </WebLink>
@@ -295,8 +295,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
       <View style={styles.headerContent}>
         {/* Left: Logo */}
         <WebLink style={styles.logoSection} screen="Dashboard">
-          <Image source={require('../../assets/icon.png')} style={{ width: 32, height: 32, borderRadius: 8 }} />
-          <Text style={styles.logoText}>ATS finland</Text>
+          <Image source={require('../../assets/icon.png')} style={{ width: 42, height: 42, borderRadius: 10 }} />
+          <Text style={[styles.logoText, { fontSize: 24 }]}>ATS finland</Text>
         </WebLink>
 
         {/* Center: Top Tabs */}
@@ -304,7 +304,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
           <WebLink screen="Services" onPress={() => setActiveTab('Services')} style={[styles.topTab, activeTab === 'Services' && styles.topTabActive]}>
             <Text style={[styles.topTabText, activeTab === 'Services' && styles.topTabTextActive]}>Services</Text>
           </WebLink>
-          <WebLink screen="Store" onPress={() => setActiveTab('Pricing')} style={[styles.topTab, activeTab === 'Pricing' && styles.topTabActive]}>
+          <WebLink screen="ShopDetails" onPress={() => setActiveTab('Pricing')} style={[styles.topTab, activeTab === 'Pricing' && styles.topTabActive]}>
             <Text style={[styles.topTabText, activeTab === 'Pricing' && styles.topTabTextActive]}>Pricing</Text>
           </WebLink>
         </View>
