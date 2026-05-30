@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Tag, Share2, ShieldCheck, Lock } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 
 import { useAuth } from '../context/AuthContext';
 
@@ -32,20 +33,12 @@ export default function SharedTagsScreen() {
     setLoading(true);
     try {
       if (!user) return;
-
-      // Then, fetch the actual tag details for those IDs
-      if (theirSharedTagIds.length > 0) {
-        const { data: theirTagsData } = await supabase_lucifer_core
-          .from('qr_tags')
-          .select('*')
-          .in('id', theirSharedTagIds);
-        setTheirTags(theirTagsData || []);
-      } else {
-        setTheirTags([]);
-      }
-
+      const res = await apiClient.get(`/api/tags/shared/${friendId}`);
+      setMyTags(res.data.tags || []);
+      setSharedTagIds(new Set(res.data.shared_with_ids || []));
+      setTheirTags([]);
     } catch (error: any) {
-      Alert.alert("Error fetching data", error.message);
+      Alert.alert("Error fetching data", error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
@@ -54,43 +47,14 @@ export default function SharedTagsScreen() {
   const toggleShare = async (tagId: string, isCurrentlyShared: boolean) => {
     try {
       if (!user) return;
-
+      await apiClient.post(`/api/tags/${tagId}/share`, { friend_id: friendId, is_currently_shared: isCurrentlyShared });
       if (isCurrentlyShared) {
-        // Unshare: Delete the record
-        const { error } = await supabase_lucifer_core
-          .from('shared_tags')
-          .delete()
-          .eq('tag_id', tagId)
-          .eq('shared_with_id', friendId);
-        
-        if (error) throw error;
-        
-        setSharedTagIds(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(tagId);
-          return newSet;
-        });
-
+        setSharedTagIds(prev => { const newSet = new Set(prev); newSet.delete(tagId); return newSet; });
       } else {
-        // Share: Insert a new record
-        const { error } = await supabase_lucifer_core
-          .from('shared_tags')
-          .insert({
-            tag_id: tagId,
-            owner_id: user.id,
-            shared_with_id: friendId
-          });
-
-        if (error) throw error;
-
-        setSharedTagIds(prev => {
-          const newSet = new Set(prev);
-          newSet.add(tagId);
-          return newSet;
-        });
+        setSharedTagIds(prev => { const newSet = new Set(prev); newSet.add(tagId); return newSet; });
       }
     } catch (error: any) {
-      Alert.alert("Error updating share settings", error.message);
+      Alert.alert("Error", error.response?.data || error.message);
     }
   };
 

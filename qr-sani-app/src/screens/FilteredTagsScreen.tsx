@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator }
 import { useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { ArrowLeft, Tag, PauseCircle, Archive, Users } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 
 import { useAuth } from '../context/AuthContext';
 
@@ -26,21 +27,9 @@ export default function FilteredTagsScreen() {
     setLoading(true);
     try {
       if (!user) return;
-            const shareRecord = sharedIdsData.find(s => s.tag_id === tag.id);
-            const owner = owners?.find((o: any) => o.id === shareRecord?.owner_id);
-            return {
-              ...tag,
-              is_shared: true,
-              owner_name: owner?.display_name || owner?.username || 'A Friend'
-            };
-          });
-        }
-      }
-
-      // Combine and Sort
-      const combinedTags = [...(myTags || []), ...sharedTags].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setTags(combinedTags);
-    } catch (err) {
+      const res = await apiClient.get(`/api/tags/filter?type=${filterType}`);
+      setTags(res.data.tags || []);
+    } catch (err: any) {
       console.error(err);
     } finally {
       setLoading(false);

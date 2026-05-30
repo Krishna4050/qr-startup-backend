@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Keyboa
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Users, Mail, Plus, Trash2, Clock, CheckCircle, ChevronRight } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 
 import { useAuth } from '../context/AuthContext';
 

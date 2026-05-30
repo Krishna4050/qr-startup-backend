@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Tag, User, PauseCircle, Trash2, ShieldAlert, Save, ShieldCheck, Share2, RefreshCw, Clock } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 
 import { useAuth } from '../context/AuthContext';
 
