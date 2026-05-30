@@ -339,3 +339,133 @@ func DeleteTag(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
+
+func GetFilteredTags(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, ok := r.Context().Value("userID").(string)
+	if !ok || userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	filterType := r.URL.Query().Get("type")
+	
+	query := `
+		SELECT id::text, owner_id::text, status, COALESCE(item_name, '') as item_name, COALESCE(category, '') as category, created_at::text, COALESCE(assigned_to, '') as assigned_to
+		FROM public.qr_tags
+		WHERE owner_id = $1
+	`
+
+	if filterType == "active" {
+		query += ` AND status IN ('active', 'found')`
+	} else if filterType == "lost" {
+		query += ` AND status = 'lost'`
+	} else if filterType == "archived" {
+		query += ` AND status = 'paused'`
+	}
+	query += ` ORDER BY created_at DESC`
+
+	rows, err := database.DB.Query(query, userID)
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var tags []map[string]interface{}
+	for rows.Next() {
+		var id, ownerID, status, itemName, category, createdAt, assignedTo string
+		if err := rows.Scan(&id, &ownerID, &status, &itemName, &category, &createdAt, &assignedTo); err == nil {
+			tags = append(tags, map[string]interface{}{
+				"id": id,
+				"owner_id": ownerID,
+				"status": status,
+				"item_name": itemName,
+				"category": category,
+				"created_at": createdAt,
+				"assigned_to": assignedTo,
+			})
+		}
+	}
+	if tags == nil {
+		tags = []map[string]interface{}{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{"tags": tags})
+}
+
+func GetSharedTagsWithFriend(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, ok := r.Context().Value("userID").(string)
+	if !ok || userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	friendID := r.PathValue("friendId")
+	if friendID == "" {
+		http.Error(w, "Missing friend ID", http.StatusBadRequest)
+		return
+	}
+
+	rows, err := database.DB.Query(`
+		SELECT id::text, owner_id::text, status, COALESCE(item_name, '') as item_name, COALESCE(category, '') as category
+		FROM public.qr_tags
+		WHERE owner_id = $1 AND status != 'paused'
+		ORDER BY created_at DESC
+	`, userID)
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var tags []map[string]interface{}
+	for rows.Next() {
+		var id, ownerID, status, itemName, category string
+		if err := rows.Scan(&id, &ownerID, &status, &itemName, &category); err == nil {
+			tags = append(tags, map[string]interface{}{
+				"id": id,
+				"owner_id": ownerID,
+				"status": status,
+				"item_name": itemName,
+				"category": category,
+			})
+		}
+	}
+	if tags == nil {
+		tags = []map[string]interface{}{}
+	}
+
+	sharedRows, err := database.DB.Query(`SELECT tag_id::text FROM public.shared_tags WHERE shared_with_id = $1 AND shared_by_id = $2`, friendID, userID)
+	var sharedWithIds []string
+	if err == nil {
+		defer sharedRows.Close()
+		for sharedRows.Next() {
+			var tagID string
+			if err := sharedRows.Scan(&tagID); err == nil {
+				sharedWithIds = append(sharedWithIds, tagID)
+			}
+		}
+	}
+	if sharedWithIds == nil {
+		sharedWithIds = []string{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"tags": tags,
+		"shared_with_ids": sharedWithIds,
+	})
+}
