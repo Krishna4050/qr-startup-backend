@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Modal, TextInput, Platform } from 'react-native';
 import { Check, X, Building2, User, Mail, MessageSquare } from 'lucide-react-native';
-import WebLayout from '../components/WebLayout';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 
@@ -33,7 +32,7 @@ export default function PricingScreen() {
   };
 
   return (
-    <WebLayout>
+    <>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {/* Hero Section */}
         <View style={styles.heroSection}>
@@ -224,7 +223,7 @@ export default function PricingScreen() {
           </View>
         </View>
       </Modal>
-    </WebLayout>
+    </>
   );
 }
 
