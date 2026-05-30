@@ -292,7 +292,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             setShowGuestDropdown(false);
             setShowProfileDropdown(false);
           }} 
-          style={{ position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 90, cursor: 'default' }}
+          style={{ position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 90, cursor: 'default' } as any}
         />
       )}
     <View style={styles.headerContainer}>
