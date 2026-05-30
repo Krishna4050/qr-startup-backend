@@ -339,7 +339,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
                 {/* Profile Dropdown */}
                 {showProfileDropdown && (
-                  <View style={styles.profileDropdown}>
+                  <View style={[styles.dropdownMenu, { top: 50, right: 0, left: 'auto', width: 240, padding: 8, zIndex: 999 }]}>
                     <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages</Text>
                     </WebLink>
@@ -424,35 +424,35 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
           </View>
         </View>
 
-          {/* Absolute Service Dropdown */}
-          {showServiceDropdown && (
-            <View style={styles.dropdownMenu}>
-              {servicesList.map((service, idx) => (
-                <TouchableOpacity 
-                  key={idx} 
-                  style={[styles.dropdownItem, selectedService === service && styles.dropdownItemActive]}
-                  onPress={() => { setSelectedService(service); setShowServiceDropdown(false); }}
-                >
-                  <Text style={[styles.dropdownItemText, selectedService === service && styles.dropdownItemTextActive]}>{service}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+        {/* Absolute Service Dropdown */}
+        {showServiceDropdown && (
+          <View style={styles.dropdownMenu}>
+            {servicesList.map((service, idx) => (
+              <TouchableOpacity 
+                key={idx} 
+                style={[styles.dropdownItem, selectedService === service && styles.dropdownItemActive]}
+                onPress={() => { setSelectedService(service); setShowServiceDropdown(false); }}
+              >
+                <Text style={[styles.dropdownItemText, selectedService === service && styles.dropdownItemTextActive]}>{service}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
-          {/* Absolute Location Dropdown */}
-          {showLocationDropdown && (
-            <View style={[styles.dropdownMenu, { left: 160 }]}>
-              {['Helsinki', 'Espoo', 'Vantaa', 'Tampere', 'Turku'].map((loc, idx) => (
-                <TouchableOpacity 
-                  key={idx} 
-                  style={[styles.dropdownItem, selectedLocation === loc && styles.dropdownItemActive]}
-                  onPress={() => { setSelectedLocation(loc); setShowLocationDropdown(false); setShowDateDropdown(true); }}
-                >
-                  <Text style={[styles.dropdownItemText, selectedLocation === loc && styles.dropdownItemTextActive]}>{loc}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+        {/* Absolute Location Dropdown */}
+        {showLocationDropdown && (
+          <View style={[styles.dropdownMenu, { left: 160 }]}>
+            {['Helsinki', 'Espoo', 'Vantaa', 'Tampere', 'Turku'].map((loc, idx) => (
+              <TouchableOpacity 
+                key={idx} 
+                style={[styles.dropdownItem, selectedLocation === loc && styles.dropdownItemActive]}
+                onPress={() => { setSelectedLocation(loc); setShowLocationDropdown(false); setShowDateDropdown(true); }}
+              >
+                <Text style={[styles.dropdownItemText, selectedLocation === loc && styles.dropdownItemTextActive]}>{loc}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Absolute Date Dropdown (Modern Calendar) */}
         {showDateDropdown && (
@@ -494,65 +494,6 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             </View>
           </View>
         )}
-      </View>
-
-        {/* Right: Actions */}
-        <View style={styles.rightActions}>
-          <WebLink style={styles.actionBtn} screen="Services">
-            <Text style={styles.hostText}>Explore Services</Text>
-          </WebLink>
-          <TouchableOpacity style={[styles.actionBtn, styles.globeIcon]}>
-            <Globe color="#E2E8F0" size={18} />
-          </TouchableOpacity>
-          
-          <View style={{ position: 'relative' }}>
-            {isGuest ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <WebLink screen="Login" style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
-                  <Text style={{ fontWeight: '600', color: '#E2E8F0', fontSize: 15 }}>Log In</Text>
-                </WebLink>
-                <WebLink screen="Login" style={{ backgroundColor: '#00E5FF', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24 }}>
-                  <Text style={{ fontWeight: 'bold', color: '#0A192F', fontSize: 15 }}>Sign Up</Text>
-                </WebLink>
-              </View>
-            ) : (
-              <>
-                <TouchableOpacity 
-                  style={styles.profileMenu}
-                  onPress={() => setShowProfileDropdown(!showProfileDropdown)}
-                >
-                  <Menu color="#E2E8F0" size={18} />
-                  <View style={styles.avatarCircle}>
-                    {profile?.avatar_url ? (
-                      <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-                    ) : (
-                      <User color="#FFF" size={16} />
-                    )}
-                  </View>
-                </TouchableOpacity>
-                
-                {/* Absolute Profile Dropdown */}
-                {showProfileDropdown && (
-                  <View style={[styles.dropdownMenu, { top: 50, right: 0, left: 'auto', width: 240, padding: 8, zIndex: 999 }]}>
-                    <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
-                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages</Text>
-                    </WebLink>
-                    <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
-                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
-                    </WebLink>
-                    <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}>
-                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
-                    </WebLink>
-                    <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
-                    <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}>
-                      <Text style={[styles.dropdownItemText, { color: '#E11D48' }]}>Sign Out</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </>
-            )}
-          </View>
-        </View>
       </View>
     </View>
   );
