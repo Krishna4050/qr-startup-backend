@@ -99,9 +99,9 @@ export default function TagManageScreen() {
                 await supabase_lucifer_core.from('notifications').insert({
                   user_id: tag.owner_id,
                   title: "Tag Action Request",
-                  body: `${currentUser.email} thinks ${tag.item_name} should be marked as ${newStatus.toUpperCase()}.`,
+                  body: `${currentUser?.email || 'A user'} thinks ${tag.item_name} should be marked as ${newStatus.toUpperCase()}.`,
                   category: "security",
-                  action_data: { request_type: 'tag_status', requested_status: newStatus, tag_id: tag.id, requester_id: currentUser.id }
+                  action_data: { request_type: 'tag_status', requested_status: newStatus, tag_id: tag.id, requester_id: currentUser?.id }
                 });
                 
                 // --- THE FIX: Instantly lock the UI into "Pending" mode ---

@@ -206,7 +206,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
     zIndex: 10,
-    backdropFilter: 'blur(10px)' as any,
+    // @ts-ignore: React Native web specific CSS
+    backdropFilter: 'blur(10px)',
   },
   headerTop: {
     flexDirection: 'row',

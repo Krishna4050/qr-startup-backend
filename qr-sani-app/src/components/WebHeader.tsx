@@ -592,6 +592,7 @@ const styles = StyleSheet.create({
     height: 66,
     width: '100%',
     maxWidth: 700,
+    // @ts-ignore: React Native web specific CSS
     backdropFilter: 'blur(10px)',
   },
   searchSection: {
