@@ -327,13 +327,13 @@ export default function DashboardScreen() {
             <Text style={styles.sectionTitle}>Available Services</Text>
             <View style={Platform.OS === 'web' ? [styles.webGridContainer, { paddingHorizontal: 0, marginTop: 16 }] : { gap: 16, marginTop: 16 }}>
                {[
-                { title: "Vehicle Repair", desc: "Trusted mechanics near you", bg: '#EEF2FF', color: '#4338CA', icon: <Wrench color="#4338CA" size={24} />, route: 'VehicleRepairDirectory' },
-                { title: "Bike Repair", desc: "Fix your bike quickly", bg: '#ECFDF5', color: '#047857', icon: <Bike color="#047857" size={24} />, route: 'Services' },
-                { title: "Pay Parking", desc: "Find and pay for parking", bg: '#FFFBEB', color: '#B45309', icon: <Car color="#B45309" size={24} />, route: 'Services' },
-                { title: "Hotels & Stays", desc: "Find a place to stay", bg: '#F5F3FF', color: '#6D28D9', icon: <Bed color="#6D28D9" size={24} />, route: 'Services' },
-                { title: "City Transit", desc: "Get around the city", bg: '#FDF2F8', color: '#BE185D', icon: <BusFront color="#BE185D" size={24} />, route: 'Services' },
-                { title: "Train Tickets", desc: "Travel across cities", bg: '#ECFEFF', color: '#0369A1', icon: <Train color="#0369A1" size={24} />, route: 'Services' },
-                { title: "Flights", desc: "Book your next flight", bg: '#EEF2FF', color: '#4338CA', icon: <Plane color="#4338CA" size={24} />, route: 'Services' },
+                { title: "Vehicle Repair", desc: "Trusted mechanics near you", bg: '#EEF2FF', color: '#4338CA', icon: <Wrench color="#4338CA" size={24} />, route: 'ServiceDirectory' },
+                { title: "Bike Repair", desc: "Fix your bike quickly", bg: '#ECFDF5', color: '#047857', icon: <Bike color="#047857" size={24} />, route: 'BikeRepairDirectory' },
+                { title: "Pay Parking", desc: "Find and pay for parking", bg: '#FFFBEB', color: '#B45309', icon: <Car color="#B45309" size={24} />, route: 'ParkingMap' },
+                { title: "Hotels & Stays", desc: "Find a place to stay", bg: '#F5F3FF', color: '#6D28D9', icon: <Bed color="#6D28D9" size={24} />, route: 'HotelSearch' },
+                { title: "City Transit", desc: "Get around the city", bg: '#FDF2F8', color: '#BE185D', icon: <BusFront color="#BE185D" size={24} />, route: 'TransitPass' },
+                { title: "Train Tickets", desc: "Travel across cities", bg: '#ECFEFF', color: '#0369A1', icon: <Train color="#0369A1" size={24} />, route: 'TrainSearch' },
+                { title: "Flights", desc: "Book your next flight", bg: '#EEF2FF', color: '#4338CA', icon: <Plane color="#4338CA" size={24} />, route: 'FlightSearch' },
               ].map((item, idx) => (
                 <WebLink 
                   key={idx} 

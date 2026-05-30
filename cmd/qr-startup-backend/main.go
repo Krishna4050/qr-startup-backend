@@ -107,6 +107,9 @@ func main(){
 	// --- NEW: Shop & Host Upload APIs ---
 	mux.HandleFunc("GET /api/host/shop/{id}", middleware.RequireAuth(handlers.GetHostShopDetailsHandler))
 	mux.HandleFunc("POST /api/upload", middleware.RequireAuth(handlers.UploadAssetHandler))
+	
+	// Directory API
+	mux.HandleFunc("GET /api/directory", middleware.RequireAuth(handlers.GetServicesDirectoryHandler))
 
 	// CORS config
 	// Tag Manage API

@@ -16,7 +16,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const { user, logout } = useAuth();
   const isGuest = !user;
   const [profile, setProfile] = useState<any>(null);
+  const todayDate = new Date().getDate();
+  const currentMonth = new Date().toLocaleString('default', { month: 'short' });
+  const currentYear = new Date().getFullYear();
 
+  // Handle outside clicks to close dropdowns
   useEffect(() => {
     if (user) {
       // Fetch avatar securely from the Go API Interceptor
@@ -93,20 +97,20 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
         <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <WebLink style={styles.logoSection} screen="Dashboard">
-              <ShieldCheck color="#E11D48" size={28} />
+              <ShieldCheck color="#00E5FF" size={28} />
               <Text style={[styles.logoText, { fontSize: 18 }]}>smarttags</Text>
             </WebLink>
             <View style={{ position: 'relative' }}>
               {isGuest ? (
-                <WebLink screen="Login" style={{ backgroundColor: '#E11D48', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}>
-                  <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 14 }}>Log In</Text>
+                <WebLink screen="Login" style={{ backgroundColor: '#00E5FF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}>
+                  <Text style={{ color: '#0A192F', fontWeight: 'bold', fontSize: 14 }}>Log In</Text>
                 </WebLink>
               ) : (
                 <TouchableOpacity 
                   style={styles.profileMenu}
                   onPress={() => setShowProfileDropdown(!showProfileDropdown)}
                 >
-                  <Menu color="#222222" size={16} />
+                  <Menu color="#E2E8F0" size={16} />
                   <View style={[styles.avatarCircle, { width: 28, height: 28 }]}>
                     {profile?.avatar_url ? (
                       <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
@@ -133,10 +137,10 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             style={styles.mobileSearchPill}
             onPress={() => setShowMobileSearchModal(true)}
           >
-              <Search color="#E11D48" size={18} />
+              <Search color="#00E5FF" size={18} />
               <View style={{ marginLeft: 12 }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#222222' }}>{selectedLocation}</Text>
-                <Text style={{ fontSize: 12, color: '#717171' }}>{selectedService} • {selectedDate ? `May ${selectedDate}` : 'Any week'} {requiresGuests ? `• ${adults + childrenCount || 'Add'} guests` : ''}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#E2E8F0' }}>{selectedLocation}</Text>
+                <Text style={{ fontSize: 12, color: '#94A3B8' }}>{selectedService} • {selectedDate ? `May ${selectedDate}` : 'Any week'} {requiresGuests ? `• ${adults + childrenCount || 'Add'} guests` : ''}</Text>
               </View>
           </TouchableOpacity>
         </View>
@@ -145,15 +149,21 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
         <Modal visible={showMobileSearchModal} animationType="slide" transparent={false}>
           <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F7F7' }}>
             <View style={styles.mobileModalHeader}>
-              <TouchableOpacity onPress={() => setShowMobileSearchModal(false)} style={styles.mobileCloseBtn}>
-                <X color="#222" size={24} />
+              <TouchableOpacity style={styles.mobileCloseBtn} onPress={() => setShowMobileSearchModal(false)}>
+                <X color="#E2E8F0" size={20} />
               </TouchableOpacity>
               <View style={styles.mobileServiceToggleRow}>
-                 <Text style={{fontSize: 16, fontWeight: 'bold'}}>{selectedService}</Text>
+                 <Text style={{fontSize: 16, fontWeight: 'bold', color: '#FFF'}}>{selectedService}</Text>
               </View>
             </View>
 
-            <ScrollView style={{ padding: 20 }}>
+            <ScrollView style={{ padding: 20, backgroundColor: '#0B1120' }}>
+              {/* Explore Services Link */}
+              <WebLink screen="Services" style={{ marginBottom: 20, padding: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                 <Text style={{ color: '#00E5FF', fontWeight: 'bold', fontSize: 16 }}>Explore All Services</Text>
+                 <Globe color="#00E5FF" size={20} />
+              </WebLink>
+
               {/* Service Selection Card */}
               <View style={styles.mobileCard}>
                 <Text style={styles.mobileCardTitle}>What are you looking for?</Text>
@@ -164,7 +174,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                       onPress={() => setSelectedService(srv)}
                       style={[styles.mobileServicePill, selectedService === srv && styles.mobileServicePillActive]}
                     >
-                      <Text style={{ color: selectedService === srv ? '#FFF' : '#222', fontWeight: '500' }}>{srv}</Text>
+                      <Text style={{ color: selectedService === srv ? '#FFF' : '#E2E8F0', fontWeight: '500' }}>{srv}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -178,9 +188,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                     <TouchableOpacity 
                       key={loc}
                       onPress={() => setSelectedLocation(loc)}
-                      style={[styles.mobileLocBtn, selectedLocation === loc && { borderColor: '#222', borderWidth: 2 }]}
+                      style={[styles.mobileLocBtn, selectedLocation === loc && { borderColor: '#00E5FF', borderWidth: 2 }]}
                     >
-                      <Text style={{ fontWeight: selectedLocation === loc ? 'bold' : 'normal' }}>{loc}</Text>
+                      <Text style={{ fontWeight: selectedLocation === loc ? 'bold' : 'normal', color: '#E2E8F0' }}>{loc}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -191,11 +201,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 <View style={styles.mobileCard}>
                   <Text style={styles.mobileCardTitle}>Who's coming?</Text>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
-                    <Text style={{ fontSize: 16 }}>Adults</Text>
+                    <Text style={{ fontSize: 16, color: '#E2E8F0' }}>Adults</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                      <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#717171" /></TouchableOpacity>
-                      <Text style={{ fontSize: 16, minWidth: 20, textAlign: 'center' }}>{adults}</Text>
-                      <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#717171" /></TouchableOpacity>
+                      <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
+                      <Text style={{ fontSize: 16, minWidth: 20, textAlign: 'center', color: '#E2E8F0' }}>{adults}</Text>
+                      <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
                     </View>
                   </View>
                 </View>
@@ -204,11 +214,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
             <View style={styles.mobileFooterBar}>
               <TouchableOpacity onPress={() => setShowMobileSearchModal(false)}>
-                <Text style={{ fontSize: 16, fontWeight: '600', textDecorationLine: 'underline' }}>Clear all</Text>
+                <Text style={{ fontSize: 16, fontWeight: '600', textDecorationLine: 'underline', color: '#E2E8F0' }}>Clear all</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.mobileSearchExecuteBtn} onPress={handleSearchExecute}>
-                <Search color="#FFF" size={18} />
-                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold', marginLeft: 8 }}>Search</Text>
+                <Search color="#0A192F" size={18} />
+                <Text style={{ color: '#0A192F', fontSize: 16, fontWeight: 'bold', marginLeft: 8 }}>Search</Text>
               </TouchableOpacity>
             </View>
           </SafeAreaView>
@@ -223,12 +233,13 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
       <View style={styles.headerContent}>
         {/* Left: Logo */}
         <WebLink style={styles.logoSection} screen="Dashboard">
-          <ShieldCheck color="#E11D48" size={32} />
+          <ShieldCheck color="#00E5FF" size={32} />
           <Text style={styles.logoText}>smarttags</Text>
         </WebLink>
 
         {/* Center: Search Pill */}
-        <View style={styles.searchPill}>
+        <View style={styles.searchPillContainer}>
+          <View style={styles.searchPill}>
           <TouchableOpacity 
             style={[styles.searchSection, showServiceDropdown && styles.activeSection]} 
             onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
@@ -238,7 +249,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 <Text style={styles.searchTitle}>Service</Text>
                 <Text style={styles.searchSub}>{selectedService}</Text>
               </View>
-              <ChevronDown color="#717171" size={16} />
+              <ChevronDown color="#94A3B8" size={16} />
             </View>
           </TouchableOpacity>
           
@@ -277,8 +288,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
           
           <View style={styles.searchButtonContainer}>
             <TouchableOpacity style={styles.searchIconBg} onPress={handleSearchExecute}>
-              <Search color="#FFF" size={16} />
-              <Text style={{ color: '#FFF', fontWeight: 'bold', marginLeft: 6 }}>Search</Text>
+              <Search color="#0A192F" size={16} />
+              <Text style={{ color: '#0A192F', fontWeight: 'bold', marginLeft: 6 }}>Search</Text>
             </TouchableOpacity>
           </View>
 
@@ -312,56 +323,64 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             </View>
           )}
 
-          {/* Absolute Date Dropdown (Modern Calendar) */}
-          {showDateDropdown && (
-            <View style={[styles.dropdownMenu, { left: 180, width: 320, padding: 20 }]}>
-              <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 16, textAlign: 'center' }}>May 2026</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <Text key={d} style={{ color: '#717171', width: 40, textAlign: 'center', fontSize: 14 }}>{d}</Text>)}
-              </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0 }}>
-                {Array.from({length: 5}).map((_, i) => <View key={`e-${i}`} style={{ width: 40, height: 40 }} />)}
-                {Array.from({length: 31}, (_, i) => i + 1).map(d => (
+        {/* Absolute Date Dropdown (Modern Calendar) */}
+        {showDateDropdown && (
+          <View style={[styles.dropdownMenu, { left: 180, width: 320, padding: 20 }]}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 16, textAlign: 'center', color: '#E2E8F0' }}>{currentMonth} {currentYear}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <Text key={d} style={{ color: '#94A3B8', width: 40, textAlign: 'center', fontSize: 14 }}>{d}</Text>)}
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0 }}>
+              {Array.from({length: 5}).map((_, i) => <View key={`e-${i}`} style={{ width: 40, height: 40 }} />)}
+              {Array.from({length: 31}, (_, i) => i + 1).map(d => {
+                const isToday = d === todayDate;
+                return (
                   <TouchableOpacity 
                     key={d} 
                     onPress={() => { setShowDateDropdown(false); setSelectedDate(d); }}
-                    style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 20, backgroundColor: selectedDate === d ? '#E11D48' : 'transparent' }}
+                    style={{ 
+                      width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 20, 
+                      backgroundColor: selectedDate === d ? '#00E5FF' : isToday ? 'rgba(0, 229, 255, 0.1)' : 'transparent',
+                      borderWidth: isToday && selectedDate !== d ? 1 : 0,
+                      borderColor: '#00E5FF'
+                    }}
                   >
-                    <Text style={{ color: selectedDate === d ? '#FFF' : '#222' }}>{d}</Text>
+                    <Text style={{ color: selectedDate === d ? '#0A192F' : isToday ? '#00E5FF' : '#E2E8F0', fontWeight: isToday ? 'bold' : 'normal' }}>{d}</Text>
                   </TouchableOpacity>
-                ))}
-              </View>
+                )
+              })}
             </View>
-          )}
+          </View>
+        )}
 
-          {/* Absolute Guest Dropdown */}
-          {showGuestDropdown && (
-            <View style={[styles.dropdownMenu, { right: 120, left: 'auto', width: 320, padding: 24 }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <View>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Adults</Text>
-                  <Text style={{ color: '#717171', fontSize: 14 }}>Ages 13 or above</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                  <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#717171" /></TouchableOpacity>
-                  <Text style={{ fontSize: 16 }}>{adults}</Text>
-                  <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#717171" /></TouchableOpacity>
-                </View>
+        {/* Absolute Guest Dropdown */}
+        {showGuestDropdown && (
+          <View style={[styles.dropdownMenu, { right: 120, left: 'auto', width: 320, padding: 24 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <View>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Adults</Text>
+                <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 13 or above</Text>
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Children</Text>
-                  <Text style={{ color: '#717171', fontSize: 14 }}>Ages 2-12</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                  <TouchableOpacity onPress={() => setChildrenCount(Math.max(0, childrenCount - 1))} style={styles.circleBtn}><Minus size={16} color="#717171" /></TouchableOpacity>
-                  <Text style={{ fontSize: 16 }}>{childrenCount}</Text>
-                  <TouchableOpacity onPress={() => setChildrenCount(childrenCount + 1)} style={styles.circleBtn}><Plus size={16} color="#717171" /></TouchableOpacity>
-                </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
+                <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{adults}</Text>
+                <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
               </View>
             </View>
-          )}
-        </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Children</Text>
+                <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 2-12</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <TouchableOpacity onPress={() => setChildrenCount(Math.max(0, childrenCount - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
+                <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{childrenCount}</Text>
+                <TouchableOpacity onPress={() => setChildrenCount(childrenCount + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
 
         {/* Right: Actions */}
         <View style={styles.rightActions}>
@@ -369,17 +388,17 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             <Text style={styles.hostText}>Explore Services</Text>
           </WebLink>
           <TouchableOpacity style={[styles.actionBtn, styles.globeIcon]}>
-            <Globe color="#222222" size={18} />
+            <Globe color="#E2E8F0" size={18} />
           </TouchableOpacity>
           
           <View style={{ position: 'relative' }}>
             {isGuest ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <WebLink screen="Login" style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
-                  <Text style={{ fontWeight: '600', color: '#222', fontSize: 15 }}>Log In</Text>
+                  <Text style={{ fontWeight: '600', color: '#E2E8F0', fontSize: 15 }}>Log In</Text>
                 </WebLink>
-                <WebLink screen="Login" style={{ backgroundColor: '#E11D48', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24 }}>
-                  <Text style={{ fontWeight: 'bold', color: '#FFF', fontSize: 15 }}>Sign Up</Text>
+                <WebLink screen="Login" style={{ backgroundColor: '#00E5FF', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24 }}>
+                  <Text style={{ fontWeight: 'bold', color: '#0A192F', fontSize: 15 }}>Sign Up</Text>
                 </WebLink>
               </View>
             ) : (
@@ -388,7 +407,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   style={styles.profileMenu}
                   onPress={() => setShowProfileDropdown(!showProfileDropdown)}
                 >
-                  <Menu color="#222222" size={18} />
+                  <Menu color="#E2E8F0" size={18} />
                   <View style={styles.avatarCircle}>
                     {profile?.avatar_url ? (
                       <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
@@ -427,64 +446,59 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
 const styles = StyleSheet.create({
   headerContainer: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0A192F',
     borderBottomWidth: 1,
-    borderBottomColor: '#EBEBEB',
-    paddingVertical: 16,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
     zIndex: 100,
   },
   headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     maxWidth: 1440,
     width: '100%',
     alignSelf: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 40,
+    height: 80,
+    position: 'relative',
   },
   logoSection: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
   logoText: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#E11D48',
+    color: '#00E5FF',
     marginLeft: 6,
     letterSpacing: -0.5,
   },
   mobileSearchPill: {
     marginTop: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 30,
     padding: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
     borderWidth: 1,
-    borderColor: '#EBEBEB'
+    borderColor: 'rgba(255,255,255,0.1)'
   },
   mobileModalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: '#0A192F',
     borderBottomWidth: 1,
-    borderBottomColor: '#EBEBEB',
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   mobileCloseBtn: {
     position: 'absolute',
     left: 20,
     padding: 8,
-    backgroundColor: '#F7F7F7',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 20,
   },
   mobileServiceToggleRow: {
@@ -493,74 +507,71 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   mobileCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#111827',
     borderRadius: 24,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)'
   },
   mobileCardTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#222',
+    color: '#F9FAFB',
   },
   mobileServicePill: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#F7F7F7',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 20,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: '#EBEBEB',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   mobileServicePillActive: {
-    backgroundColor: '#222',
-    borderColor: '#222',
+    backgroundColor: '#00E5FF',
+    borderColor: '#00E5FF',
   },
   mobileLocBtn: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#EBEBEB',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   mobileFooterBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: '#0B1120',
     borderTopWidth: 1,
-    borderTopColor: '#EBEBEB',
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
   mobileSearchExecuteBtn: {
-    backgroundColor: '#E11D48',
+    backgroundColor: '#00E5FF',
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
   },
+  searchPillContainer: {
+    flex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   searchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F7F7',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 40,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 3,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     height: 66,
-    flex: 2,
-    maxWidth: 850,
-    position: 'relative',
+    width: '100%',
+    maxWidth: 700,
+    backdropFilter: 'blur(10px)',
   },
   searchSection: {
     flex: 1,
@@ -570,34 +581,31 @@ const styles = StyleSheet.create({
     borderRadius: 32,
   },
   activeSection: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    backgroundColor: 'rgba(0, 229, 255, 0.05)',
+    borderColor: 'rgba(0, 229, 255, 0.3)',
+    borderWidth: 1,
   },
   searchTitle: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#222222',
+    color: '#94A3B8',
   },
   searchSub: {
     fontSize: 14,
-    color: '#717171',
+    color: '#F8FAFC',
     marginTop: 2,
   },
   divider: {
     width: 1,
     height: 32,
-    backgroundColor: '#DDDDDD',
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   searchButtonContainer: {
     paddingRight: 8,
     justifyContent: 'center',
   },
   searchIconBg: {
-    backgroundColor: '#E11D48',
+    backgroundColor: '#00E5FF',
     height: 48,
     borderRadius: 24,
     flexDirection: 'row',
@@ -610,12 +618,14 @@ const styles = StyleSheet.create({
     top: 76,
     left: 0,
     width: 300,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 24,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.3,
     shadowRadius: 24,
     elevation: 10,
     zIndex: 200,
@@ -626,15 +636,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   dropdownItemActive: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(0,229,255,0.1)',
   },
   dropdownItemText: {
     fontSize: 16,
-    color: '#4B5563',
+    color: '#94A3B8',
   },
   dropdownItemTextActive: {
     fontWeight: 'bold',
-    color: '#111827',
+    color: '#00E5FF',
   },
   rightActions: {
     flexDirection: 'row',
@@ -650,7 +660,7 @@ const styles = StyleSheet.create({
   hostText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#222222',
+    color: '#E2E8F0',
   },
   globeIcon: {
     paddingHorizontal: 10,
@@ -660,13 +670,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 30,
     paddingLeft: 14,
     paddingRight: 6,
     paddingVertical: 6,
     gap: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     cursor: 'pointer',
   },
   avatarCircle: {
@@ -688,7 +698,7 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   }

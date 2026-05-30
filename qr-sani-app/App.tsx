@@ -30,6 +30,12 @@ import TagManageScreen from './src/screens/TagManageScreen';
 import HostShopDetailsScreen from './src/screens/HostShopDetailsScreen';
 import SharedTagsScreen from './src/screens/SharedTagsScreen';
 import VehicleRepairDirectory from './src/screens/VehicleRepairDirectory';
+import BikeRepairDirectory from './src/screens/BikeRepairDirectory';
+import ParkingMap from './src/screens/ParkingMap';
+import HotelSearch from './src/screens/HotelSearch';
+import TransitPass from './src/screens/TransitPass';
+import TrainSearch from './src/screens/TrainSearch';
+import FlightSearch from './src/screens/FlightSearch';
 import ShopDetailsScreen from './src/screens/ShopDetailsScreen';
 import PartnerOnboardingIntroScreen from './src/screens/PartnerOnboardingIntroScreen';
 import PartnerOnboardingStep1Screen from './src/screens/PartnerOnboardingStep1Screen';
@@ -83,6 +89,12 @@ const GuestStack = () => (
     <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false, gestureEnabled: false }} />
     <Stack.Screen name="Dashboard" component={MainTabs} options={{ headerShown: false, gestureEnabled: false }} />
     <Stack.Screen name="ServiceDirectory" component={VehicleRepairDirectory} options={{ headerShown: false }} />
+    <Stack.Screen name="BikeRepairDirectory" component={BikeRepairDirectory} options={{ headerShown: false }} />
+    <Stack.Screen name="ParkingMap" component={ParkingMap} options={{ headerShown: false }} />
+    <Stack.Screen name="HotelSearch" component={HotelSearch} options={{ headerShown: false }} />
+    <Stack.Screen name="TransitPass" component={TransitPass} options={{ headerShown: false }} />
+    <Stack.Screen name="TrainSearch" component={TrainSearch} options={{ headerShown: false }} />
+    <Stack.Screen name="FlightSearch" component={FlightSearch} options={{ headerShown: false }} />
     <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
   </Stack.Navigator>
@@ -104,6 +116,12 @@ const AuthStack = () => (
     <Stack.Screen name="HostShopDetails" component={HostShopDetailsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="SharedTags" component={SharedTagsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="ServiceDirectory" component={VehicleRepairDirectory} options={{ headerShown: false }} />
+    <Stack.Screen name="BikeRepairDirectory" component={BikeRepairDirectory} options={{ headerShown: false }} />
+    <Stack.Screen name="ParkingMap" component={ParkingMap} options={{ headerShown: false }} />
+    <Stack.Screen name="HotelSearch" component={HotelSearch} options={{ headerShown: false }} />
+    <Stack.Screen name="TransitPass" component={TransitPass} options={{ headerShown: false }} />
+    <Stack.Screen name="TrainSearch" component={TrainSearch} options={{ headerShown: false }} />
+    <Stack.Screen name="FlightSearch" component={FlightSearch} options={{ headerShown: false }} />
     <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingStep1" component={PartnerOnboardingStep1Screen} options={{ headerShown: false }} />

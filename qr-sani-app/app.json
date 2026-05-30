@@ -37,6 +37,9 @@
         "projectId": "aa9ca581-b033-4d20-b7e6-86bf73bfa041"
       }
     },
-    "owner": "krishna4050"
+    "owner": "krishna4050",
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
