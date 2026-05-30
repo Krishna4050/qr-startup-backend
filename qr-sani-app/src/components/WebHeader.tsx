@@ -185,18 +185,14 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
           {/* Airbnb-style Mobile Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 16, marginHorizontal: -20, paddingBottom: 8 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 32 }}>
-            <TouchableOpacity onPress={() => setActiveTab('Explore')} style={[styles.mobileTab, activeTab === 'Explore' && styles.mobileTabActive]}>
-                <Globe color={activeTab === 'Explore' ? '#00E5FF' : '#94A3B8'} size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />
-                <Text style={[styles.mobileTabText, activeTab === 'Explore' && styles.mobileTabTextActive]}>Explore</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setActiveTab('Services')} style={[styles.mobileTab, activeTab === 'Services' && styles.mobileTabActive]}>
+            <WebLink screen="Services" onPress={() => setActiveTab('Services')} style={[styles.mobileTab, activeTab === 'Services' && styles.mobileTabActive]}>
                 <Menu color={activeTab === 'Services' ? '#00E5FF' : '#94A3B8'} size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />
                 <Text style={[styles.mobileTabText, activeTab === 'Services' && styles.mobileTabTextActive]}>Services</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setActiveTab('Store')} style={[styles.mobileTab, activeTab === 'Store' && styles.mobileTabActive]}>
-                <Building2 color={activeTab === 'Store' ? '#00E5FF' : '#94A3B8'} size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />
-                <Text style={[styles.mobileTabText, activeTab === 'Store' && styles.mobileTabTextActive]}>Store</Text>
-            </TouchableOpacity>
+            </WebLink>
+            <WebLink screen="Store" onPress={() => setActiveTab('Pricing')} style={[styles.mobileTab, activeTab === 'Pricing' && styles.mobileTabActive]}>
+                <Building2 color={activeTab === 'Pricing' ? '#00E5FF' : '#94A3B8'} size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />
+                <Text style={[styles.mobileTabText, activeTab === 'Pricing' && styles.mobileTabTextActive]}>Pricing</Text>
+            </WebLink>
           </ScrollView>
         </View>
 
@@ -284,6 +280,21 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
   // ================= DESKTOP HEADER =================
   return (
+    <>
+      {/* Invisible Overlay to close dropdowns on outside click */}
+      {(showServiceDropdown || showLocationDropdown || showDateDropdown || showGuestDropdown || showProfileDropdown) && (
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={() => {
+            setShowServiceDropdown(false);
+            setShowLocationDropdown(false);
+            setShowDateDropdown(false);
+            setShowGuestDropdown(false);
+            setShowProfileDropdown(false);
+          }} 
+          style={{ position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 90, cursor: 'default' }}
+        />
+      )}
     <View style={styles.headerContainer}>
       <View style={styles.headerContent}>
         {/* Left: Logo */}
@@ -294,22 +305,19 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
         {/* Center: Top Tabs */}
         <View style={styles.topTabsContainer}>
-          <TouchableOpacity onPress={() => setActiveTab('Explore')} style={[styles.topTab, activeTab === 'Explore' && styles.topTabActive]}>
-            <Text style={[styles.topTabText, activeTab === 'Explore' && styles.topTabTextActive]}>Explore</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setActiveTab('Services')} style={[styles.topTab, activeTab === 'Services' && styles.topTabActive]}>
+          <WebLink screen="Services" onPress={() => setActiveTab('Services')} style={[styles.topTab, activeTab === 'Services' && styles.topTabActive]}>
             <Text style={[styles.topTabText, activeTab === 'Services' && styles.topTabTextActive]}>Services</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setActiveTab('Store')} style={[styles.topTab, activeTab === 'Store' && styles.topTabActive]}>
-            <Text style={[styles.topTabText, activeTab === 'Store' && styles.topTabTextActive]}>Store</Text>
-          </TouchableOpacity>
+          </WebLink>
+          <WebLink screen="Store" onPress={() => setActiveTab('Pricing')} style={[styles.topTab, activeTab === 'Pricing' && styles.topTabActive]}>
+            <Text style={[styles.topTabText, activeTab === 'Pricing' && styles.topTabTextActive]}>Pricing</Text>
+          </WebLink>
         </View>
 
         {/* Right: Actions */}
         <View style={styles.rightActions}>
-          <TouchableOpacity style={[styles.actionBtn, styles.globeIcon]}>
-            <Globe color="#E2E8F0" size={18} />
-          </TouchableOpacity>
+          <WebLink style={styles.actionBtn} screen="Services">
+            <Text style={styles.hostText}>Explore Services</Text>
+          </WebLink>
           
           <View style={{ position: 'relative' }}>
             {isGuest ? (
@@ -383,7 +391,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
             onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
           >
-            <View style={{ flex: 1, paddingRight: 8 }}>
+            <View>
               <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Destination' : 'Where'}</Text>
               <Text style={styles.searchSub} numberOfLines={1}>{selectedLocation}</Text>
             </View>
@@ -395,7 +403,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             style={[styles.searchSection, showDateDropdown && styles.activeSection]}
             onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
           >
-            <View style={{ flex: 1, paddingRight: 8 }}>
+            <View>
               <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Departure' : 'When'}</Text>
               <Text style={styles.searchSub} numberOfLines={1}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
             </View>
@@ -408,7 +416,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 style={[styles.searchSection, showGuestDropdown && styles.activeSection]}
                 onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
               >
-                <View style={{ flex: 1, paddingRight: 8 }}>
+                <View>
                   <Text style={styles.searchTitle} numberOfLines={1}>Who</Text>
                   <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
                 </View>
@@ -496,6 +504,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
         )}
       </View>
     </View>
+    </>
   );
 }
 
