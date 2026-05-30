@@ -66,6 +66,9 @@ export default function TrustedNetworkScreen() {
           try {
             await apiClient.delete(`/api/network/${connectionId}`);
             fetchNetwork();
+          } catch (error: any) {
+            Alert.alert("Error", error.response?.data || "Failed to remove connection.");
+          }
         }
       }
     ]);
