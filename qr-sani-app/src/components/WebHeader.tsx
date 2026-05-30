@@ -371,137 +371,139 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
       {/* Bottom Row: Search Pill */}
       <View style={styles.searchPillContainer}>
-        <View style={styles.searchPill}>
-          <TouchableOpacity 
-            style={[styles.searchSection, showServiceDropdown && styles.activeSection]} 
-            onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={styles.searchTitle} numberOfLines={1}>Service</Text>
-                <Text style={styles.searchSub} numberOfLines={1}>{selectedService}</Text>
-              </View>
-              <ChevronDown color="#94A3B8" size={16} />
-            </View>
-          </TouchableOpacity>
-          
-          <View style={styles.divider} />
-          
-          <TouchableOpacity 
-            style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
-            onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
-          >
-            <View>
-              <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Destination' : 'Where'}</Text>
-              <Text style={styles.searchSub} numberOfLines={1}>{selectedLocation}</Text>
-            </View>
-          </TouchableOpacity>
-          
-          <View style={styles.divider} />
-          
-          <TouchableOpacity 
-            style={[styles.searchSection, showDateDropdown && styles.activeSection]}
-            onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
-          >
-            <View>
-              <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Departure' : 'When'}</Text>
-              <Text style={styles.searchSub} numberOfLines={1}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
-            </View>
-          </TouchableOpacity>
-          
-          {requiresGuests && (
-            <>
-              <View style={styles.divider} />
-              <TouchableOpacity 
-                style={[styles.searchSection, showGuestDropdown && styles.activeSection]}
-                onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
-              >
-                <View>
-                  <Text style={styles.searchTitle} numberOfLines={1}>Who</Text>
-                  <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
+        <View style={{ position: 'relative', width: '100%', maxWidth: 700, zIndex: 10 }}>
+          <View style={styles.searchPill}>
+            <TouchableOpacity 
+              style={[styles.searchSection, showServiceDropdown && styles.activeSection]} 
+              onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={styles.searchTitle} numberOfLines={1}>Service</Text>
+                  <Text style={styles.searchSub} numberOfLines={1}>{selectedService}</Text>
                 </View>
-              </TouchableOpacity>
-            </>
-          )}
-          
-          <View style={styles.searchButtonContainer}>
-            <TouchableOpacity style={styles.searchIconBg} onPress={handleSearchExecute}>
-              <Search color="#0A192F" size={16} />
-              <Text style={{ color: '#0A192F', fontWeight: 'bold', marginLeft: 6 }}>Search</Text>
+                <ChevronDown color="#94A3B8" size={16} />
+              </View>
             </TouchableOpacity>
+            
+            <View style={styles.divider} />
+            
+            <TouchableOpacity 
+              style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
+              onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
+            >
+              <View>
+                <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Destination' : 'Where'}</Text>
+                <Text style={styles.searchSub} numberOfLines={1}>{selectedLocation}</Text>
+              </View>
+            </TouchableOpacity>
+            
+            <View style={styles.divider} />
+            
+            <TouchableOpacity 
+              style={[styles.searchSection, showDateDropdown && styles.activeSection]}
+              onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
+            >
+              <View>
+                <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Departure' : 'When'}</Text>
+                <Text style={styles.searchSub} numberOfLines={1}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
+              </View>
+            </TouchableOpacity>
+            
+            {requiresGuests && (
+              <>
+                <View style={styles.divider} />
+                <TouchableOpacity 
+                  style={[styles.searchSection, showGuestDropdown && styles.activeSection]}
+                  onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
+                >
+                  <View>
+                    <Text style={styles.searchTitle} numberOfLines={1}>Who</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
+            
+            <View style={styles.searchButtonContainer}>
+              <TouchableOpacity style={styles.searchIconBg} onPress={handleSearchExecute}>
+                <Search color="#0A192F" size={16} />
+                <Text style={{ color: '#0A192F', fontWeight: 'bold', marginLeft: 6 }}>Search</Text>
+              </TouchableOpacity>
+            </View>
           </View>
+
+          {/* Absolute Service Dropdown */}
+          {showServiceDropdown && (
+            <View style={styles.dropdownMenu}>
+              {servicesList.map((service, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={[styles.dropdownItem, selectedService === service && styles.dropdownItemActive]}
+                  onPress={() => { setSelectedService(service); setShowServiceDropdown(false); }}
+                >
+                  <Text style={[styles.dropdownItemText, selectedService === service && styles.dropdownItemTextActive]}>{service}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Absolute Location Dropdown */}
+          {showLocationDropdown && (
+            <View style={[styles.dropdownMenu, { left: 160 }]}>
+              {['Helsinki', 'Espoo', 'Vantaa', 'Tampere', 'Turku'].map((loc, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={[styles.dropdownItem, selectedLocation === loc && styles.dropdownItemActive]}
+                  onPress={() => { setSelectedLocation(loc); setShowLocationDropdown(false); setShowDateDropdown(true); }}
+                >
+                  <Text style={[styles.dropdownItemText, selectedLocation === loc && styles.dropdownItemTextActive]}>{loc}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Absolute Date Dropdown (Modern Calendar) */}
+          {showDateDropdown && (
+            <DateDropdownComponent 
+               currentMonth={currentMonth} 
+               currentYear={currentYear} 
+               todayDate={todayDate} 
+               selectedDate={selectedDate} 
+               setShowDateDropdown={setShowDateDropdown} 
+               setSelectedDate={setSelectedDate} 
+               styles={styles} 
+            />
+          )}
+
+          {/* Absolute Guest Dropdown */}
+          {showGuestDropdown && (
+            <View style={[styles.dropdownMenu, { right: 120, left: 'auto', width: 320, padding: 24 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <View>
+                  <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Adults</Text>
+                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 13 or above</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                  <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
+                  <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{adults}</Text>
+                  <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View>
+                  <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Children</Text>
+                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 2-12</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                  <TouchableOpacity onPress={() => setChildrenCount(Math.max(0, childrenCount - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
+                  <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{childrenCount}</Text>
+                  <TouchableOpacity onPress={() => setChildrenCount(childrenCount + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
-
-        {/* Absolute Service Dropdown */}
-        {showServiceDropdown && (
-          <View style={styles.dropdownMenu}>
-            {servicesList.map((service, idx) => (
-              <TouchableOpacity 
-                key={idx} 
-                style={[styles.dropdownItem, selectedService === service && styles.dropdownItemActive]}
-                onPress={() => { setSelectedService(service); setShowServiceDropdown(false); }}
-              >
-                <Text style={[styles.dropdownItemText, selectedService === service && styles.dropdownItemTextActive]}>{service}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {/* Absolute Location Dropdown */}
-        {showLocationDropdown && (
-          <View style={[styles.dropdownMenu, { left: 160 }]}>
-            {['Helsinki', 'Espoo', 'Vantaa', 'Tampere', 'Turku'].map((loc, idx) => (
-              <TouchableOpacity 
-                key={idx} 
-                style={[styles.dropdownItem, selectedLocation === loc && styles.dropdownItemActive]}
-                onPress={() => { setSelectedLocation(loc); setShowLocationDropdown(false); setShowDateDropdown(true); }}
-              >
-                <Text style={[styles.dropdownItemText, selectedLocation === loc && styles.dropdownItemTextActive]}>{loc}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {/* Absolute Date Dropdown (Modern Calendar) */}
-        {showDateDropdown && (
-          <DateDropdownComponent 
-             currentMonth={currentMonth} 
-             currentYear={currentYear} 
-             todayDate={todayDate} 
-             selectedDate={selectedDate} 
-             setShowDateDropdown={setShowDateDropdown} 
-             setSelectedDate={setSelectedDate} 
-             styles={styles} 
-          />
-        )}
-
-        {/* Absolute Guest Dropdown */}
-        {showGuestDropdown && (
-          <View style={[styles.dropdownMenu, { right: 120, left: 'auto', width: 320, padding: 24 }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <View>
-                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Adults</Text>
-                <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 13 or above</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
-                <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{adults}</Text>
-                <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
-              </View>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View>
-                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Children</Text>
-                <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 2-12</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                <TouchableOpacity onPress={() => setChildrenCount(Math.max(0, childrenCount - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
-                <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{childrenCount}</Text>
-                <TouchableOpacity onPress={() => setChildrenCount(childrenCount + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
       </View>
     </View>
     </>
