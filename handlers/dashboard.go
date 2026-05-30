@@ -18,7 +18,7 @@ type DashboardTag struct {
 	ID        string `json:"id"`
 	OwnerID   string `json:"owner_id"`
 	Status    string `json:"status"`
-	Name      string `json:"name"`
+	Name      string `json:"item_name"`
 	TagType   string `json:"tag_type"`
 	CreatedAt string `json:"created_at"`
 	IsShared  bool   `json:"is_shared"`
