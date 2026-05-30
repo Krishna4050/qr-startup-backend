@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, ChevronRight, CheckCircle, Clock } from 'lucide-react-native';
-import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 
 // Reusable List Row Component (To match the Airbnb screenshot style)
 const EditRow = ({ title, value, hasImage, imageUrl, onPress }: any) => (
@@ -29,13 +29,8 @@ export default function HostShopDetailsScreen() {
     if (!initialShopData && id) {
       const fetchShop = async () => {
         try {
-          const { data, error } = await supabase_lucifer_core
-            .from('shop_locations')
-            .select('*, shop_photos(photo_url)')
-            .eq('id', id)
-            .single();
-          if (error) throw error;
-          if (data) setShopData(data);
+          const res = await apiClient.get(`/api/host/shop/${id}`);
+          if (res.data) setShopData(res.data);
         } catch (e) {
           console.error(e);
         } finally {
@@ -57,7 +52,7 @@ export default function HostShopDetailsScreen() {
     Alert.alert("Coming Soon", "The edit form for this section will be built next!");
   };
 
-  const coverPhoto = shopData?.shop_photos?.[0]?.photo_url || 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150';
+  const coverPhoto = shopData?.photos?.[0] || 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&q=80&w=150&h=150';
 
   if (loading) {
     return (

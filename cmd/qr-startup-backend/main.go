@@ -104,6 +104,11 @@ func main(){
 	mux.HandleFunc("POST /api/call-shop-webhook", handlers.CallShopWebhook)
 	mux.HandleFunc("GET /api/dashboard", middleware.RequireAuth(handlers.GetDashboardData))
 
+	// --- NEW: Shop & Host Upload APIs ---
+	mux.HandleFunc("GET /api/host/shop/{id}", middleware.RequireAuth(handlers.GetHostShopDetailsHandler))
+	mux.HandleFunc("POST /api/upload", middleware.RequireAuth(handlers.UploadAssetHandler))
+
+	// CORS config
 	// Tag Manage API
 	mux.HandleFunc("GET /api/tags/manage/{id}", middleware.RequireAuth(handlers.GetTagManageData))
 	mux.HandleFunc("POST /api/tags/{id}/toggle-status", middleware.RequireAuth(handlers.ToggleTagStatus))

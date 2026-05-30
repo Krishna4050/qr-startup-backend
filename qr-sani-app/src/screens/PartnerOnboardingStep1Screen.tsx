@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
-import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
 
 export default function PartnerOnboardingStep1Screen() {
@@ -41,9 +41,10 @@ export default function PartnerOnboardingStep1Screen() {
     const fetchProfile = async () => {
       if (user) {
         setPrimaryEmail(user.email || '');
-        const { data: profile } = await supabase_lucifer_core.from('profiles').select('phone').eq('id', user.id).single();
-        if (profile?.phone) {
-          setPrimaryPhone(profile.phone);
+        // Try to fetch existing phone from backend
+        const res = await apiClient.get('/api/dashboard');
+        if (res.data?.profile?.phone) {
+          setPrimaryPhone(res.data.profile.phone);
         } else {
           setUsePrimaryPhone(false);
         }

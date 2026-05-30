@@ -4,7 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, ShieldCheck, UploadCloud, FileText } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
 
 export default function PartnerOnboardingVerificationScreen() {
@@ -57,18 +57,23 @@ export default function PartnerOnboardingVerificationScreen() {
   };
 
   const uploadToSupabase = async (localUri: string, bucketPath: string, contentType: string) => {
-    // Memory-safe upload via fetch ArrayBuffer
-    const response = await fetch(localUri);
-    const buffer = await response.arrayBuffer();
-
-    const { data, error } = await supabase_lucifer_core.storage
-      .from('shop_assets')
-      .upload(bucketPath, buffer, { contentType });
-
-    if (error) throw error;
+    const formData = new FormData();
+    const filename = bucketPath.split('/').pop() || 'upload.jpg';
     
-    const { data: publicUrlData } = supabase_lucifer_core.storage.from('shop_assets').getPublicUrl(bucketPath);
-    return publicUrlData.publicUrl;
+    formData.append('file', {
+      uri: localUri,
+      type: contentType,
+      name: filename
+    } as any);
+    formData.append('bucket', 'shop_assets');
+
+    const res = await apiClient.post('/api/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return res.data.publicUrl;
   };
 
   const handleSubmit = async () => {
@@ -130,13 +135,9 @@ export default function PartnerOnboardingVerificationScreen() {
         photoUrls: finalPhotoUrls
       };
 
-      const response = await fetch(`${backendUrl}/api/host/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const response = await apiClient.post('/api/host/register', payload);
 
-      if (!response.ok) {
+      if (response.status >= 400) {
         throw new Error("Backend failed to register the shop. Check server logs.");
       }
 
