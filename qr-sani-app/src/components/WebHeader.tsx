@@ -137,8 +137,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
         <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16 }}>
             <WebLink style={styles.logoSection} screen="Dashboard">
-              <Image source={require('../../assets/icon.png')} style={{ width: 36, height: 36, borderRadius: 8 }} />
-              <Text style={[styles.logoText, { fontSize: 20 }]}>ATS finland</Text>
+              <Image source={require('../../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12 }} />
+              <Text style={[styles.logoText, { fontSize: 24 }]}>ATS finland</Text>
             </WebLink>
             <View style={{ position: 'relative' }}>
               {isGuest ? (
@@ -295,8 +295,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
       <View style={styles.headerContent}>
         {/* Left: Logo */}
         <WebLink style={styles.logoSection} screen="Dashboard">
-          <Image source={require('../../assets/icon.png')} style={{ width: 42, height: 42, borderRadius: 10 }} />
-          <Text style={[styles.logoText, { fontSize: 24 }]}>ATS finland</Text>
+          <Image source={require('../../assets/icon.png')} style={{ width: 56, height: 56, borderRadius: 14 }} />
+          <Text style={[styles.logoText, { fontSize: 28 }]}>ATS finland</Text>
         </WebLink>
 
         {/* Center: Top Tabs */}
