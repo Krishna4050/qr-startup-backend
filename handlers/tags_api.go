@@ -360,11 +360,12 @@ func GetFilteredTags(w http.ResponseWriter, r *http.Request) {
 		WHERE owner_id = $1
 	`
 
-	if filterType == "active" {
+	switch filterType {
+	case "active":
 		query += ` AND status IN ('active', 'found')`
-	} else if filterType == "lost" {
+	case "lost":
 		query += ` AND status = 'lost'`
-	} else if filterType == "archived" {
+	case "archived":
 		query += ` AND status = 'paused'`
 	}
 	query += ` ORDER BY created_at DESC`
