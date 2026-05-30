@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Modal, TextInput, Platform } from 'react-native';
 import { Check, X, Building2, User, Mail, MessageSquare } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import WebFooter from '../components/WebFooter';
 import { useNavigation } from '@react-navigation/native';
 
 export default function PricingScreen() {
@@ -145,6 +146,8 @@ export default function PricingScreen() {
           </View>
         </View>
 
+        <WebFooter />
+
       </ScrollView>
 
       {/* Contact Sales Modal */}
@@ -166,7 +169,7 @@ export default function PricingScreen() {
               <View style={styles.inputWrapper}>
                 <User color="#94A3B8" size={18} style={styles.inputIcon} />
                 <TextInput 
-                  style={styles.input} 
+                  style={[styles.input, Platform.OS === 'web' && { outlineStyle: 'none' } as any]} 
                   placeholder="John Doe" 
                   value={salesForm.name}
                   onChangeText={(txt) => setSalesForm({...salesForm, name: txt})}
@@ -179,7 +182,7 @@ export default function PricingScreen() {
               <View style={styles.inputWrapper}>
                 <Mail color="#94A3B8" size={18} style={styles.inputIcon} />
                 <TextInput 
-                  style={styles.input} 
+                  style={[styles.input, Platform.OS === 'web' && { outlineStyle: 'none' } as any]} 
                   placeholder="john@company.com" 
                   keyboardType="email-address"
                   value={salesForm.email}
@@ -193,7 +196,7 @@ export default function PricingScreen() {
               <View style={styles.inputWrapper}>
                 <Building2 color="#94A3B8" size={18} style={styles.inputIcon} />
                 <TextInput 
-                  style={styles.input} 
+                  style={[styles.input, Platform.OS === 'web' && { outlineStyle: 'none' } as any]} 
                   placeholder="Acme Corp" 
                   value={salesForm.company}
                   onChangeText={(txt) => setSalesForm({...salesForm, company: txt})}
@@ -206,7 +209,7 @@ export default function PricingScreen() {
               <View style={styles.inputWrapper}>
                 <MessageSquare color="#94A3B8" size={18} style={[styles.inputIcon, { alignSelf: 'flex-start', marginTop: 12 }]} />
                 <TextInput 
-                  style={[styles.input, styles.textArea]} 
+                  style={[styles.input, styles.textArea, Platform.OS === 'web' && { outlineStyle: 'none' } as any]} 
                   placeholder="Tell us about your requirements..." 
                   multiline={true}
                   numberOfLines={4}
@@ -514,8 +517,6 @@ const styles = StyleSheet.create({
     height: 48,
     color: '#0A192F',
     fontSize: 16,
-    // @ts-ignore: web only
-    outlineStyle: 'none',
   },
   textArea: {
     height: 100,
