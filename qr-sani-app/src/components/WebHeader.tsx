@@ -282,9 +282,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View>
-                <Text style={styles.searchTitle}>Service</Text>
-                <Text style={styles.searchSub}>{selectedService}</Text>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.searchTitle} numberOfLines={1}>Service</Text>
+                <Text style={styles.searchSub} numberOfLines={1}>{selectedService}</Text>
               </View>
               <ChevronDown color="#94A3B8" size={16} />
             </View>
@@ -296,8 +296,10 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
             onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
           >
-            <Text style={styles.searchTitle}>{isTravel ? 'Destination' : 'Where'}</Text>
-            <Text style={styles.searchSub}>{selectedLocation}</Text>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Destination' : 'Where'}</Text>
+              <Text style={styles.searchSub} numberOfLines={1}>{selectedLocation}</Text>
+            </View>
           </TouchableOpacity>
           
           <View style={styles.divider} />
@@ -306,8 +308,10 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             style={[styles.searchSection, showDateDropdown && styles.activeSection]}
             onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
           >
-            <Text style={styles.searchTitle}>{isTravel ? 'Departure' : 'When'}</Text>
-            <Text style={styles.searchSub}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Departure' : 'When'}</Text>
+              <Text style={styles.searchSub} numberOfLines={1}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
+            </View>
           </TouchableOpacity>
           
           {requiresGuests && (
@@ -317,8 +321,10 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 style={[styles.searchSection, showGuestDropdown && styles.activeSection]}
                 onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
               >
-                <Text style={styles.searchTitle}>Who</Text>
-                <Text style={styles.searchSub}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={styles.searchTitle} numberOfLines={1}>Who</Text>
+                  <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
+                </View>
               </TouchableOpacity>
             </>
           )}
@@ -496,10 +502,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   searchPillContainer: {
-    flex: 0,
+    flex: 2,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 5,
+    paddingHorizontal: 16,
   },
   rightActions: {
     flex: 1,
