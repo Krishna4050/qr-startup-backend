@@ -14,7 +14,7 @@ export default function NotificationsScreen() {
   useEffect(() => {
     fetchNotifications();
     markAllAsRead();
-  }, []);
+  }, [user?.id]);
 
   const fetchNotifications = async () => {
     try {

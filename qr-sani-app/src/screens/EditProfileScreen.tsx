@@ -26,7 +26,7 @@ export default function EditProfileScreen() {
 
   useEffect(() => {
     loadCurrentData();
-  }, []);
+  }, [user?.id]);
 
   const loadCurrentData = async () => {
     try {

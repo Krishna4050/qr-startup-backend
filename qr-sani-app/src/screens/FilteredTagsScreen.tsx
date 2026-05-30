@@ -20,7 +20,7 @@ export default function FilteredTagsScreen() {
 
   useEffect(() => {
     if (isFocused) fetchTags();
-  }, [isFocused]);
+  }, [isFocused, user?.id]);
 
   const fetchTags = async () => {
     setLoading(true);

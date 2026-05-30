@@ -52,7 +52,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     fetchProfileData();
-  }, []);
+  }, [user?.id]);
 
   const handleLogout = async () => {
     const { error } = await supabase_lucifer_core.auth.signOut();

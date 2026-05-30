@@ -31,7 +31,7 @@ export default function TagManageScreen() {
 
   useEffect(() => {
     fetchTagAndNetwork();
-  }, []);
+  }, [currentUser?.id]);
 
   const fetchTagAndNetwork = async () => {
     setLoading(true);

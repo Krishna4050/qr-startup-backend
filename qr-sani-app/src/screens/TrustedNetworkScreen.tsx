@@ -17,7 +17,7 @@ export default function TrustedNetworkScreen() {
 
   useEffect(() => {
     fetchNetwork();
-  }, []);
+  }, [currentUser?.id]);
 
   const fetchNetwork = async () => {
     setLoading(true);

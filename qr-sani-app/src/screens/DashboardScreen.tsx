@@ -439,7 +439,7 @@ export default function DashboardScreen() {
                 <View style={[styles.tagIconWrapper, tag.is_shared && { backgroundColor: '#EFF6FF' }]}>
                   {tag.is_shared ? <Users color="#2563EB" size={20} /> : <Tag color="#0F2D4D" size={20} />}
                 </View>
-                <TouchableOpacity style={[styles.lostModeBtn, { backgroundColor: tag.status === 'lost' ? '#FEF2F2' : '#F3F4F6' }]} onPress={() => toggleLostMode(tag)}>
+                <TouchableOpacity style={[styles.lostModeBtn, { backgroundColor: tag.status === 'lost' ? '#FEF2F2' : '#F3F4F6' }]} onPress={(e) => { e.stopPropagation(); toggleLostMode(tag); }}>
                   <ShieldAlert color={tag.status === 'lost' ? '#EF4444' : '#9CA3AF'} size={18} />
                   <Text style={[styles.lostModeText, { color: tag.status === 'lost' ? '#EF4444' : '#6B7280' }]}>{tag.status === 'lost' ? 'Lost Mode: ON' : 'Mark as Lost'}</Text>
                 </TouchableOpacity>

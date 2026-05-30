@@ -26,7 +26,7 @@ export default function SharedTagsScreen() {
       return;
     }
     fetchSharingData();
-  }, []);
+  }, [friendId, user?.id]);
 
   const fetchSharingData = async () => {
     setLoading(true);

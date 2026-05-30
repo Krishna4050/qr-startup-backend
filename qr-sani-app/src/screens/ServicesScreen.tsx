@@ -57,7 +57,6 @@ export default function ServicesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FAFAFC' }}>
-      <WebLayout defaultService="Vehicle Repair">
       
       {/* Mobile App Header (Hidden on Web) */}
       {!isWeb && (
@@ -129,9 +128,7 @@ export default function ServicesScreen() {
               ))}
           </View>
         </View>
-        <WebFooter />
       </RefreshableScroll>
-      </WebLayout>
     </View>
   );
 }
