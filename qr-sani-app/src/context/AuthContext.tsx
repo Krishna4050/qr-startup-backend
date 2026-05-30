@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { Platform } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking'; // NEW: Deep Linking Engine
 import { supabase_lucifer_core } from '../utils/supabase';
@@ -109,6 +110,15 @@ export const AuthProvider = ({ children }: any) => {
     } catch (e) {
       console.warn("Signout timed out, forcefully clearing session");
     } finally {
+      if (Platform.OS === 'web') {
+        // Find and remove specifically the Supabase auth token to truly log out
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.includes('-auth-token')) {
+            localStorage.removeItem(key);
+          }
+        }
+      }
       set_mayalu_session(null);
       set_is_sani_loading(false);
     }
