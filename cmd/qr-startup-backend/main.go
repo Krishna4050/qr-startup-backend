@@ -104,6 +104,20 @@ func main(){
 	mux.HandleFunc("POST /api/call-shop-webhook", handlers.CallShopWebhook)
 	mux.HandleFunc("GET /api/dashboard", middleware.RequireAuth(handlers.GetDashboardData))
 
+	// Tag Manage API
+	mux.HandleFunc("GET /api/tags/manage/{id}", middleware.RequireAuth(handlers.GetTagManageData))
+	mux.HandleFunc("POST /api/tags/{id}/toggle-status", middleware.RequireAuth(handlers.ToggleTagStatus))
+	mux.HandleFunc("POST /api/tags/{id}/update", middleware.RequireAuth(handlers.UpdateTagDetails))
+	mux.HandleFunc("POST /api/tags/{id}/share", middleware.RequireAuth(handlers.ToggleTagShare))
+	mux.HandleFunc("DELETE /api/tags/{id}", middleware.RequireAuth(handlers.DeleteTag))
+	mux.HandleFunc("GET /api/tags/filter", middleware.RequireAuth(handlers.GetFilteredTags))
+	mux.HandleFunc("GET /api/tags/shared/{friendId}", middleware.RequireAuth(handlers.GetSharedTagsWithFriend))
+
+	// Network API
+	mux.HandleFunc("GET /api/network", middleware.RequireAuth(handlers.GetTrustedNetwork))
+	mux.HandleFunc("POST /api/network/invite", middleware.RequireAuth(handlers.FinalizeNetworkInvite))
+	mux.HandleFunc("DELETE /api/network/{id}", middleware.RequireAuth(handlers.RemoveNetworkMember))
+
 	//start the server
 	fmt.Printf("Server is starting on http://localhost:%s\n", port)
 
