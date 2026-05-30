@@ -10,7 +10,7 @@ import (
 
 type NetworkMemberInfo struct {
 	ID        string `json:"id"`
-	Email     string `json:"member_email"`
+	Email     string `json:"friend_name"`
 	Status    string `json:"status"`
 	OwnerID   string `json:"owner_id"`
 	FriendID  string `json:"friend_id"`

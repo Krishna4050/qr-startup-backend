@@ -107,6 +107,7 @@ func main(){
 	// Tag Manage API
 	mux.HandleFunc("GET /api/tags/manage/{id}", middleware.RequireAuth(handlers.GetTagManageData))
 	mux.HandleFunc("POST /api/tags/{id}/toggle-status", middleware.RequireAuth(handlers.ToggleTagStatus))
+	mux.HandleFunc("POST /api/tags/{id}/set-status", middleware.RequireAuth(handlers.SetTagStatus))
 	mux.HandleFunc("POST /api/tags/{id}/update", middleware.RequireAuth(handlers.UpdateTagDetails))
 	mux.HandleFunc("POST /api/tags/{id}/share", middleware.RequireAuth(handlers.ToggleTagShare))
 	mux.HandleFunc("DELETE /api/tags/{id}", middleware.RequireAuth(handlers.DeleteTag))

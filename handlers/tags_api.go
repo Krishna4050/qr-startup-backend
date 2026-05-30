@@ -469,3 +469,53 @@ func GetSharedTagsWithFriend(w http.ResponseWriter, r *http.Request) {
 		"shared_with_ids": sharedWithIds,
 	})
 }
+
+func SetTagStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, ok := r.Context().Value("userID").(string)
+	if !ok || userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tagID := r.PathValue("id")
+	if tagID == "" {
+		http.Error(w, "Missing tag ID", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
+
+	// Verify ownership
+	var ownerID string
+	err := database.DB.QueryRow(`SELECT owner_id::text FROM public.qr_tags WHERE id = $1`, tagID).Scan(&ownerID)
+	if err != nil {
+		http.Error(w, "Tag not found", http.StatusNotFound)
+		return
+	}
+
+	if ownerID != userID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	_, err = database.DB.Exec(`UPDATE public.qr_tags SET status = $1 WHERE id = $2`, req.Status, tagID)
+	if err != nil {
+		http.Error(w, "Failed to set status", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success", "new_status": req.Status})
+}
