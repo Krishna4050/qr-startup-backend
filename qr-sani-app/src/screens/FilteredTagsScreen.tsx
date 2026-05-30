@@ -26,23 +26,6 @@ export default function FilteredTagsScreen() {
     setLoading(true);
     try {
       if (!user) return;
-
-      // 1. My Tags
-      const { data: myTags } = await supabase_lucifer_core.from('qr_tags').select('*').eq('owner_id', user.id).eq('status', filterType);
-
-      // 2. Shared Tags
-      const { data: sharedIdsData } = await supabase_lucifer_core.from('shared_tags').select('tag_id, owner_id').eq('shared_with_id', user.id);
-
-      let sharedTags: any[] = [];
-      if (sharedIdsData && sharedIdsData.length > 0) {
-        const sharedIds = sharedIdsData.map(row => row.tag_id);
-        const { data: sharedTagsData } = await supabase_lucifer_core.from('qr_tags').select('*').in('id', sharedIds).eq('status', filterType);
-        
-        if (sharedTagsData) {
-          const ownerIds = [...new Set(sharedIdsData.map(row => row.owner_id))];
-          const { data: owners } = await supabase_lucifer_core.from('profiles').select('id, display_name, username').in('id', ownerIds);
-
-          sharedTags = sharedTagsData.map(tag => {
             const shareRecord = sharedIdsData.find(s => s.tag_id === tag.id);
             const owner = owners?.find((o: any) => o.id === shareRecord?.owner_id);
             return {

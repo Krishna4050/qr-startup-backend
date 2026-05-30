@@ -23,28 +23,11 @@ export default function TrustedNetworkScreen() {
     setLoading(true);
     try {
       if (!currentUser) return;
-
-      const { data, error } = await supabase_lucifer_core.from('trusted_network').select('*').or(`owner_id.eq.${currentUser.id},member_email.ilike.${currentUser.email}`).order('created_at', { ascending: false });
-      if (error) throw error;
-
-      const enrichedData = await Promise.all((data || []).map(async (member) => {
-        if (member.owner_id !== currentUser.id) {
-          const { data: ownerEmail } = await supabase_lucifer_core.rpc('get_email_by_user_id', { target_id: member.owner_id });
-          return { ...member, friend_id: member.owner_id, friend_name: ownerEmail || 'Connected Friend' };
-        } else {
-          const { data: profile } = await supabase_lucifer_core.from('profiles').select('id').ilike('username', member.member_email).maybeSingle();
-          let targetId = profile?.id;
-          if (!targetId) {
-            const { data: rpcId } = await supabase_lucifer_core.rpc('get_user_id_by_email', { lookup_email: member.member_email });
-            targetId = rpcId;
-          }
-          return { ...member, friend_id: targetId || null, friend_name: member.member_email };
-        }
-      }));
-
-      setNetwork(enrichedData);
-    } catch (err) {
-      console.error(err);
+      const res = await apiClient.get('/api/network');
+      setNetwork(res.data.network || []);
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert("Error", "Could not load trusted network.");
     } finally {
       setLoading(false);
     }
@@ -52,96 +35,37 @@ export default function TrustedNetworkScreen() {
 
   const handleInvite = async () => {
     const emailToInvite = inviteEmail.toLowerCase().trim();
-    if (!emailToInvite || !emailToInvite.includes('@')) { Alert.alert("Invalid Email", "Please enter a valid email address."); return; }
-    setIsInviting(true);
-    try {
-      if (!currentUser) throw new Error("Not logged in");
-      if (emailToInvite === currentUser.email?.toLowerCase()) { Alert.alert("Error", "You cannot invite yourself."); setIsInviting(false); return; }
-
-      const { data: targetUserId, error: rpcError } = await supabase_lucifer_core.rpc('get_user_id_by_email', { lookup_email: emailToInvite });
-      if (rpcError) throw rpcError;
-      const userExists = !!targetUserId; 
-
-      let orQuery = `and(owner_id.eq.${currentUser.id},member_email.ilike.${emailToInvite})`;
-      if (userExists && targetUserId) {
-          orQuery += `,and(member_email.ilike.${currentUser.email},owner_id.eq.${targetUserId})`;
-      }
-
-      const { data: existingConnection } = await supabase_lucifer_core.from('trusted_network').select('status').or(orQuery).maybeSingle();
-      if (existingConnection) { Alert.alert("Already Connected", `You already have a ${existingConnection.status} connection with this person.`); setIsInviting(false); return; }
-
-      if (!userExists) {
-        setIsInviting(false);
-        Alert.alert("Account Not Found", `${emailToInvite} does not have an account yet. Send invite anyway?`, [
-            { text: "Cancel", style: "cancel" },
-            { text: "Send", onPress: () => finalizeInvite(emailToInvite, currentUser.id, false, null) }
-        ]);
-        return;
-      } else {
-        await finalizeInvite(emailToInvite, currentUser.id, true, targetUserId);
-      }
-    } catch (err: any) {
-      Alert.alert("Error", err.message);
-      setIsInviting(false);
+    if (!emailToInvite || !emailToInvite.includes('@')) {
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
     }
-  };
+    
+    if (emailToInvite.toLowerCase() === currentUser?.email?.toLowerCase()) {
+      Alert.alert("Wait a minute!", "You cannot invite yourself.");
+      return;
+    }
 
-  const finalizeInvite = async (email: string, ownerId: string, userExists: boolean, targetUserId: string | null) => {
     setIsInviting(true);
     try {
-      const { data: inviteData, error: inviteError } = await supabase_lucifer_core.from('trusted_network').insert({ owner_id: ownerId, member_email: email, status: 'pending' }).select().single();
-      if (inviteError) {
-        if (inviteError.code === '23505') throw new Error("This person is already invited.");
-        throw inviteError;
-      }
-
-      const { data: profile } = await supabase_lucifer_core.from('profiles').select('display_name, username').eq('id', ownerId).maybeSingle();
-      const inviterName = profile?.display_name || profile?.username || 'A friend';
-
-      if (userExists && targetUserId) {
-          await supabase_lucifer_core.from('notifications').insert({
-            user_id: targetUserId,
-            title: "New Network Invite",
-            body: `${inviterName} wants to add you to their trusted network!`,
-            category: "invite", 
-            action_data: { invite_id: inviteData.id }
-          });
-      }
-
-      // --- RESTORED: SEND THE ACTUAL EMAIL ---
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-      if (backendUrl) {
-        await fetch(`${backendUrl}/api/invite`, { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ email: email, inviter_name: inviterName, is_registered: userExists }) 
-        });
-      }
-
-      Alert.alert("Invite Sent!", `An invitation was sent to ${email}.`);
+      const res = await apiClient.post('/api/network/invite', { email: emailToInvite });
+      Alert.alert("Success", res.data.user_exists ? "They have been added to your network." : "Invitation sent! They need to register first.");
       setInviteEmail('');
       fetchNetwork();
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Could not send the invite right now.");
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert("Error", error.response?.data || "Could not process invitation.");
     } finally {
       setIsInviting(false);
     }
   };
 
-  const removeMember = (id: string, friendId: string | null) => {
-    Alert.alert("Remove Connection", "Are you sure you want to remove this person? All tags shared between you will be unshared.", [
+  const handleRemoveConnection = async (connectionId: string, email: string) => {
+    Alert.alert("Remove Connection", `Are you sure you want to remove ${email} from your network?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Remove", style: "destructive", onPress: async () => {
           try {
-            await supabase_lucifer_core.from('trusted_network').delete().eq('id', id);
-            if (friendId && currentUser) {
-              await supabase_lucifer_core.from('shared_tags').delete().match({ owner_id: currentUser.id, shared_with_id: friendId });
-              await supabase_lucifer_core.from('shared_tags').delete().match({ owner_id: friendId, shared_with_id: currentUser.id });
-            }
+            await apiClient.delete(`/api/network/${connectionId}`);
             fetchNetwork();
-          } catch (error) {
-            Alert.alert("Error", "Could not remove member completely.");
-          }
         }
       }
     ]);
@@ -199,7 +123,7 @@ export default function TrustedNetworkScreen() {
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {member.status === 'accepted' && <ChevronRight color="#9CA3AF" size={20} style={{ marginRight: 12 }} />}
-                  <TouchableOpacity style={styles.deleteBtn} onPress={() => removeMember(member.id, member.friend_id)}>
+                  <TouchableOpacity style={styles.deleteBtn} onPress={() => handleRemoveConnection(member.id, member.friend_name || member.member_email)}>
                     <Trash2 color="#EF4444" size={18} />
                   </TouchableOpacity>
                 </View>

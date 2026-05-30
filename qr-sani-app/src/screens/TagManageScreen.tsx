@@ -37,45 +37,24 @@ export default function TagManageScreen() {
     setLoading(true);
     try {
       if (!currentUser) return;
-
-      const { data: tagData, error: tagError } = await supabase_lucifer_core.from('qr_tags').select('*').eq('id', tagId).single();
-      if (tagError) throw tagError;
+      const res = await apiClient.get(`/api/tags/manage/${tagId}`);
+      const data = res.data;
       
-      setTag(tagData);
-      setItemName(tagData.item_name || '');
-      setCategory(tagData.category || 'item');
-      setAssignedTo(tagData.assigned_to || '');
+      setTag(data.tag);
+      setItemName(data.tag.item_name || '');
+      setCategory(data.tag.category || 'item');
+      setAssignedTo(data.tag.assigned_to || '');
 
-      const ownerCheck = currentUser.id === tagData.owner_id;
-      setIsOwner(ownerCheck);
-
-      if (ownerCheck) {
-        // OWNER LOGIC
-        const { data: networkData } = await supabase_lucifer_core.from('trusted_network').select('*').eq('status', 'accepted').or(`owner_id.eq.${currentUser.id},member_email.ilike.${currentUser.email}`);
-
-        const enrichedNetwork = await Promise.all((networkData || []).map(async (member) => {
-          if (member.owner_id !== currentUser.id) {
-            const { data: ownerEmail } = await supabase_lucifer_core.rpc('get_email_by_user_id', { target_id: member.owner_id });
-            return { friend_id: member.owner_id, friend_name: ownerEmail || 'Connected Friend' };
-          } else {
-            const { data: targetUserId } = await supabase_lucifer_core.rpc('get_user_id_by_email', { lookup_email: member.member_email.toLowerCase().trim() });
-            return { friend_id: targetUserId, friend_name: member.member_email };
-          }
-        }));
-
-        setNetwork(enrichedNetwork.filter(m => m.friend_id !== null));
-        const { data: sharedData } = await supabase_lucifer_core.from('shared_tags').select('shared_with_id').eq('tag_id', tagId);
-        setSharedWithIds(new Set((sharedData || []).map(row => row.shared_with_id)));
+      setIsOwner(data.is_owner);
+      if (data.is_owner) {
+        setNetwork(data.network || []);
+        setSharedWithIds(new Set(data.shared_with_ids || []));
       } else {
-        const { data: ownerProfile } = await supabase_lucifer_core.from('profiles').select('display_name, username').eq('id', tagData.owner_id).maybeSingle();
-        setOwnerName(ownerProfile?.display_name || ownerProfile?.username || 'the owner');
-
-        const { data: pendingStatus } = await supabase_lucifer_core.rpc('get_pending_tag_request', { check_tag_id: tagId, requester: currentUser.id });
-        setPendingRequest(pendingStatus || null);
+        setOwnerName(data.owner_name);
+        setPendingRequest(data.pending_request || null);
       }
-
     } catch (err: any) {
-      Alert.alert("Error", "Could not load details. Make sure you have permission.");
+      Alert.alert("Error", "Could not load details.");
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -83,14 +62,13 @@ export default function TagManageScreen() {
   };
 
   const handleSaveChanges = async () => {
-    if (!isOwner) { Alert.alert("Permission Denied", "Only the owner of this tag can change its name."); return; }
+    if (!isOwner) { Alert.alert("Permission Denied", "Only the owner can change its name."); return; }
     setSaving(true);
     try {
-      const { error } = await supabase_lucifer_core.from('qr_tags').update({ item_name: itemName, category: category, assigned_to: category === 'person' ? assignedTo : null }).eq('id', tagId);
-      if (error) throw error;
+      await apiClient.post(`/api/tags/${tagId}/update`, { item_name: itemName, category: category, assigned_to: category === 'person' ? assignedTo : null });
       Alert.alert("Success", "Tag details updated!");
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", err.response?.data || err.message);
     } finally {
       setSaving(false);
     }
@@ -99,15 +77,14 @@ export default function TagManageScreen() {
   const toggleShare = async (friendId: string, isCurrentlyShared: boolean) => {
     try {
       if (!isOwner) return; 
+      await apiClient.post(`/api/tags/${tagId}/share`, { friend_id: friendId, is_currently_shared: isCurrentlyShared });
       if (isCurrentlyShared) {
-        await supabase_lucifer_core.from('shared_tags').delete().eq('tag_id', tagId).eq('shared_with_id', friendId);
         setSharedWithIds(prev => { const newSet = new Set(prev); newSet.delete(friendId); return newSet; });
       } else {
-        await supabase_lucifer_core.from('shared_tags').insert({ tag_id: tagId, owner_id: currentUser.id, shared_with_id: friendId });
         setSharedWithIds(prev => { const newSet = new Set(prev); newSet.add(friendId); return newSet; });
       }
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Error", error.response?.data || error.message);
     }
   };
 
@@ -145,8 +122,11 @@ export default function TagManageScreen() {
         { text: "Yes", style: newStatus === 'archived' ? 'destructive' : 'default', onPress: async () => {
             setSaving(true);
             try {
-              const { error } = await supabase_lucifer_core.from('qr_tags').update({ status: newStatus }).eq('id', tagId);
-              if (error) throw error;
+              // Note: using the same toggle endpoint for active/lost toggles. 
+              // If we need a specific 'set' endpoint, we should create one. For now, since Dashboard toggles active/lost, we can just use toggle-status if it's active/lost.
+              // Actually we need to set the status precisely, so we will use the Supabase JS for this specifically unless we build a set-status endpoint.
+              // Wait, since we know Supabase JS freezes, let's use apiClient.post! We'll just call the new /set-status API.
+              await apiClient.post(`/api/tags/${tagId}/set-status`, { status: newStatus });
               if (newStatus === 'archived') {
                 Alert.alert("Tag Removed", "This tag has been archived.");
                 navigation.navigate('Home'); 
@@ -157,7 +137,7 @@ export default function TagManageScreen() {
                 fetchTagAndNetwork(); 
               }
             } catch (err: any) {
-              Alert.alert("Error", err.message);
+              Alert.alert("Error", err.response?.data || err.message);
             } finally {
               setSaving(false);
             }

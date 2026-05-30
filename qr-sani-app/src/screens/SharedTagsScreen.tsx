@@ -33,35 +33,6 @@ export default function SharedTagsScreen() {
     try {
       if (!user) return;
 
-      // 1. Fetch My Tags
-      const { data: myTagsData } = await supabase_lucifer_core
-        .from('qr_tags')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      setMyTags(myTagsData || []);
-
-      // 2. Fetch which of my tags I am currently sharing with this friend
-      const { data: mySharedData } = await supabase_lucifer_core
-        .from('shared_tags')
-        .select('tag_id')
-        .eq('owner_id', user.id)
-        .eq('shared_with_id', friendId);
-
-      const sharedSet = new Set((mySharedData || []).map(row => row.tag_id));
-      setSharedTagIds(sharedSet);
-
-      // 3. Fetch tags THEY own and have shared with ME
-      // First, get the IDs of tags shared with me by them
-      const { data: sharedWithMeData } = await supabase_lucifer_core
-        .from('shared_tags')
-        .select('tag_id')
-        .eq('owner_id', friendId)
-        .eq('shared_with_id', user.id);
-
-      const theirSharedTagIds = (sharedWithMeData || []).map(row => row.tag_id);
-
       // Then, fetch the actual tag details for those IDs
       if (theirSharedTagIds.length > 0) {
         const { data: theirTagsData } = await supabase_lucifer_core

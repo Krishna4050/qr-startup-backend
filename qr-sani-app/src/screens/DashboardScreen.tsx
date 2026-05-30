@@ -153,16 +153,15 @@ export default function DashboardScreen() {
         navigation.navigate('TagManage', { tagId: tag.id });
         return;
     }
-    const newStatus = tag.status === 'active' ? 'lost' : 'active';
-    const actionText = newStatus === 'lost' ? 'Marked as Lost' : 'Marked as Active';
 
     try {
-      const { error } = await supabase_lucifer_core.from('qr_tags').update({ status: newStatus }).eq('id', tag.id);
-      if (error) throw error;
-      Alert.alert(actionText, `${tag.item_name} is now ${newStatus}.`);
+      const res = await apiClient.post(`/api/tags/${tag.id}/toggle-status`);
+      const newStatus = res.data.new_status;
+      const actionText = newStatus === 'lost' ? 'Marked as Lost' : 'Marked as Active';
+      Alert.alert(actionText, `${tag.item_name || 'Item'} is now ${newStatus}.`);
       fetchDashboardData(); 
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Error", error.response?.data || error.message);
     }
   };
 
