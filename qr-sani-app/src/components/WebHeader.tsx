@@ -47,7 +47,7 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
 export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defaultService?: string }) {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
-  const isMobileWeb = width < 768;
+  const isMobileWeb = width < 1024;
 
   // --- AUTHENTICATION STATE ---
   const { user, logout } = useAuth();
@@ -481,12 +481,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
     height: 80,
-    position: 'relative',
   },
   logoSection: {
-    zIndex: 10,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   logoText: {
     fontSize: 22,
@@ -496,13 +496,17 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   searchPillContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
+    flex: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    pointerEvents: 'box-none',
     zIndex: 5,
+  },
+  rightActions: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 16,
   },
   mobileSearchPill: {
     marginTop: 16,
@@ -672,12 +676,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#00E5FF',
   },
-  rightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    flex: 1,
-  },
+
   actionBtn: {
     paddingHorizontal: 12,
     paddingVertical: 10,
