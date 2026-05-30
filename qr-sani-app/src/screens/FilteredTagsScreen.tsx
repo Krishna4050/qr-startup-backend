@@ -4,6 +4,8 @@ import { useNavigation, useRoute, useIsFocused } from '@react-navigation/native'
 import { ArrowLeft, Tag, PauseCircle, Archive, Users } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
 
+import { useAuth } from '../context/AuthContext';
+
 export default function FilteredTagsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -14,6 +16,7 @@ export default function FilteredTagsScreen() {
 
   const [tags, setTags] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (isFocused) fetchTags();
@@ -22,7 +25,6 @@ export default function FilteredTagsScreen() {
   const fetchTags = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) return;
 
       // 1. My Tags

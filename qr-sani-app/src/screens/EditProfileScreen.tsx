@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingVi
 import { ArrowLeft, Save, User, Phone, MapPin, FileText, Calendar, Hash, Home as HomeIcon, Pencil, CheckCircle, XCircle } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export default function EditProfileScreen() {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const { user } = useAuth();
 
   // Form Data State
   const [formData, setFormData] = useState({
@@ -28,7 +30,6 @@ export default function EditProfileScreen() {
 
   const loadCurrentData = async () => {
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) return;
 
       const { data } = await supabase_lucifer_core.from('profiles').select('*').eq('id', user.id).single();
@@ -148,7 +149,6 @@ export default function EditProfileScreen() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) throw new Error("Not logged in");
 
       const { error } = await supabase_lucifer_core.from('profiles').update({

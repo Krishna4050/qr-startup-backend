@@ -204,7 +204,6 @@ export default function DashboardScreen() {
   const uploadAvatar = async (base64Image: string) => {
     setUploading(true);
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) throw new Error("No user found");
 
       const filePath = `${user.id}/avatar.jpg`;

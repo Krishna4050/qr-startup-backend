@@ -5,11 +5,13 @@ import { ArrowLeft, ShieldCheck, UploadCloud, FileText } from 'lucide-react-nati
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase_lucifer_core } from '../utils/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export default function PartnerOnboardingVerificationScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { shopData } = route.params || {};
+  const { user } = useAuth();
 
   React.useEffect(() => {
     if (!shopData) {
@@ -77,7 +79,6 @@ export default function PartnerOnboardingVerificationScreen() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) throw new Error("You must be logged in.");
       const timestamp = Date.now();
 

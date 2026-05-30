@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingVi
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ShieldCheck, Tag, KeyRound, ArrowLeft, Info } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export default function TagRegistrationScreen() {
   const navigation = useNavigation<any>();
@@ -12,6 +13,7 @@ export default function TagRegistrationScreen() {
   const [itemName, setItemName] = useState('');
   const [activationPin, setActivationPin] = useState('');
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   const handleRegisterTag = async () => {
     if (!itemName.trim()) {
@@ -26,7 +28,6 @@ export default function TagRegistrationScreen() {
     setLoading(true);
 
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) throw new Error("You must be logged in.");
 
       const { data: vaultTag, error: vaultError } = await supabase_lucifer_core

@@ -16,10 +16,12 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export default function PartnerOnboardingStep1Screen() {
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   const [shopName, setShopName] = useState('');
   const [street, setStreet] = useState('');
@@ -37,7 +39,6 @@ export default function PartnerOnboardingStep1Screen() {
 
   React.useEffect(() => {
     const fetchProfile = async () => {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (user) {
         setPrimaryEmail(user.email || '');
         const { data: profile } = await supabase_lucifer_core.from('profiles').select('phone').eq('id', user.id).single();
@@ -49,7 +50,7 @@ export default function PartnerOnboardingStep1Screen() {
       }
     };
     fetchProfile();
-  }, []);
+  }, [user]);
 
   const handleNext = async () => {
     // UPDATED VALIDATION: Email is no longer required here
@@ -63,7 +64,6 @@ export default function PartnerOnboardingStep1Screen() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) throw new Error("You must be logged in to create a listing.");
 
       // THE FALLBACK LOGIC: If they leave it blank, use their account email

@@ -5,12 +5,14 @@ import { useNavigation } from '@react-navigation/native';
 import { Archive /* ...other icons */ } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
+import { useAuth } from '../context/AuthContext';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
   const [completionPercentage, setCompletionPercentage] = useState(0);
+  const { user } = useAuth();
 
   // Local UI States
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -19,7 +21,6 @@ export default function ProfileScreen() {
 
   const fetchProfileData = async () => {
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) return;
       
       const { data, error } = await supabase_lucifer_core

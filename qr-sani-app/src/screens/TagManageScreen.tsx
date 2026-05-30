@@ -4,6 +4,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Tag, User, PauseCircle, Trash2, ShieldAlert, Save, ShieldCheck, Share2, RefreshCw, Clock } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
 
+import { useAuth } from '../context/AuthContext';
+
 export default function TagManageScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -13,8 +15,8 @@ export default function TagManageScreen() {
   const [saving, setSaving] = useState(false);
   const [tag, setTag] = useState<any>(null);
   
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isOwner, setIsOwner] = useState(true); 
+  const { user: currentUser } = useAuth();
+  const [isOwner, setIsOwner] = useState(true);
 
   // --- NEW: Pending Request States ---
   const [pendingRequest, setPendingRequest] = useState<string | null>(null);
@@ -34,9 +36,7 @@ export default function TagManageScreen() {
   const fetchTagAndNetwork = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
-      if (!user) return;
-      setCurrentUser(user);
+      if (!currentUser) return;
 
       const { data: tagData, error: tagError } = await supabase_lucifer_core.from('qr_tags').select('*').eq('id', tagId).single();
       if (tagError) throw tagError;
@@ -46,15 +46,15 @@ export default function TagManageScreen() {
       setCategory(tagData.category || 'item');
       setAssignedTo(tagData.assigned_to || '');
 
-      const ownerCheck = user.id === tagData.owner_id;
+      const ownerCheck = currentUser.id === tagData.owner_id;
       setIsOwner(ownerCheck);
 
       if (ownerCheck) {
         // OWNER LOGIC
-        const { data: networkData } = await supabase_lucifer_core.from('trusted_network').select('*').eq('status', 'accepted').or(`owner_id.eq.${user.id},member_email.ilike.${user.email}`);
+        const { data: networkData } = await supabase_lucifer_core.from('trusted_network').select('*').eq('status', 'accepted').or(`owner_id.eq.${currentUser.id},member_email.ilike.${currentUser.email}`);
 
         const enrichedNetwork = await Promise.all((networkData || []).map(async (member) => {
-          if (member.owner_id !== user.id) {
+          if (member.owner_id !== currentUser.id) {
             const { data: ownerEmail } = await supabase_lucifer_core.rpc('get_email_by_user_id', { target_id: member.owner_id });
             return { friend_id: member.owner_id, friend_name: ownerEmail || 'Connected Friend' };
           } else {
@@ -67,11 +67,10 @@ export default function TagManageScreen() {
         const { data: sharedData } = await supabase_lucifer_core.from('shared_tags').select('shared_with_id').eq('tag_id', tagId);
         setSharedWithIds(new Set((sharedData || []).map(row => row.shared_with_id)));
       } else {
-        // --- NEW: GUEST LOGIC (Check for pending requests) ---
         const { data: ownerProfile } = await supabase_lucifer_core.from('profiles').select('display_name, username').eq('id', tagData.owner_id).maybeSingle();
         setOwnerName(ownerProfile?.display_name || ownerProfile?.username || 'the owner');
 
-        const { data: pendingStatus } = await supabase_lucifer_core.rpc('get_pending_tag_request', { check_tag_id: tagId, requester: user.id });
+        const { data: pendingStatus } = await supabase_lucifer_core.rpc('get_pending_tag_request', { check_tag_id: tagId, requester: currentUser.id });
         setPendingRequest(pendingStatus || null);
       }
 

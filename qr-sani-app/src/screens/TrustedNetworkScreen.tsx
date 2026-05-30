@@ -4,6 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Users, Mail, Plus, Trash2, Clock, CheckCircle, ChevronRight } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
 
+import { useAuth } from '../context/AuthContext';
+
 export default function TrustedNetworkScreen() {
   const navigation = useNavigation<any>();
 
@@ -11,7 +13,7 @@ export default function TrustedNetworkScreen() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [network, setNetwork] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     fetchNetwork();
@@ -20,15 +22,13 @@ export default function TrustedNetworkScreen() {
   const fetchNetwork = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
-      if (!user) return;
-      setCurrentUser(user);
+      if (!currentUser) return;
 
-      const { data, error } = await supabase_lucifer_core.from('trusted_network').select('*').or(`owner_id.eq.${user.id},member_email.ilike.${user.email}`).order('created_at', { ascending: false });
+      const { data, error } = await supabase_lucifer_core.from('trusted_network').select('*').or(`owner_id.eq.${currentUser.id},member_email.ilike.${currentUser.email}`).order('created_at', { ascending: false });
       if (error) throw error;
 
       const enrichedData = await Promise.all((data || []).map(async (member) => {
-        if (member.owner_id !== user.id) {
+        if (member.owner_id !== currentUser.id) {
           const { data: ownerEmail } = await supabase_lucifer_core.rpc('get_email_by_user_id', { target_id: member.owner_id });
           return { ...member, friend_id: member.owner_id, friend_name: ownerEmail || 'Connected Friend' };
         } else {

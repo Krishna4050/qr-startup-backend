@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { ArrowLeft, ShieldAlert, Bell, Info, Megaphone, Trash2, Check, X } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase_lucifer_core } from '../utils/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export default function NotificationsScreen() {
   const navigation = useNavigation();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchNotifications();
@@ -16,7 +18,6 @@ export default function NotificationsScreen() {
 
   const fetchNotifications = async () => {
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) return;
 
       const { data, error } = await supabase_lucifer_core.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
@@ -30,7 +31,6 @@ export default function NotificationsScreen() {
   };
 
   const markAllAsRead = async () => {
-    const { data: { user } } = await supabase_lucifer_core.auth.getUser();
     if (!user) return;
     await supabase_lucifer_core.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
   };
@@ -43,7 +43,6 @@ export default function NotificationsScreen() {
   // --- THE FIX: SEND FEEDBACK FOR INVITES ---
   const handleInviteResponse = async (notificationId: string, inviteId: string, action: 'accepted' | 'declined') => {
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       const { data: invite } = await supabase_lucifer_core.from('trusted_network').select('owner_id').eq('id', inviteId).single();
 
       if (action === 'accepted') {

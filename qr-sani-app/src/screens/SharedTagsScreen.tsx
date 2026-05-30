@@ -4,6 +4,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Tag, Share2, ShieldCheck, Lock } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
 
+import { useAuth } from '../context/AuthContext';
+
 export default function SharedTagsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -15,6 +17,7 @@ export default function SharedTagsScreen() {
   const [myTags, setMyTags] = useState<any[]>([]);
   const [sharedTagIds, setSharedTagIds] = useState<Set<string>>(new Set());
   const [theirTags, setTheirTags] = useState<any[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!friendId) {
@@ -28,7 +31,6 @@ export default function SharedTagsScreen() {
   const fetchSharingData = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) return;
 
       // 1. Fetch My Tags
@@ -80,7 +82,6 @@ export default function SharedTagsScreen() {
 
   const toggleShare = async (tagId: string, isCurrentlyShared: boolean) => {
     try {
-      const { data: { user } } = await supabase_lucifer_core.auth.getUser();
       if (!user) return;
 
       if (isCurrentlyShared) {
