@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { supabase_lucifer_core } from './supabase';
 
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+
 // Helper to remove trailing slashes from the backend URL
 const getBackendUrl = () => {
   let backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -19,11 +22,38 @@ const apiClient = axios.create({
   },
 });
 
+// Calculate the storage key
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
+const projectId = supabaseUrl ? supabaseUrl.split('//')[1].split('.')[0] : '';
+const storageKey = `sb-${projectId}-auth-token`;
+
+// Safe storage fetcher
+const getStoredSession = async () => {
+  try {
+    let jsonStr: string | null = null;
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') {
+        jsonStr = window.localStorage.getItem(storageKey);
+      }
+    } else {
+      jsonStr = await SecureStore.getItemAsync(storageKey);
+    }
+
+    if (jsonStr) {
+      const parsed = JSON.parse(jsonStr);
+      return parsed.access_token ? parsed : null;
+    }
+  } catch (e) {
+    console.error("Failed to parse stored session:", e);
+  }
+  return null;
+};
+
 // Intercept all requests to inject the latest session token
 apiClient.interceptors.request.use(
   async (config) => {
-    // We grab the session from the Supabase client directly
-    const { data: { session } } = await supabase_lucifer_core.auth.getSession();
+    // Read directly from storage to bypass Supabase GoTrue web hanging bug
+    const session = await getStoredSession();
     
     if (session?.access_token) {
       config.headers.Authorization = `Bearer ${session.access_token}`;

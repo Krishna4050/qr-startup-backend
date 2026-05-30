@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import WebLink from './WebLink';
 import { useAuth } from '../context/AuthContext';
 import { supabase_lucifer_core } from '../utils/supabase';
+import apiClient from '../utils/apiClient';
 
 export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defaultService?: string }) {
   const navigation = useNavigation<any>();
@@ -18,9 +19,18 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
   useEffect(() => {
     if (user) {
-      // Enterprise standard: use the metadata instantly available in Context.
-      // Do not make a direct Supabase DB call from the header component.
-      setProfile({ avatar_url: user.user_metadata?.avatar_url || null });
+      // Fetch avatar securely from the Go API Interceptor
+      apiClient.get('/api/dashboard')
+        .then(res => {
+          if (res.data?.profile?.avatar_url) {
+            setProfile({ avatar_url: res.data.profile.avatar_url });
+          } else {
+            setProfile({ avatar_url: user.user_metadata?.avatar_url || null });
+          }
+        })
+        .catch(err => {
+          setProfile({ avatar_url: user.user_metadata?.avatar_url || null });
+        });
     } else {
       setProfile(null);
     }
