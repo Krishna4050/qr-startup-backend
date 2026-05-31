@@ -78,6 +78,9 @@ export default function DashboardScreen() {
         // Delay popup slightly for better UX
         const timer = setTimeout(() => setShowWebPushPrompt(true), 2000);
         return () => clearTimeout(timer);
+      } else if (Notification.permission === 'granted') {
+        // Get token quietly in background if already granted
+        requestWebPush();
       }
     }
   }, [user]);
@@ -554,6 +557,21 @@ export default function DashboardScreen() {
         </View>
         <WebFooter />
       </RefreshableScroll>
+      
+      {showWebPushPrompt && Platform.OS === 'web' && (
+        <View style={styles.webPushPrompt}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.webPushTitle}>Enable Notifications</Text>
+            <Text style={styles.webPushDesc}>Get instantly notified when a tag is scanned.</Text>
+          </View>
+          <TouchableOpacity style={styles.webPushBtn} onPress={requestWebPush}>
+            <Text style={styles.webPushBtnText}>Enable</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ marginLeft: 12, padding: 4 }} onPress={() => setShowWebPushPrompt(false)}>
+            <X color="#94A3B8" size={20} />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
