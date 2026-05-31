@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions, Platform, ActivityIndicator, Alert, Image } from 'react-native';
-import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle, ShieldAlert, LayoutGrid, Globe, Wrench, Bike, Car, Bed, BusFront, Train, Plane } from 'lucide-react-native';
+import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle, ShieldAlert, LayoutGrid, Globe, Wrench, Bike, Car, Bed, BusFront, Train, Plane, X } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
@@ -38,6 +38,8 @@ export default function DashboardScreen() {
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
+  const [showWebPushPrompt, setShowWebPushPrompt] = useState(false);
+
   const totalTags = tags.length;
   const foundItems = tags.filter(t => t.status === 'found' && !t.is_shared).length;
 
@@ -67,6 +69,30 @@ export default function DashboardScreen() {
       fetchDashboardData();
     }
   }, [isFocused]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && 'Notification' in window && user) {
+      if (Notification.permission === 'default') {
+        // Delay popup slightly for better UX
+        const timer = setTimeout(() => setShowWebPushPrompt(true), 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user]);
+
+  const requestWebPush = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        setShowWebPushPrompt(false);
+        // Will handle Firebase registration later as requested
+      } else {
+        setShowWebPushPrompt(false);
+      }
+    } catch (e) {
+      console.warn("Failed to request web push permission", e);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -611,4 +637,42 @@ const styles = StyleSheet.create({
   shopName: { fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
   shopAddress: { fontSize: 14, color: '#6B7280', marginBottom: 8 },
   shopRating: { fontSize: 14, fontWeight: '600', color: '#10B981' },
+  webPushPrompt: {
+    position: 'absolute',
+    top: 24,
+    right: 24,
+    backgroundColor: '#0A192F',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 350,
+    zIndex: 9999,
+    // @ts-ignore
+    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  webPushTitle: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  webPushDesc: {
+    color: '#94A3B8',
+    fontSize: 13,
+  },
+  webPushBtn: {
+    backgroundColor: '#00E5FF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  webPushBtnText: {
+    color: '#0A192F',
+    fontWeight: '700',
+    fontSize: 14,
+  },
 });
