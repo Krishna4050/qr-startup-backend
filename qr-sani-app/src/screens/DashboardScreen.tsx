@@ -11,6 +11,8 @@ import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { messaging } from '../utils/firebase';
+import { getToken } from 'firebase/messaging';
 
 const { width } = Dimensions.get('window');
 
@@ -83,14 +85,26 @@ export default function DashboardScreen() {
   const requestWebPush = async () => {
     try {
       const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        setShowWebPushPrompt(false);
-        // Will handle Firebase registration later as requested
-      } else {
-        setShowWebPushPrompt(false);
+      setShowWebPushPrompt(false);
+      
+      if (permission === 'granted' && messaging && user) {
+        console.log("Generating Firebase Web Push Token...");
+        const token = await getToken(messaging, {
+          vapidKey: 'BG2LVOjcmoEeCtSyqttNLvWjX61XCak3lNhq3jI0ua5hvvP6IUQVjYRrWqtWgQhDu5jJFW0X9qwzNxHagLKMnQY'
+        });
+
+        if (token) {
+          console.log("Firebase Web Push Token retrieved!");
+          // Save token to Supabase
+          await supabase_lucifer_core
+            .from('profiles')
+            .update({ expo_push_token: token })
+            .eq('id', user.id);
+        }
       }
     } catch (e) {
-      console.warn("Failed to request web push permission", e);
+      console.warn("Failed to generate web push token", e);
+      setShowWebPushPrompt(false);
     }
   };
 
