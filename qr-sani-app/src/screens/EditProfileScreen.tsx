@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { ArrowLeft, Save, User, Phone, MapPin, FileText, Calendar, Hash, Home as HomeIcon, Pencil, CheckCircle, XCircle } from 'lucide-react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
+import { ArrowLeft, Save, User, Phone, MapPin, FileText, Calendar, Hash, Home as HomeIcon, Pencil, CheckCircle, XCircle, Camera } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase_lucifer_core } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
+import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
 
 export default function EditProfileScreen() {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const { user } = useAuth();
 
   // Form Data State
   const [formData, setFormData] = useState({
     first_name: '', last_name: '', username: '', gender: '', date_of_birth: '',
+    avatar_url: '',
     phone_number: '', country: '', city: '', street: '', house_number: '', bio: ''
   });
 
@@ -39,7 +43,7 @@ export default function EditProfileScreen() {
           first_name: data.first_name || '', last_name: data.last_name || '', username: data.username || '',
           gender: data.gender || '', date_of_birth: data.date_of_birth || '', phone_number: data.phone_number || '',
           country: data.country || '', city: data.city || '', street: data.street || '',
-          house_number: data.house_number || '', bio: data.bio || ''
+          house_number: data.house_number || '', bio: data.bio || '', avatar_url: data.avatar_url || ''
         });
         setOriginalUsername(data.username || ''); // Remember their current username!
       }
@@ -144,6 +148,51 @@ export default function EditProfileScreen() {
     if (errors[field]) setErrors({ ...errors, [field]: null });
   };
 
+  const pickImage = async () => {
+    try {
+      const options: ImagePicker.ImagePickerOptions = { 
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, 
+        allowsEditing: true, 
+        aspect: [1, 1], 
+        quality: 0.5, 
+        base64: true 
+      };
+      
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const result = await ImagePicker.launchImageLibraryAsync(options);
+
+      if (!result.canceled && result.assets && result.assets.length > 0 && result.assets[0].base64) {
+        await uploadAvatar(result.assets[0].base64);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not select an image.");
+    }
+  };
+
+  const uploadAvatar = async (base64Image: string) => {
+    setUploadingAvatar(true);
+    try {
+      if (!user) throw new Error("No user found");
+
+      const filePath = `${user.id}/avatar.jpg`;
+      const { error: uploadError } = await supabase_lucifer_core.storage.from('avatars').upload(filePath, decode(base64Image), { upsert: true, contentType: 'image/jpeg' });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase_lucifer_core.storage.from('avatars').getPublicUrl(filePath);
+      const newAvatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+      
+      const { error: updateError } = await supabase_lucifer_core.from('profiles').update({ avatar_url: newAvatarUrl }).eq('id', user.id);
+      if (updateError) throw updateError;
+
+      setFormData(prev => ({ ...prev, avatar_url: newAvatarUrl }));
+      Alert.alert("Success", "Profile picture updated!");
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!validateForm()) return;
 
@@ -198,6 +247,28 @@ export default function EditProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {!isEditing && <View style={styles.readOnlyBanner}><Text style={styles.readOnlyText}>Tap the pencil icon to edit your details.</Text></View>}
+
+        {/* --- AVATAR SECTION --- */}
+        <View style={styles.avatarSection}>
+          <TouchableOpacity onPress={pickImage} disabled={uploadingAvatar} style={styles.avatarWrapper}>
+            {formData.avatar_url ? (
+              <Image source={{ uri: formData.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <User color="#9CA3AF" size={40} />
+              </View>
+            )}
+            
+            <View style={styles.avatarEditBadge}>
+              {uploadingAvatar ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Camera color="#FFFFFF" size={14} />
+              )}
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.avatarSubtext}>Tap to change picture</Text>
+        </View>
 
         {/* --- PERSONAL INFO SECTION --- */}
         <Text style={styles.sectionHeading}>Personal Information</Text>
@@ -366,5 +437,13 @@ const styles = StyleSheet.create({
   suggestionLabel: { fontSize: 12, color: '#6B7280', marginBottom: 6, fontWeight: '600' },
   suggestionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   suggestionChip: { backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: '#BFDBFE' },
-  suggestionChipText: { color: '#2563EB', fontSize: 12, fontWeight: '600' }
+  suggestionChipText: { color: '#2563EB', fontSize: 12, fontWeight: '600' },
+  
+  // Avatar Styles
+  avatarSection: { alignItems: 'center', marginBottom: 24, marginTop: 8 },
+  avatarWrapper: { position: 'relative', width: 100, height: 100, borderRadius: 50, overflow: 'visible' },
+  avatarImage: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F3F4F6' },
+  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
+  avatarEditBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#3B82F6', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 4 },
+  avatarSubtext: { marginTop: 12, fontSize: 13, color: '#6B7280', fontWeight: '500' }
 });

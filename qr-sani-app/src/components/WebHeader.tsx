@@ -49,6 +49,15 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const { width } = useWindowDimensions();
   const isMobileWeb = width < 1024;
 
+  const handleDropdownNavigation = (screenName: string) => {
+    navigation.navigate(screenName);
+    if (Platform.OS === 'web') {
+      setTimeout(() => setShowProfileDropdown(false), 100);
+    } else {
+      setShowProfileDropdown(false);
+    }
+  };
+
   // --- AUTHENTICATION STATE ---
   const { user, logout } = useAuth();
   const isGuest = !user;
@@ -162,9 +171,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               )}
               {showProfileDropdown && (
                 <View style={[styles.dropdownMenu, { top: 40, right: 0, left: 'auto', width: 200, padding: 8 }]}>
-                  <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Profile</Text></WebLink>
-                  <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Messages</Text></WebLink>
-                  <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Host Dashboard</Text></WebLink>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('Profile')}><Text style={styles.dropdownItemText}>Profile</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('UserMessages')}><Text style={styles.dropdownItemText}>Messages</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('HostDashboard')}><Text style={styles.dropdownItemText}>Host Dashboard</Text></TouchableOpacity>
                   <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 4 }} />
                   <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}><Text style={[styles.dropdownItemText, {color: '#E11D48'}]}>Sign Out</Text></TouchableOpacity>
                 </View>
@@ -344,15 +353,15 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 {/* Profile Dropdown */}
                 {showProfileDropdown && (
                   <View style={[styles.dropdownMenu, { top: 50, right: 0, left: 'auto', width: 240, padding: 8, zIndex: 999 }]}>
-                    <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
+                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('UserMessages')}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages</Text>
-                    </WebLink>
-                    <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('Profile')}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
-                    </WebLink>
-                    <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('HostDashboard')}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
-                    </WebLink>
+                    </TouchableOpacity>
                     <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
                     <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}>
                       <Text style={[styles.dropdownItemText, { color: '#E11D48' }]}>Sign Out</Text>
