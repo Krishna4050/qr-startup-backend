@@ -151,7 +151,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     return (
       <>
         <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, zIndex: 9999 }}>
             <WebLink style={styles.logoSection} screen="Dashboard">
               <Image source={require('../../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12 }} />
               <Text style={[styles.logoText, { fontSize: 24 }]}>ATS finland</Text>
@@ -193,9 +193,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             style={styles.mobileSearchPill}
             onPress={() => setShowMobileSearchModal(true)}
           >
-              <Search color="#00E5FF" size={20} />
+              <Search color="#00E5FF" size={18} />
               <View style={{ marginLeft: 12 }}>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#F8FAFC' }}>Start your search</Text>
+                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#F8FAFC' }}>Start your search</Text>
               </View>
           </TouchableOpacity>
 
@@ -308,7 +308,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
         />
       )}
     <View style={styles.headerContainer}>
-      <View style={styles.headerContent}>
+      <View style={[styles.headerContent, { zIndex: 9999 }]}>
         {/* Left: Logo */}
         <WebLink style={styles.logoSection} screen="Dashboard">
           <Image source={require('../../assets/icon.png')} style={{ width: 56, height: 56, borderRadius: 14 }} />
@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 30,
-    padding: 12,
+    padding: 10,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
