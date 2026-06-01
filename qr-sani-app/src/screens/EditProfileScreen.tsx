@@ -366,19 +366,15 @@ export default function EditProfileScreen({ route, isEmbedded }: any) {
     </ScrollView>
   );
 
-  if (isEmbedded) {
-    return (
-      <View style={[styles.container, { backgroundColor: '#FFFFFF', flex: 1 }]}>
-        {renderForm()}
-      </View>
-    );
-  }
-
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}><ArrowLeft color="#111827" size={24} /></TouchableOpacity>
+      <View style={[styles.header, isEmbedded && { paddingTop: 20 }]}>
+        {!isEmbedded ? (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}><ArrowLeft color="#111827" size={24} /></TouchableOpacity>
+        ) : (
+          <View style={{ width: 32 }} />
+        )}
         <Text style={styles.headerTitle}>{isEditing ? "Editing Profile" : "Profile Details"}</Text>
         {isEditing ? (
           <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.iconBtn}>

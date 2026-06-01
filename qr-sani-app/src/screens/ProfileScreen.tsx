@@ -6,6 +6,8 @@ import RefreshableScroll from '../components/RefreshableScroll';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../utils/apiClient';
 import EditProfileScreen from './EditProfileScreen';
+import ContactManagerScreen from './ContactManagerScreen';
+import FilteredTagsScreen from './FilteredTagsScreen';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -147,7 +149,9 @@ export default function ProfileScreen() {
           {activeTab === 'Profile Information' ? (
             <EditProfileScreen isEmbedded={true} />
           ) : activeTab === 'Contact Details & Emergency' ? (
-             <View style={styles.placeholderContent}><Text style={{color: theme.text, fontSize: 18}}>Contact Manager Screen goes here</Text></View>
+             <ContactManagerScreen isEmbedded={true} />
+          ) : activeTab === 'Archived Tags' ? (
+             <FilteredTagsScreen isEmbedded={true} route={{ params: { filterType: 'archived' } }} />
           ) : (
             <View style={styles.placeholderContent}>
               <Text style={{color: theme.text, fontSize: 24, fontWeight: 'bold', marginBottom: 8}}>{activeTab}</Text>

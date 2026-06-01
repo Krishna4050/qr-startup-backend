@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Keyboa
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Phone, ShieldCheck, Plus, Trash2, Smartphone, KeyRound } from 'lucide-react-native';
 
-export default function ContactManagerScreen() {
+export default function ContactManagerScreen({ isEmbedded }: any) {
   const navigation = useNavigation<any>();
 
   // --- OTP Flow States ---
@@ -53,10 +53,14 @@ export default function ContactManagerScreen() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <ArrowLeft color="#111827" size={24} />
-        </TouchableOpacity>
+      <View style={[styles.header, isEmbedded && { paddingTop: 20 }]}>
+        {!isEmbedded ? (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+            <ArrowLeft color="#111827" size={24} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 32 }} />
+        )}
         <Text style={styles.headerTitle}>Contact Details</Text>
         <View style={{ width: 32 }} />
       </View>

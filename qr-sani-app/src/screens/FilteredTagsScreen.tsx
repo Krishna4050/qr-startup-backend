@@ -7,10 +7,12 @@ import apiClient from '../utils/apiClient';
 
 import { useAuth } from '../context/AuthContext';
 
-export default function FilteredTagsScreen() {
+export default function FilteredTagsScreen({ route: propRoute, isEmbedded }: any) {
   const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navRoute = useRoute<any>();
   const isFocused = useIsFocused();
+  
+  const route = propRoute || navRoute;
   
   const filterType = route.params?.filterType || 'paused'; 
   const title = filterType === 'paused' ? 'Paused Tags' : 'Archived Tags';
@@ -53,10 +55,14 @@ export default function FilteredTagsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <ArrowLeft color="#111827" size={24} />
-        </TouchableOpacity>
+      <View style={[styles.header, isEmbedded && { paddingTop: 20 }]}>
+        {!isEmbedded ? (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+            <ArrowLeft color="#111827" size={24} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 32 }} />
+        )}
         <Text style={styles.headerTitle}>{title}</Text>
         <View style={{ width: 32 }} />
       </View>
