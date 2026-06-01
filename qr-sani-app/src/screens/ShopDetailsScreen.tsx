@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Platform, Linking, Alert, useWindowDimensions, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Platform, Linking, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { ArrowLeft, Star, MapPin, Phone, MessageSquare, ShieldCheck, Heart, CheckCircle2, Share, Calendar, X } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { supabase_lucifer_core } from '../utils/supabase';
+import { useResponsive } from '../hooks/useResponsive';
 
 export default function ShopDetailsScreen({ route, navigation }: any) {
   const { shopData: initialShopData, id } = route?.params || {};
@@ -12,10 +13,10 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
   
   const [isFavorite, setIsFavorite] = useState(false);
   const { user } = useAuth();
-  const { width } = useWindowDimensions();
+  const { width, isMobile } = useResponsive();
   
   // Breakpoint for Desktop vs Mobile
-  const isDesktop = width >= 768; 
+  const isDesktop = !isMobile; 
   
   useEffect(() => {
     if (!isValidShopData && id) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { 
   Wrench, 
@@ -20,13 +20,14 @@ import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
 import { useAuth } from '../context/AuthContext';
 
+import { useResponsive } from '../hooks/useResponsive';
+
 export default function ServicesScreen() {
   const navigation = useNavigation<any>();
-  const { width } = useWindowDimensions();
+  const { width, isWeb, isMobile } = useResponsive();
   const { user } = useAuth();
   
-  const isWeb = Platform.OS === 'web';
-  const isDesktopWeb = isWeb && width >= 768;
+  const isDesktopWeb = isWeb && !isMobile;
 
   const handleRefresh = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve, 800));

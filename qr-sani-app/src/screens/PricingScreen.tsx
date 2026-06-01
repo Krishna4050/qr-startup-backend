@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Modal, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Platform } from 'react-native';
 import { Check, X, Building2, User, Mail, MessageSquare } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import WebFooter from '../components/WebFooter';
 import { useNavigation } from '@react-navigation/native';
+import { useResponsive } from '../hooks/useResponsive';
 
 export default function PricingScreen() {
-  const { width } = useWindowDimensions();
-  const isMobile = width < 768;
+  const { isMobile } = useResponsive();
   const { user } = useAuth();
   const navigation = useNavigation<any>();
 

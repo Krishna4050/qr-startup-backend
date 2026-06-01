@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, ActivityIndicator, useWindowDimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, ActivityIndicator, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, MessageSquare, ChevronRight, Info, MapPin } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
 import ChatScreen from './ChatScreen'; 
 import apiClient from '../utils/apiClient';
+import { useResponsive } from '../hooks/useResponsive';
 
 export default function UserMessagesScreen({ route }: any) {
   const { shopId: defaultShopId, shopName: defaultShopName, hostId: defaultHostId } = route.params || {};
   const navigation = useNavigation<any>();
   const { user, session } = useAuth();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 1024; 
+  const { isDesktop } = useResponsive();
   
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Alert, useWindowDimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { User, Shield, CreditCard, Moon, Bell, Clock, Globe, HelpCircle, Info, ChevronRight, LogOut, ArrowRight, Phone, Archive } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import RefreshableScroll from '../components/RefreshableScroll';
@@ -8,6 +8,7 @@ import apiClient from '../utils/apiClient';
 import EditProfileScreen from './EditProfileScreen';
 import ContactManagerScreen from './ContactManagerScreen';
 import FilteredTagsScreen from './FilteredTagsScreen';
+import { useResponsive } from '../hooks/useResponsive';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -21,8 +22,7 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [saveHistory, setSaveHistory] = useState(true);
 
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 1024;
+  const { isDesktop } = useResponsive();
   const [activeTab, setActiveTab] = useState('Profile Information');
 
   const fetchProfileData = async () => {
