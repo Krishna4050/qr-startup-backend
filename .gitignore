@@ -18,4 +18,6 @@ go.work
 # Architecture documents & research
 research paper on airbnb/
 001_airbnb_architecture.sql
-002_services_architecture.sqlfirebase-service-account.json
+002_services_architecture.sql
+005_push_tokens.sql
+firebase-service-account.json

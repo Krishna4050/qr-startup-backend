@@ -76,6 +76,9 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     if (Platform.OS === 'web' && 'Notification' in window && user) {
+      const isDismissed = sessionStorage.getItem('push_prompt_dismissed') === 'true';
+      if (isDismissed) return;
+
       if (Notification.permission === 'default') {
         // Delay popup slightly for better UX
         const timer = setTimeout(() => setShowWebPushPrompt(true), 2000);
@@ -593,7 +596,10 @@ export default function DashboardScreen() {
               <Text style={styles.webPushBtnText}>Enable</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={{ marginLeft: 12, padding: 4 }} onPress={() => setShowWebPushPrompt(false)}>
+          <TouchableOpacity style={{ marginLeft: 12, padding: 4 }} onPress={() => {
+            if (Platform.OS === 'web') sessionStorage.setItem('push_prompt_dismissed', 'true');
+            setShowWebPushPrompt(false);
+          }}>
             <X color="#94A3B8" size={20} />
           </TouchableOpacity>
         </View>
