@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import apiClient from '../utils/apiClient';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
+import { supabase_lucifer_core } from '../utils/supabase';
 
 export default function EditProfileScreen({ route, isEmbedded }: any) {
   const navigation = useNavigation();
@@ -98,12 +99,18 @@ export default function EditProfileScreen({ route, isEmbedded }: any) {
     ];
 
     // Bulk check which of these suggestions are ALREADY taken
-    const { data } = await supabase_lucifer_core
-      .from('profiles')
-      .select('username')
-      .in('username', candidates);
-
-    const takenNames = data?.map(d => d.username) || [];
+    const takenNames: string[] = [];
+    
+    await Promise.all(candidates.map(async (name) => {
+      try {
+        const { data } = await apiClient.get(`/api/profile/check-username?username=${name}`);
+        if (data.taken) {
+          takenNames.push(name);
+        }
+      } catch (err) {
+        // ignore errors for suggestions
+      }
+    }));
     
     // Filter out any taken ones, and only keep the safe ones!
     const safeSuggestions = candidates.filter(name => !takenNames.includes(name));
