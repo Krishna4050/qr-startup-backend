@@ -64,7 +64,7 @@ export default function DashboardScreen() {
 
     setIsGuest(false);
     fetchDashboardData();
-  }, [user?.id, isAuthLoading]);
+  }, [user?.id, session?.access_token, isAuthLoading]);
 
   useEffect(() => {
     if (isFocused && !loading && user) {

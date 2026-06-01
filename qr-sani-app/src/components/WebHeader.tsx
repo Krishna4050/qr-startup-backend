@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView } from 'react-native';
 import { Search, Globe, Menu, User, Building2, ChevronDown, Plus, Minus, X, ArrowLeft } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useLinkTo } from '@react-navigation/native';
 import WebLink from './WebLink';
 import { useAuth } from '../context/AuthContext';
 import { supabase_lucifer_core } from '../utils/supabase';
@@ -49,16 +49,18 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const { width } = useWindowDimensions();
   const isMobileWeb = width < 1024;
 
-  const handleDropdownNavigation = (screenName: string) => {
+  const linkTo = useLinkTo();
+
+  const handleDropdownNavigation = (path: string) => {
     // Hide dropdown first so the UI responds instantly
     setShowProfileDropdown(false);
     
     // Defer navigation slightly so it doesn't get cancelled by the unmount
     setTimeout(() => {
-      if (screenName === 'Profile') {
-        navigation.navigate('Dashboard', { screen: 'Profile' });
-      } else {
-        navigation.navigate(screenName);
+      try {
+        linkTo(path);
+      } catch (e) {
+        console.warn("Navigation failed:", e);
       }
     }, 50);
   };
@@ -176,9 +178,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               )}
               {showProfileDropdown && (
                 <View style={[styles.dropdownMenu, { top: 40, right: 0, left: 'auto', width: 200, padding: 8 }]}>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('Profile')}><Text style={styles.dropdownItemText}>Profile</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('UserMessages')}><Text style={styles.dropdownItemText}>Messages</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('HostDashboard')}><Text style={styles.dropdownItemText}>Host Dashboard</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/dashboard/Profile')}><Text style={styles.dropdownItemText}>Profile</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/messages')}><Text style={styles.dropdownItemText}>Messages</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/host')}><Text style={styles.dropdownItemText}>Host Dashboard</Text></TouchableOpacity>
                   <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 4 }} />
                   <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}><Text style={[styles.dropdownItemText, {color: '#E11D48'}]}>Sign Out</Text></TouchableOpacity>
                 </View>
@@ -358,13 +360,13 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 {/* Profile Dropdown */}
                 {showProfileDropdown && (
                   <View style={[styles.dropdownMenu, { top: 50, right: 0, left: 'auto', width: 240, padding: 8, zIndex: 999 }]}>
-                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('UserMessages')}>
+                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/messages')}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('Profile')}>
+                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/dashboard/Profile')}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('HostDashboard')}>
+                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/host')}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
                     </TouchableOpacity>
                     <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
