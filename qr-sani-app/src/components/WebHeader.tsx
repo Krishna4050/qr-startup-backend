@@ -50,12 +50,17 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const isMobileWeb = width < 1024;
 
   const handleDropdownNavigation = (screenName: string) => {
-    navigation.navigate(screenName);
-    if (Platform.OS === 'web') {
-      setTimeout(() => setShowProfileDropdown(false), 100);
-    } else {
-      setShowProfileDropdown(false);
-    }
+    // Hide dropdown first so the UI responds instantly
+    setShowProfileDropdown(false);
+    
+    // Defer navigation slightly so it doesn't get cancelled by the unmount
+    setTimeout(() => {
+      if (screenName === 'Profile') {
+        navigation.navigate('Dashboard', { screen: 'Profile' });
+      } else {
+        navigation.navigate(screenName);
+      }
+    }, 50);
   };
 
   // --- AUTHENTICATION STATE ---
