@@ -150,7 +150,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   if (isMobileWeb) {
     return (
       <>
-        <View style={[styles.headerContainer, { paddingHorizontal: 20 }]}>
+        <View style={[styles.headerContainer, { paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 24 : 0 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, zIndex: 9999 }}>
             <WebLink style={styles.logoSection} screen="Dashboard">
               <Image source={require('../../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12 }} />

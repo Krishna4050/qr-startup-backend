@@ -427,7 +427,7 @@ export default function DashboardScreen() {
 
   const GridOrScroll = ({ children }: any) => {
     if (Platform.OS === 'web') {
-      return <View style={styles.webGridContainer}>{children}</View>;
+      return <View style={[styles.webGridContainer, isMobileWeb && { justifyContent: 'space-between', gap: 12 }]}>{children}</View>;
     }
     return (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
@@ -622,7 +622,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   webMaxWidth: { maxWidth: Platform.OS === 'web' ? 1280 : '100%', alignSelf: 'center', width: '100%' },
-  webGridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 24, paddingBottom: 16, justifyContent: 'space-between' },
+  webGridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 24, paddingHorizontal: 24, paddingBottom: 16 },
   headerGradient: { paddingBottom: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
   headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: Platform.OS === 'android' ? 40 : 10 },
   greetingText: { fontSize: 14, color: '#DED1C6', marginBottom: 4 },
