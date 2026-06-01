@@ -66,8 +66,10 @@ export default function WebLink({ screen, params, style, children, activeOpacity
   const navigation = useNavigation<any>();
 
   const handleNavigate = () => {
-    if (onPress) onPress();
     navigation.navigate(screen, params);
+    if (onPress) {
+      setTimeout(() => onPress(), 50); // delay unmount so navigation triggers first!
+    }
   };
 
   // On native platforms, use the standard TouchableOpacity

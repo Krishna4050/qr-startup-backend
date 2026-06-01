@@ -178,9 +178,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               )}
               {showProfileDropdown && (
                 <View style={[styles.dropdownMenu, { top: 40, right: 0, left: 'auto', width: 200, padding: 8 }]}>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/dashboard/Profile')}><Text style={styles.dropdownItemText}>Profile</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/messages')}><Text style={styles.dropdownItemText}>Messages</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/host')}><Text style={styles.dropdownItemText}>Host Dashboard</Text></TouchableOpacity>
+                  <WebLink style={styles.dropdownItem} screen="Dashboard" params={{ screen: 'Profile' }} onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Profile</Text></WebLink>
+                  <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Messages</Text></WebLink>
+                  <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Host Dashboard</Text></WebLink>
                   <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 4 }} />
                   <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}><Text style={[styles.dropdownItemText, {color: '#E11D48'}]}>Sign Out</Text></TouchableOpacity>
                 </View>
@@ -360,15 +360,15 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 {/* Profile Dropdown */}
                 {showProfileDropdown && (
                   <View style={[styles.dropdownMenu, { top: 50, right: 0, left: 'auto', width: 240, padding: 8, zIndex: 999 }]}>
-                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/messages')}>
+                    <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/dashboard/Profile')}>
+                    </WebLink>
+                    <WebLink style={styles.dropdownItem} screen="Dashboard" params={{ screen: 'Profile' }} onPress={() => setShowProfileDropdown(false)}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.dropdownItem} onPress={() => handleDropdownNavigation('/host')}>
+                    </WebLink>
+                    <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
-                    </TouchableOpacity>
+                    </WebLink>
                     <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
                     <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}>
                       <Text style={[styles.dropdownItemText, { color: '#E11D48' }]}>Sign Out</Text>
