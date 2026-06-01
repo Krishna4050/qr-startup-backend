@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Dimensions, ScrollView, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { useNavigation, useIsFocused, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Star, Search, Heart, Clock, Settings } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
@@ -8,31 +8,28 @@ import { useAuth } from '../context/AuthContext';
 import RefreshableScroll from '../components/RefreshableScroll';
 import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
+import { useResponsive } from '../hooks/useResponsive';
 
-const { width } = Dimensions.get('window');
 const CARD_MARGIN = 24;
-const CARD_WIDTH = width - (CARD_MARGIN * 2); 
 
-const ShopCard = ({ item, onPress, cardWidth }: { item: any, onPress: () => void, cardWidth?: number }) => {
+const ShopCard = ({ item, onPress, cardWidth }: { item: any, onPress: () => void, cardWidth: number }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const actualCardWidth = cardWidth || (Platform.OS === 'web' ? 300 : CARD_WIDTH);
-
   const handleScroll = (event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
-    const index = Math.round(scrollPosition / actualCardWidth);
+    const index = Math.round(scrollPosition / cardWidth);
     setActiveIndex(index);
   };
 
   return (
-    <TouchableOpacity style={[styles.shopCard, { width: actualCardWidth }]} activeOpacity={1} onPress={onPress}>
-      <View style={[styles.imageContainer, { width: actualCardWidth }]}>
+    <TouchableOpacity style={[styles.shopCard, { width: cardWidth }]} activeOpacity={1} onPress={onPress}>
+      <View style={[styles.imageContainer, { width: cardWidth }]}>
         {item.photos.length > 0 ? (
           <>
             <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
               {item.photos.map((url: string, index: number) => (
-                <Image key={index} source={{ uri: url }} style={[styles.shopImage, { width: actualCardWidth }]} />
+                <Image key={index} source={{ uri: url }} style={[styles.shopImage, { width: cardWidth }]} />
               ))}
             </ScrollView>
             {item.photos.length > 1 && (
@@ -72,7 +69,7 @@ export default function VehicleRepairDirectory() {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused(); // Triggers a re-check when returning to this screen
   const route = useRoute<any>();
-  const { width } = useWindowDimensions();
+  const { width, isMobileWeb, isWeb, rs } = useResponsive();
   
   const initialLocation = route.params?.location;
   const targetService = route.params?.service || 'Vehicle Repair';
@@ -94,12 +91,13 @@ export default function VehicleRepairDirectory() {
   const loadedFilters = uniqueCities.map(c => c.charAt(0) + c.slice(1).toLowerCase());
   const filters = ['All', ...(loadedFilters.length > 0 ? loadedFilters : ['Helsinki', 'Espoo', 'Vantaa', 'Tampere'])];
 
-  const isMobileWeb = Platform.OS === 'web' && width < 768;
   const webGridGap = 24;
   const horizontalPadding = CARD_MARGIN * 2;
-  const webCardWidth = isMobileWeb 
+  const dynamicCardWidth = isMobileWeb 
     ? (width - horizontalPadding - webGridGap) / 2 
-    : 300;
+    : isWeb 
+      ? 300 
+      : (width - horizontalPadding);
 
   // Reactive effect for auth state
   useEffect(() => {
@@ -281,7 +279,7 @@ export default function VehicleRepairDirectory() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalCityScroll}>
                     {groupedShops[city].map((item) => (
                       <WebLink key={item.id} screen="ShopDetails" params={{ id: item.id }} style={{ marginRight: 24 }}>
-                        <ShopCard item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={300} />
+                        <ShopCard item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={isMobileWeb ? dynamicCardWidth : 300} />
                       </WebLink>
                     ))}
                   </ScrollView>
@@ -289,10 +287,10 @@ export default function VehicleRepairDirectory() {
               ))}
             </View>
           ) : (
-            <View style={Platform.OS === 'web' ? styles.webGridContainer : {}}>
+            <View style={Platform.OS === 'web' ? [styles.webGridContainer, isMobileWeb && { justifyContent: 'space-between', gap: 12 }] : {}}>
               {filteredShops.map((item) => (
-                <WebLink key={item.id} screen="ShopDetails" params={{ id: item.id }} style={Platform.OS === 'web' ? { width: webCardWidth } : {}}>
-                  <ShopCard item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={Platform.OS === 'web' ? webCardWidth : undefined} />
+                <WebLink key={item.id} screen="ShopDetails" params={{ id: item.id }} style={Platform.OS === 'web' ? { width: dynamicCardWidth } : {}}>
+                  <ShopCard item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={dynamicCardWidth} />
                 </WebLink>
               ))}
             </View>
@@ -325,8 +323,8 @@ const styles = StyleSheet.create({
   horizontalCityScroll: { paddingRight: 24, paddingBottom: 16 },
   
   shopCard: { marginBottom: 20 },
-  imageContainer: { width: CARD_WIDTH, aspectRatio: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#E2E8F0', position: 'relative' },
-  shopImage: { width: CARD_WIDTH, height: '100%', resizeMode: 'cover' },
+  imageContainer: { aspectRatio: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#E2E8F0', position: 'relative' },
+  shopImage: { height: '100%', resizeMode: 'cover' },
   noImagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   heartButton: { position: 'absolute', top: 14, right: 14, padding: 2 },
   dotsContainer: { position: 'absolute', bottom: 12, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5 },

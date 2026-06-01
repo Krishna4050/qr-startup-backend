@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions, Platform, ActivityIndicator, Alert, Image, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
 import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle, ShieldAlert, LayoutGrid, Globe, Wrench, Bike, Car, Bed, BusFront, Train, Plane, X } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,8 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { messaging } from '../utils/firebase';
 import { getToken } from 'firebase/messaging';
-
-const { width } = Dimensions.get('window');
+import { useResponsive } from '../hooks/useResponsive';
 
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
@@ -25,8 +24,7 @@ export default function DashboardScreen() {
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   
-  const windowWidth = useWindowDimensions().width;
-  const isMobileWeb = Platform.OS === 'web' && windowWidth < 768;
+  const { width, isMobileWeb, isWeb } = useResponsive();
 
   const [tags, setTags] = useState<any[]>([]); // Combined array of My Tags + Shared Tags
   const [pausedTagsCount, setPausedTagsCount] = useState(0);
@@ -672,15 +670,15 @@ const styles = StyleSheet.create({
   badgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
   seeAllText: { fontSize: 12, fontWeight: 'bold', color: '#3B82F6' },
   horizontalScroll: { paddingHorizontal: 24, paddingBottom: 16, gap: 16 },
-  emptyCard: { width: Platform.OS === 'web' ? '100%' : width * 0.85, padding: 24, backgroundColor: '#FFFFFF', borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderStyle: 'dashed' },
+  emptyCard: { width: Platform.OS === 'web' ? '100%' : '85%', padding: 24, backgroundColor: '#FFFFFF', borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderStyle: 'dashed' },
   emptyCardText: { color: '#6B7280', fontSize: 14, textAlign: 'center' },
-  tagCard: { width: Platform.OS === 'web' ? 280 : width * 0.65, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  tagCard: { width: Platform.OS === 'web' ? 280 : '85%', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   tagCategory: { fontSize: 10, fontWeight: 'bold', color: '#6B7280', letterSpacing: 1, marginBottom: 8 },
   tagTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 12, height: 40 },
   tagStatus: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   tagStatusText: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
   tagIconWrapper: { width: 36, height: 36, backgroundColor: '#F3F4F6', borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'absolute', bottom: 16, right: 16 },
-  alertCard: { width: Platform.OS === 'web' ? 320 : width * 0.75, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, borderLeftWidth: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  alertCard: { width: Platform.OS === 'web' ? 320 : '85%', backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, borderLeftWidth: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   alertCategory: { fontSize: 10, fontWeight: 'bold', color: '#6B7280', letterSpacing: 1, marginBottom: 8 },
   alertTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
   alertDetail: { fontSize: 12, color: '#6B7280' },
@@ -690,7 +688,7 @@ const styles = StyleSheet.create({
   contactCardNumber: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginTop: 2 },
   addContactBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
   addContactText: { color: '#3B82F6', fontWeight: 'bold', marginLeft: 6, fontSize: 14 },
-  overviewCard: { width: Platform.OS === 'web' ? 280 : width * 0.65, height: Platform.OS === 'web' ? 160 : width * 0.5, borderRadius: 24, padding: 24, justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  overviewCard: { width: Platform.OS === 'web' ? 280 : '65%', height: Platform.OS === 'web' ? 160 : 180, borderRadius: 24, padding: 24, justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
   overviewCardTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', opacity: 0.9 },
   overviewCardNumber: { fontSize: 56, fontWeight: '900', color: '#FFFFFF' },
   lostModeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 12, alignSelf: 'flex-start', zIndex: 10 },
