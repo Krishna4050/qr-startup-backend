@@ -30,7 +30,7 @@ export default function UserMessagesScreen({ route }: any) {
     setLoading(true);
     try {
       // Find all messages involving this user to get unique shops
-      const data = await apiClient.get('/api/messages');
+      const { data } = await apiClient.get('/api/messages');
 
       const uniqueShops = new Map();
       

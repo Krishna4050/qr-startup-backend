@@ -36,7 +36,7 @@ export default function EditProfileScreen({ route, isEmbedded }: any) {
     try {
       if (!user) return;
 
-      const data = await apiClient.get('/api/profile');
+      const { data } = await apiClient.get('/api/profile');
 
       if (data && data.id) {
         setFormData({
@@ -70,7 +70,7 @@ export default function EditProfileScreen({ route, isEmbedded }: any) {
     const delayDebounceFn = setTimeout(async () => {
       
       try {
-        const data = await apiClient.get(`/api/profile/check-username?username=${formData.username.trim()}`);
+        const { data } = await apiClient.get(`/api/profile/check-username?username=${formData.username.trim()}`);
         if (data.taken) {
           setUsernameStatus('taken');
           generateSmartSuggestions(formData.username.trim());

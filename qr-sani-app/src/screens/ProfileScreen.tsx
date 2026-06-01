@@ -26,7 +26,7 @@ export default function ProfileScreen() {
   const fetchProfileData = async () => {
     try {
       if (!user) return;
-      const data = await apiClient.get('/api/profile');
+      const { data } = await apiClient.get('/api/profile');
       setProfileData(data);
       calculateCompletion(data);
     } catch (error) {
