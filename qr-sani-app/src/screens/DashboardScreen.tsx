@@ -72,6 +72,8 @@ export default function DashboardScreen() {
     }
   }, [isFocused]);
 
+  const [isNotificationsBlocked, setIsNotificationsBlocked] = useState(false);
+
   useEffect(() => {
     if (Platform.OS === 'web' && 'Notification' in window && user) {
       if (Notification.permission === 'default') {
@@ -81,6 +83,13 @@ export default function DashboardScreen() {
       } else if (Notification.permission === 'granted') {
         // Get token quietly in background if already granted
         requestWebPush();
+      } else if (Notification.permission === 'denied') {
+        // The user previously blocked notifications natively
+        const timer = setTimeout(() => {
+          setIsNotificationsBlocked(true);
+          setShowWebPushPrompt(true);
+        }, 2000);
+        return () => clearTimeout(timer);
       }
     }
   }, [user]);
@@ -98,11 +107,20 @@ export default function DashboardScreen() {
 
         if (token) {
           console.log("Firebase Web Push Token retrieved!");
-          // Save token to Supabase
-          await supabase_lucifer_core
+          // Fetch existing tokens and append
+          const { data: profile } = await supabase_lucifer_core
             .from('profiles')
-            .update({ expo_push_token: token })
-            .eq('id', user.id);
+            .select('push_tokens')
+            .eq('id', user.id)
+            .single();
+            
+          const existingTokens = profile?.push_tokens || [];
+          if (!existingTokens.includes(token)) {
+            await supabase_lucifer_core
+              .from('profiles')
+              .update({ push_tokens: [...existingTokens, token] })
+              .eq('id', user.id);
+          }
         }
       }
     } catch (e) {
@@ -561,12 +579,20 @@ export default function DashboardScreen() {
       {showWebPushPrompt && Platform.OS === 'web' && (
         <View style={styles.webPushPrompt}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.webPushTitle}>Enable Notifications</Text>
-            <Text style={styles.webPushDesc}>Get instantly notified when a tag is scanned.</Text>
+            <Text style={styles.webPushTitle}>
+              {isNotificationsBlocked ? "Notifications Blocked" : "Enable Notifications"}
+            </Text>
+            <Text style={styles.webPushDesc}>
+              {isNotificationsBlocked 
+                ? "Click the 🔒 lock icon in your URL bar to allow alerts." 
+                : "Get instantly notified when a tag is scanned."}
+            </Text>
           </View>
-          <TouchableOpacity style={styles.webPushBtn} onPress={requestWebPush}>
-            <Text style={styles.webPushBtnText}>Enable</Text>
-          </TouchableOpacity>
+          {!isNotificationsBlocked && (
+            <TouchableOpacity style={styles.webPushBtn} onPress={requestWebPush}>
+              <Text style={styles.webPushBtnText}>Enable</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={{ marginLeft: 12, padding: 4 }} onPress={() => setShowWebPushPrompt(false)}>
             <X color="#94A3B8" size={20} />
           </TouchableOpacity>

@@ -75,11 +75,20 @@ export default function AuthForm() {
           const token = await registerForPushNotificationsAsync();
           
           if (token) {
-            //  Save token to Supabase
-            await supabase_lucifer_core
+            // Fetch existing tokens and append
+            const { data: profile } = await supabase_lucifer_core
               .from('profiles')
-              .update({ expo_push_token: token })
-              .eq('id', data.user.id);
+              .select('push_tokens')
+              .eq('id', data.user.id)
+              .single();
+              
+            const existingTokens = profile?.push_tokens || [];
+            if (!existingTokens.includes(token)) {
+              await supabase_lucifer_core
+                .from('profiles')
+                .update({ push_tokens: [...existingTokens, token] })
+                .eq('id', data.user.id);
+            }
             
             // Ping Go Server for the Security Geofence Check!
             const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL; 

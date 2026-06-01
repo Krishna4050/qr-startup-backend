@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/lib/pq"
 	"github.com/Krishna4050/qr-startup-backend/database"
 )
 
@@ -75,15 +76,26 @@ func LoginSecurityCheck(w http.ResponseWriter, r *http.Request) {
 	database.DB.Exec(insertQuery, req.UserID, realIP, req.Device)
 
 	// Fire the Alert if it's new
-	if isNewLocation && req.PushToken != "" {
+	if isNewLocation {
 		title := "⚠️ Unrecognized Login detected"
 		body := fmt.Sprintf("A new login occurred on an %s near %s, %s. If this wasn't you, secure your account immediately.", req.Device, city, country)
 
-		// Fire Push Notification
-		go SendPushNotification(req.PushToken, title, body, map[string]string{
-			"category": "security",
-			"priority": "urgent",
-		})
+		var pushTokens []string
+		// Query the new push_tokens array
+		err := database.DB.QueryRow(`SELECT push_tokens FROM profiles WHERE id = $1`, req.UserID).Scan(pq.Array(&pushTokens))
+		if err == nil {
+			for _, token := range pushTokens {
+				// Don't send the alert to the device that just logged in!
+				if token != req.PushToken && token != "" {
+					go SendPushNotification(token, title, body, map[string]string{
+						"category": "security",
+						"priority": "urgent",
+					})
+				}
+			}
+		} else {
+			fmt.Printf("Failed to fetch push_tokens for user %s: %v\n", req.UserID, err)
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
