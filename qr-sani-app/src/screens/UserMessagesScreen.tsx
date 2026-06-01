@@ -9,7 +9,7 @@ import ChatScreen from './ChatScreen';
 export default function UserMessagesScreen({ route }: any) {
   const { shopId: defaultShopId, shopName: defaultShopName, hostId: defaultHostId } = route.params || {};
   const navigation = useNavigation<any>();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024; 
   
@@ -23,18 +23,21 @@ export default function UserMessagesScreen({ route }: any) {
     if (user) {
       fetchConversations();
     }
-  }, [user]);
+  }, [user?.id, session?.access_token]);
 
   const fetchConversations = async () => {
     setLoading(true);
     try {
       // Find all messages involving this user to get unique shops
       // For a user, they are either sender or receiver. We just group by shop_id.
-      const { data, error } = await supabase_lucifer_core
+      const fetchPromise = supabase_lucifer_core
         .from('shop_messages')
         .select('shop_id, created_at, shop_locations(id, shop_name, city, owner_id)')
         .or(`sender_id.eq.${user?.id},receiver_id.eq.${user?.id}`)
         .order('created_at', { ascending: false });
+
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Network request timed out')), 8000));
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
       if (error) throw error;
 

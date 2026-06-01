@@ -12,7 +12,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
   const [completionPercentage, setCompletionPercentage] = useState(0);
-  const { user, logout } = useAuth();
+  const { user, session, logout } = useAuth();
 
   // Local UI States
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -23,11 +23,14 @@ export default function ProfileScreen() {
     try {
       if (!user) return;
       
-      const { data, error } = await supabase_lucifer_core
+      const fetchPromise = supabase_lucifer_core
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
+
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Network request timed out')), 8000));
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
       if (error) throw error;
 
@@ -52,7 +55,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     fetchProfileData();
-  }, [user?.id]);
+  }, [user?.id, session?.access_token]);
 
   const handleLogout = async () => {
     try {

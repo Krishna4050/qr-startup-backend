@@ -178,7 +178,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               )}
               {showProfileDropdown && (
                 <View style={[styles.dropdownMenu, { top: 40, right: 0, left: 'auto', width: 200, padding: 8 }]}>
-                  <WebLink style={styles.dropdownItem} screen="Dashboard" params={{ screen: 'Profile' }} onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Profile</Text></WebLink>
+                  <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Profile</Text></WebLink>
                   <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Messages</Text></WebLink>
                   <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}><Text style={styles.dropdownItemText}>Host Dashboard</Text></WebLink>
                   <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 4 }} />
@@ -363,7 +363,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                     <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages</Text>
                     </WebLink>
-                    <WebLink style={styles.dropdownItem} screen="Dashboard" params={{ screen: 'Profile' }} onPress={() => setShowProfileDropdown(false)}>
+                    <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
                       <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
                     </WebLink>
                     <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}>
