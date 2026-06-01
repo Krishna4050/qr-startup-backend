@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Phone, ShieldCheck, Plus, Trash2, Smartphone, KeyRound } from 'lucide-react-native';
+import { ArrowLeft, Phone, ShieldCheck, Plus, Trash2, Smartphone, KeyRound, Check } from 'lucide-react-native';
+import apiClient from '../utils/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 export default function ContactManagerScreen({ isEmbedded }: any) {
   const navigation = useNavigation<any>();
@@ -11,11 +13,29 @@ export default function ContactManagerScreen({ isEmbedded }: any) {
   const [isVerified, setIsVerified] = useState(false);
   const [otpStep, setOtpStep] = useState<'idle' | 'sending' | 'awaiting_code' | 'verifying'>('idle');
   const [otpCode, setOtpCode] = useState('');
+  const { user } = useAuth();
 
   // --- Emergency Contacts State ---
-  const [emergencyContacts, setEmergencyContacts] = useState([
-    { id: '1', name: 'Mom', phone: '+1 555-0198' }
-  ]);
+  const [emergencyContacts, setEmergencyContacts] = useState<any[]>([]);
+  const [isAddingContact, setIsAddingContact] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        if (!user) return;
+        const { data } = await apiClient.get('/api/profile');
+        if (data && data.phone_number) {
+          setPhoneNumber(data.phone_number);
+          setIsVerified(true);
+        }
+      } catch (err) {
+        console.error("Error loading profile phone:", err);
+      }
+    };
+    fetchProfile();
+  }, [user]);
 
   // --- Simulated OTP Logic ---
   const handleSendOTP = () => {
@@ -42,6 +62,17 @@ export default function ContactManagerScreen({ isEmbedded }: any) {
       setIsVerified(true);
       Alert.alert("Success", "Your phone number is now verified and secure!");
     }, 1000);
+  };
+
+  const handleSaveNewContact = () => {
+    if (!newContactName.trim() || !newContactPhone.trim()) {
+      Alert.alert("Missing Details", "Please provide both a name and phone number.");
+      return;
+    }
+    setEmergencyContacts([...emergencyContacts, { id: Date.now().toString(), name: newContactName, phone: newContactPhone }]);
+    setIsAddingContact(false);
+    setNewContactName('');
+    setNewContactPhone('');
   };
 
   const removeContact = (id: string) => {
@@ -157,10 +188,26 @@ export default function ContactManagerScreen({ isEmbedded }: any) {
             </View>
           ))}
 
-          {emergencyContacts.length < 5 && (
+          {isAddingContact && (
+            <View style={{ marginTop: 16, padding: 16, backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 12, color: '#111827' }}>Add New Contact</Text>
+              <TextInput style={styles.smallInput} placeholder="Contact Name (e.g., Mom, John)" value={newContactName} onChangeText={setNewContactName} />
+              <TextInput style={styles.smallInput} placeholder="Phone Number" keyboardType="phone-pad" value={newContactPhone} onChangeText={setNewContactPhone} />
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                <TouchableOpacity style={[styles.primaryBtn, { flex: 1, height: 44 }]} onPress={handleSaveNewContact}>
+                  <Text style={styles.primaryBtnText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.primaryBtn, { flex: 1, height: 44, backgroundColor: '#E5E7EB' }]} onPress={() => setIsAddingContact(false)}>
+                  <Text style={[styles.primaryBtnText, { color: '#4B5563' }]}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {emergencyContacts.length < 5 && !isAddingContact && (
             <TouchableOpacity 
               style={styles.addBtn} 
-              onPress={() => Alert.alert("Add Contact", "Form to add a new contact will open here.")}
+              onPress={() => setIsAddingContact(true)}
             >
               <Plus color="#3B82F6" size={20} />
               <Text style={styles.addBtnText}>Add Emergency Contact</Text>
@@ -190,6 +237,7 @@ const styles = StyleSheet.create({
   inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 12, height: 56, paddingHorizontal: 16, marginBottom: 16 },
   inputIcon: { marginRight: 12 },
   input: { flex: 1, fontSize: 16, color: '#111827' },
+  smallInput: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, height: 44, paddingHorizontal: 12, marginBottom: 12, fontSize: 15 },
   
   primaryBtn: { backgroundColor: '#0F2D4D', height: 52, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   primaryBtnText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },

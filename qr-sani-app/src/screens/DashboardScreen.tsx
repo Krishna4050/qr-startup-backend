@@ -479,6 +479,14 @@ export default function DashboardScreen() {
 
       <RefreshableScroll onRefreshAction={fetchDashboardData} style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.webMaxWidth}>
+        
+        {Platform.OS === 'web' && user && !isGuest && (
+           <View style={{ marginBottom: 32, marginTop: 16 }}>
+             <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#0F2D4D' }}>{getGreeting()}</Text>
+             <Text style={{ fontSize: 18, color: '#4B5563', marginTop: 4 }}>Welcome back, {displayName}</Text>
+           </View>
+        )}
+
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.sectionTitle}>Active Tags</Text>
