@@ -5,6 +5,7 @@ import { ArrowLeft, MessageSquare, ChevronRight, Info, MapPin } from 'lucide-rea
 import { supabase_lucifer_core } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
 import ChatScreen from './ChatScreen'; 
+import apiClient from '../utils/apiClient';
 
 export default function UserMessagesScreen({ route }: any) {
   const { shopId: defaultShopId, shopName: defaultShopName, hostId: defaultHostId } = route.params || {};
@@ -29,17 +30,7 @@ export default function UserMessagesScreen({ route }: any) {
     setLoading(true);
     try {
       // Find all messages involving this user to get unique shops
-      // For a user, they are either sender or receiver. We just group by shop_id.
-      const fetchPromise = supabase_lucifer_core
-        .from('shop_messages')
-        .select('shop_id, created_at, shop_locations(id, shop_name, city, owner_id)')
-        .or(`sender_id.eq.${user?.id},receiver_id.eq.${user?.id}`)
-        .order('created_at', { ascending: false });
-
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Network request timed out')), 8000));
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-      if (error) throw error;
+      const data = await apiClient.get('/api/messages');
 
       const uniqueShops = new Map();
       

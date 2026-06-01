@@ -108,6 +108,12 @@ func main(){
 	mux.HandleFunc("GET /api/host/shop/{id}", middleware.RequireAuth(handlers.GetHostShopDetailsHandler))
 	mux.HandleFunc("POST /api/upload", middleware.RequireAuth(handlers.UploadAssetHandler))
 	
+	// --- NEW: Profile & Messages APIs ---
+	mux.HandleFunc("GET /api/profile", middleware.RequireAuth(handlers.GetProfile))
+	mux.HandleFunc("POST /api/profile", middleware.RequireAuth(handlers.UpdateProfile))
+	mux.HandleFunc("GET /api/profile/check-username", middleware.RequireAuth(handlers.CheckUsername))
+	mux.HandleFunc("GET /api/messages", middleware.RequireAuth(handlers.GetUserMessages))
+	
 	// Directory API
 	mux.HandleFunc("GET /api/directory", middleware.RequireAuth(handlers.GetServicesDirectoryHandler))
 

@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
 import { ArrowLeft, Save, User, Phone, MapPin, FileText, Calendar, Hash, Home as HomeIcon, Pencil, CheckCircle, XCircle, Camera } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { supabase_lucifer_core } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
+import apiClient from '../utils/apiClient';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 
-export default function EditProfileScreen() {
+export default function EditProfileScreen({ route, isEmbedded }: any) {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -36,9 +36,9 @@ export default function EditProfileScreen() {
     try {
       if (!user) return;
 
-      const { data } = await supabase_lucifer_core.from('profiles').select('*').eq('id', user.id).single();
+      const data = await apiClient.get('/api/profile');
 
-      if (data) {
+      if (data && data.id) {
         setFormData({
           first_name: data.first_name || '', last_name: data.last_name || '', username: data.username || '',
           gender: data.gender || '', date_of_birth: data.date_of_birth || '', phone_number: data.phone_number || '',
@@ -69,17 +69,17 @@ export default function EditProfileScreen() {
     // 3. DEBOUNCER: Wait 500ms after they stop typing before asking the database
     const delayDebounceFn = setTimeout(async () => {
       
-      // Check if it exists
-      const { data } = await supabase_lucifer_core
-        .from('profiles')
-        .select('id')
-        .eq('username', formData.username.trim())
-        .maybeSingle();
-
-      if (data) {
-        setUsernameStatus('taken');
-        generateSmartSuggestions(formData.username.trim());
-      } else {
+      try {
+        const data = await apiClient.get(`/api/profile/check-username?username=${formData.username.trim()}`);
+        if (data.taken) {
+          setUsernameStatus('taken');
+          generateSmartSuggestions(formData.username.trim());
+        } else {
+          setUsernameStatus('available');
+          setSuggestions([]);
+        }
+      } catch (err) {
+        // Fallback or ignore
         setUsernameStatus('available');
         setSuggestions([]);
       }
@@ -181,10 +181,10 @@ export default function EditProfileScreen() {
       const { data: publicUrlData } = supabase_lucifer_core.storage.from('avatars').getPublicUrl(filePath);
       const newAvatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
       
-      const { error: updateError } = await supabase_lucifer_core.from('profiles').update({ avatar_url: newAvatarUrl }).eq('id', user.id);
-      if (updateError) throw updateError;
+      const newFormData = { ...formData, avatar_url: newAvatarUrl };
+      await apiClient.post('/api/profile', newFormData);
 
-      setFormData(prev => ({ ...prev, avatar_url: newAvatarUrl }));
+      setFormData(newFormData);
       Alert.alert("Success", "Profile picture updated!");
     } catch (error: any) {
       Alert.alert("Error", error.message);
@@ -200,21 +200,7 @@ export default function EditProfileScreen() {
     try {
       if (!user) throw new Error("Not logged in");
 
-      const { error } = await supabase_lucifer_core.from('profiles').update({
-        first_name: formData.first_name, last_name: formData.last_name, username: formData.username,
-        display_name: `${formData.first_name} ${formData.last_name}`.trim(),
-        gender: formData.gender, date_of_birth: formData.date_of_birth, phone_number: formData.phone_number,
-        country: formData.country, city: formData.city, street: formData.street, house_number: formData.house_number,
-        bio: formData.bio, updated_at: new Date().toISOString()
-      }).eq('id', user.id);
-
-      if (error) {
-        if (error.code === '23505') {
-           if (error.message.includes('phone_number')) setErrors({...errors, phone_number: 'Phone number already in use'});
-           throw new Error("Please fix the errors below.");
-        }
-        throw error;
-      }
+      await apiClient.post('/api/profile', formData);
 
       setOriginalUsername(formData.username); // Update the baseline
       setUsernameStatus('idle');
@@ -230,6 +216,164 @@ export default function EditProfileScreen() {
 
   if (fetching) return <View style={[styles.container, {justifyContent: 'center', alignItems: 'center'}]}><ActivityIndicator size="large" color="#0F2D4D" /></View>;
 
+  const renderForm = () => (
+    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {!isEditing && <View style={styles.readOnlyBanner}><Text style={styles.readOnlyText}>Tap the pencil icon to edit your details.</Text></View>}
+
+      {/* --- AVATAR SECTION --- */}
+      <View style={styles.avatarSection}>
+        <TouchableOpacity onPress={pickImage} disabled={uploadingAvatar} style={styles.avatarWrapper}>
+          {formData.avatar_url ? (
+            <Image source={{ uri: formData.avatar_url }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <User color="#9CA3AF" size={40} />
+            </View>
+          )}
+          
+          <View style={styles.avatarEditBadge}>
+            {uploadingAvatar ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Camera color="#FFFFFF" size={14} />
+            )}
+          </View>
+        </TouchableOpacity>
+        <Text style={styles.avatarSubtext}>Tap to change picture</Text>
+      </View>
+
+      {/* --- PERSONAL INFO SECTION --- */}
+      <Text style={styles.sectionHeading}>Personal Information</Text>
+      
+      <View style={styles.row}>
+        <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+          <Text style={styles.label}>First Name</Text>
+          <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.first_name && styles.inputError]}>
+            <User color={errors.first_name ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
+            <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="John" value={formData.first_name} onChangeText={(t) => updateField('first_name', t)} />
+          </View>
+          {errors.first_name && <Text style={styles.errorText}>{errors.first_name}</Text>}
+        </View>
+        <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+          <Text style={styles.label}>Last Name</Text>
+          <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.last_name && styles.inputError]}>
+            <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="Doe" value={formData.last_name} onChangeText={(t) => updateField('last_name', t)} />
+          </View>
+          {errors.last_name && <Text style={styles.errorText}>{errors.last_name}</Text>}
+        </View>
+      </View>
+
+      {/* --- USERNAME SECTION (NOW WITH LIVE CHECKING) --- */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Username</Text>
+        <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, (errors.username || usernameStatus === 'taken') && styles.inputError]}>
+          <Text style={{color: (errors.username || usernameStatus === 'taken') ? '#EF4444' : '#9CA3AF', marginRight: 8, fontSize: 16}}>@</Text>
+          <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="johndoe123" autoCapitalize="none" value={formData.username} onChangeText={(t) => updateField('username', t.toLowerCase().replace(/\s/g, ''))} />
+          
+          {/* Status Indicators inside the input box */}
+          {isEditing && usernameStatus === 'checking' && <ActivityIndicator size="small" color="#3B82F6" />}
+          {isEditing && usernameStatus === 'available' && <CheckCircle color="#10B981" size={20} />}
+          {isEditing && usernameStatus === 'taken' && <XCircle color="#EF4444" size={20} />}
+        </View>
+        
+        {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+        {usernameStatus === 'taken' && <Text style={styles.errorText}>Username is already taken.</Text>}
+        
+        {/* Suggestion Chips */}
+        {isEditing && suggestions.length > 0 && (
+          <View style={styles.suggestionsWrapper}>
+            <Text style={styles.suggestionLabel}>Available:</Text>
+            <View style={styles.suggestionRow}>
+              {suggestions.map((sug, idx) => (
+                <TouchableOpacity key={idx} style={styles.suggestionChip} onPress={() => updateField('username', sug)}>
+                  <Text style={styles.suggestionChipText}>{sug}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.row}>
+        <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+          <Text style={styles.label}>Gender</Text>
+          <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.gender && styles.inputError]}>
+            <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="Male, Female..." value={formData.gender} onChangeText={(t) => updateField('gender', t)} />
+          </View>
+          {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
+        </View>
+        <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+          <Text style={styles.label}>Date of Birth</Text>
+          <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.date_of_birth && styles.inputError]}>
+            <Calendar color={errors.date_of_birth ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
+            <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="YYYY-MM-DD" value={formData.date_of_birth} onChangeText={(t) => updateField('date_of_birth', t)} />
+          </View>
+          {errors.date_of_birth && <Text style={styles.errorText}>{errors.date_of_birth}</Text>}
+        </View>
+      </View>
+
+      {/* --- ADDRESS SECTION --- */}
+      <Text style={styles.sectionHeading}>Address</Text>
+
+      <View style={styles.row}>
+        <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+          <Text style={styles.label}>Country</Text>
+          <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.country && styles.inputError]}>
+            <MapPin color={errors.country ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
+            <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="USA" value={formData.country} onChangeText={(t) => updateField('country', t)} />
+          </View>
+          {errors.country && <Text style={styles.errorText}>{errors.country}</Text>}
+        </View>
+        <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+          <Text style={styles.label}>City</Text>
+          <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.city && styles.inputError]}>
+            <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="New York" value={formData.city} onChangeText={(t) => updateField('city', t)} />
+          </View>
+          {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+        </View>
+      </View>
+
+      <View style={styles.row}>
+        <View style={[styles.inputGroup, { flex: 2, marginRight: 8 }]}>
+          <Text style={styles.label}>Street</Text>
+          <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.street && styles.inputError]}>
+            <HomeIcon color={errors.street ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
+            <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="Main St" value={formData.street} onChangeText={(t) => updateField('street', t)} />
+          </View>
+          {errors.street && <Text style={styles.errorText}>{errors.street}</Text>}
+        </View>
+        <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+          <Text style={styles.label}>House #</Text>
+          <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.house_number && styles.inputError]}>
+            <Hash color={errors.house_number ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
+            <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="123" value={formData.house_number} onChangeText={(t) => updateField('house_number', t)} />
+          </View>
+          {errors.house_number && <Text style={styles.errorText}>{errors.house_number}</Text>}
+        </View>
+      </View>
+
+      {/* --- BIO SECTION --- */}
+      <Text style={styles.sectionHeading}>About You</Text>
+
+      <View style={styles.inputGroup}>
+        <View style={[styles.inputContainer, { height: 100, alignItems: 'flex-start', paddingTop: 12 }, !isEditing && styles.inputDisabled, errors.bio && styles.inputError]}>
+          <FileText color={errors.bio ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
+          <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top' }, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="Write a short bio..." multiline value={formData.bio} onChangeText={(t) => updateField('bio', t)} />
+        </View>
+        {errors.bio && <Text style={styles.errorText}>{errors.bio}</Text>}
+      </View>
+
+    </ScrollView>
+  );
+
+  if (isEmbedded) {
+    return (
+      <View style={[styles.container, { backgroundColor: '#FFFFFF', flex: 1 }]}>
+        {renderForm()}
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       {/* HEADER */}
@@ -244,166 +388,7 @@ export default function EditProfileScreen() {
           <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.iconBtn}><Pencil color="#3B82F6" size={22} /></TouchableOpacity>
         )}
       </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {!isEditing && <View style={styles.readOnlyBanner}><Text style={styles.readOnlyText}>Tap the pencil icon to edit your details.</Text></View>}
-
-        {/* --- AVATAR SECTION --- */}
-        <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={pickImage} disabled={uploadingAvatar} style={styles.avatarWrapper}>
-            {formData.avatar_url ? (
-              <Image source={{ uri: formData.avatar_url }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <User color="#9CA3AF" size={40} />
-              </View>
-            )}
-            
-            <View style={styles.avatarEditBadge}>
-              {uploadingAvatar ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Camera color="#FFFFFF" size={14} />
-              )}
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.avatarSubtext}>Tap to change picture</Text>
-        </View>
-
-        {/* --- PERSONAL INFO SECTION --- */}
-        <Text style={styles.sectionHeading}>Personal Information</Text>
-        
-        <View style={styles.row}>
-          <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-            <Text style={styles.label}>First Name</Text>
-            <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.first_name && styles.inputError]}>
-              <User color={errors.first_name ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
-              <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="John" value={formData.first_name} onChangeText={(t) => updateField('first_name', t)} />
-            </View>
-            {errors.first_name && <Text style={styles.errorText}>{errors.first_name}</Text>}
-          </View>
-          <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-            <Text style={styles.label}>Last Name</Text>
-            <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.last_name && styles.inputError]}>
-              <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="Doe" value={formData.last_name} onChangeText={(t) => updateField('last_name', t)} />
-            </View>
-            {errors.last_name && <Text style={styles.errorText}>{errors.last_name}</Text>}
-          </View>
-        </View>
-
-        {/* --- USERNAME SECTION (NOW WITH LIVE CHECKING) --- */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Username</Text>
-          <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, (errors.username || usernameStatus === 'taken') && styles.inputError]}>
-            <Text style={{color: (errors.username || usernameStatus === 'taken') ? '#EF4444' : '#9CA3AF', marginRight: 8, fontSize: 16}}>@</Text>
-            <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="johndoe123" autoCapitalize="none" value={formData.username} onChangeText={(t) => updateField('username', t.toLowerCase().replace(/\s/g, ''))} />
-            
-            {/* Status Indicators inside the input box */}
-            {isEditing && usernameStatus === 'checking' && <ActivityIndicator size="small" color="#3B82F6" />}
-            {isEditing && usernameStatus === 'available' && <CheckCircle color="#10B981" size={20} />}
-            {isEditing && usernameStatus === 'taken' && <XCircle color="#EF4444" size={20} />}
-          </View>
-          
-          {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
-          {usernameStatus === 'taken' && <Text style={styles.errorText}>Username is already taken.</Text>}
-          
-          {/* Suggestion Chips */}
-          {isEditing && suggestions.length > 0 && (
-            <View style={styles.suggestionsWrapper}>
-              <Text style={styles.suggestionLabel}>Available:</Text>
-              <View style={styles.suggestionRow}>
-                {suggestions.map((sug, idx) => (
-                  <TouchableOpacity key={idx} style={styles.suggestionChip} onPress={() => updateField('username', sug)}>
-                    <Text style={styles.suggestionChipText}>{sug}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.row}>
-          <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-            <Text style={styles.label}>Gender</Text>
-            <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.gender && styles.inputError]}>
-              <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="Male, Female..." value={formData.gender} onChangeText={(t) => updateField('gender', t)} />
-            </View>
-            {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
-          </View>
-          <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-            <Text style={styles.label}>Date of Birth</Text>
-            <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.date_of_birth && styles.inputError]}>
-              <Calendar color={errors.date_of_birth ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
-              <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="YYYY-MM-DD" value={formData.date_of_birth} onChangeText={(t) => updateField('date_of_birth', t)} />
-            </View>
-            {errors.date_of_birth && <Text style={styles.errorText}>{errors.date_of_birth}</Text>}
-          </View>
-        </View>
-
-        {/* --- CONTACT INFO SECTION --- */}
-       { /* <Text style={styles.sectionHeading}>Contact Details</Text>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Phone Number</Text>
-          <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.phone_number && styles.inputError]}>
-            <Phone color={errors.phone_number ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
-            <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="+1 234 567 8900" keyboardType="phone-pad" value={formData.phone_number} onChangeText={(t) => updateField('phone_number', t)} />
-          </View>
-          {errors.phone_number && <Text style={styles.errorText}>{errors.phone_number}</Text>}
-        </View> */}
-
-        {/* --- ADDRESS SECTION --- */}
-        <Text style={styles.sectionHeading}>Address</Text>
-
-        <View style={styles.row}>
-          <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-            <Text style={styles.label}>Country</Text>
-            <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.country && styles.inputError]}>
-              <MapPin color={errors.country ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
-              <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="USA" value={formData.country} onChangeText={(t) => updateField('country', t)} />
-            </View>
-            {errors.country && <Text style={styles.errorText}>{errors.country}</Text>}
-          </View>
-          <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-            <Text style={styles.label}>City</Text>
-            <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.city && styles.inputError]}>
-              <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="New York" value={formData.city} onChangeText={(t) => updateField('city', t)} />
-            </View>
-            {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
-          </View>
-        </View>
-
-        <View style={styles.row}>
-          <View style={[styles.inputGroup, { flex: 2, marginRight: 8 }]}>
-            <Text style={styles.label}>Street</Text>
-            <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.street && styles.inputError]}>
-              <HomeIcon color={errors.street ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
-              <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="Main St" value={formData.street} onChangeText={(t) => updateField('street', t)} />
-            </View>
-            {errors.street && <Text style={styles.errorText}>{errors.street}</Text>}
-          </View>
-          <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-            <Text style={styles.label}>House #</Text>
-            <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.house_number && styles.inputError]}>
-              <Hash color={errors.house_number ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
-              <TextInput style={[styles.input, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="123" value={formData.house_number} onChangeText={(t) => updateField('house_number', t)} />
-            </View>
-            {errors.house_number && <Text style={styles.errorText}>{errors.house_number}</Text>}
-          </View>
-        </View>
-
-        {/* --- BIO SECTION --- */}
-        <Text style={styles.sectionHeading}>About You</Text>
-
-        <View style={styles.inputGroup}>
-          <View style={[styles.inputContainer, { height: 100, alignItems: 'flex-start', paddingTop: 12 }, !isEditing && styles.inputDisabled, errors.bio && styles.inputError]}>
-            <FileText color={errors.bio ? "#EF4444" : "#9CA3AF"} size={18} style={styles.inputIcon} />
-            <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top' }, !isEditing && styles.textDisabled]} editable={isEditing} placeholder="Write a short bio..." multiline value={formData.bio} onChangeText={(t) => updateField('bio', t)} />
-          </View>
-          {errors.bio && <Text style={styles.errorText}>{errors.bio}</Text>}
-        </View>
-
-      </ScrollView>
+      {renderForm()}
     </KeyboardAvoidingView>
   );
 }

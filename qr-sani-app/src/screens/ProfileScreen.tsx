@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Alert } from 'react-native';
-import { User, Shield, CreditCard, Moon, Bell, Clock, Globe, HelpCircle, Info, ChevronRight, LogOut, ArrowRight, Phone} from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Alert, useWindowDimensions, ScrollView } from 'react-native';
+import { User, Shield, CreditCard, Moon, Bell, Clock, Globe, HelpCircle, Info, ChevronRight, LogOut, ArrowRight, Phone, Archive } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Archive /* ...other icons */ } from 'lucide-react-native';
-import { supabase_lucifer_core } from '../utils/supabase';
 import RefreshableScroll from '../components/RefreshableScroll';
 import { useAuth } from '../context/AuthContext';
+import apiClient from '../utils/apiClient';
+import EditProfileScreen from './EditProfileScreen';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -19,21 +19,14 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [saveHistory, setSaveHistory] = useState(true);
 
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+  const [activeTab, setActiveTab] = useState('Profile Information');
+
   const fetchProfileData = async () => {
     try {
       if (!user) return;
-      
-      const fetchPromise = supabase_lucifer_core
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Network request timed out')), 8000));
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-      if (error) throw error;
-
+      const data = await apiClient.get('/api/profile');
       setProfileData(data);
       calculateCompletion(data);
     } catch (error) {
@@ -84,20 +77,87 @@ export default function ProfileScreen() {
     border: isDarkMode ? '#2C2C2E' : '#F3F4F6'
   };
 
-  // Helper component for rendering menu rows
-  const MenuRow = ({ icon: Icon, title, rightElement, onPress, isLast = false }: any) => (
-    <TouchableOpacity 
-      style={[styles.menuRow, { borderBottomWidth: isLast ? 0 : 1, borderBottomColor: theme.border }]} 
-      onPress={onPress}
-      disabled={!onPress}
-    >
-      <View style={styles.menuRowLeft}>
-        <Icon color={theme.icon} size={20} />
-        <Text style={[styles.menuRowTitle, { color: theme.text }]}>{title}</Text>
+  const MenuRow = ({ icon: Icon, title, rightElement, onPress, isLast = false }: any) => {
+    const isActive = isDesktop && activeTab === title;
+    
+    return (
+      <TouchableOpacity 
+        style={[
+          styles.menuRow, 
+          { borderBottomWidth: isLast ? 0 : 1, borderBottomColor: theme.border },
+          isActive && isDesktop && { backgroundColor: isDarkMode ? '#2C2C2E' : '#F3F4F6' }
+        ]} 
+        onPress={() => {
+          if (isDesktop && !rightElement && title !== 'Log Out') {
+            setActiveTab(title);
+          } else if (onPress) {
+            onPress();
+          }
+        }}
+        disabled={!onPress && (!isDesktop || !!rightElement)}
+      >
+        <View style={styles.menuRowLeft}>
+          <Icon color={isActive && isDesktop ? '#10B981' : theme.icon} size={20} />
+          <Text style={[styles.menuRowTitle, { color: isActive && isDesktop ? '#10B981' : theme.text, fontWeight: isActive && isDesktop ? 'bold' : '500' }]}>{title}</Text>
+        </View>
+        {rightElement || <ChevronRight color={theme.subText} size={20} />}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderMenus = () => (
+    <>
+      <View style={[styles.cardGroup, { backgroundColor: theme.card }]}>
+        <MenuRow icon={User} title="Profile Information" onPress={() => !isDesktop && navigation.navigate('EditProfile')} />
+        <MenuRow icon={Shield} title="Privacy & Security" onPress={() => Alert.alert("Navigate", "Go to Security Screen")} />
+        <MenuRow icon={CreditCard} title="Subscription & Billing" onPress={() => {}} />
+        <MenuRow icon={Phone} title="Contact Details & Emergency" onPress={() => !isDesktop && navigation.navigate('ContactManager')} />
+        <MenuRow icon={Archive} title="Archived Tags" isLast={true} onPress={() => navigation.navigate('FilteredTags', { filterType: 'archived' })} />
       </View>
-      {rightElement || <ChevronRight color={theme.subText} size={20} />}
-    </TouchableOpacity>
+
+      <View style={[styles.cardGroup, { backgroundColor: theme.card }]}>
+        <MenuRow icon={Moon} title="Dark Mode" rightElement={<Switch value={isDarkMode} onValueChange={setIsDarkMode} trackColor={{ false: '#D1D5DB', true: '#10B981' }} />} />
+        <MenuRow icon={Bell} title="Notifications" rightElement={<Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} trackColor={{ false: '#D1D5DB', true: '#10B981' }} />} />
+        <MenuRow icon={Clock} title="Save History" rightElement={<Switch value={saveHistory} onValueChange={setSaveHistory} trackColor={{ false: '#D1D5DB', true: '#10B981' }} />} />
+        <MenuRow icon={Globe} title="Language" rightElement={<View style={{flexDirection: 'row', alignItems: 'center'}}><Text style={{color: theme.subText, marginRight: 4}}>English</Text><ChevronRight color={theme.subText} size={20} /></View>} onPress={() => {}} />
+        <MenuRow icon={HelpCircle} title="Help Center" onPress={() => {}} />
+        <MenuRow icon={Info} title="About" isLast={true} onPress={() => {}} />
+      </View>
+
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <LogOut color="#DC2626" size={20} />
+        <Text style={styles.logoutText}>Log Out</Text>
+      </TouchableOpacity>
+    </>
   );
+
+  if (isDesktop) {
+    return (
+      <View style={[styles.desktopContainer, { backgroundColor: isDarkMode ? '#000000' : '#FFFFFF' }]}>
+        {/* LEFT SIDEBAR */}
+        <View style={[styles.desktopSidebar, { borderRightColor: theme.border }]}>
+          <Text style={[styles.desktopHeaderTitle, { color: theme.text }]}>Account</Text>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+            {renderMenus()}
+          </ScrollView>
+        </View>
+
+        {/* RIGHT CONTENT */}
+        <View style={styles.desktopContent}>
+          {activeTab === 'Profile Information' ? (
+            <EditProfileScreen isEmbedded={true} />
+          ) : activeTab === 'Contact Details & Emergency' ? (
+             <View style={styles.placeholderContent}><Text style={{color: theme.text, fontSize: 18}}>Contact Manager Screen goes here</Text></View>
+          ) : (
+            <View style={styles.placeholderContent}>
+              <Text style={{color: theme.text, fontSize: 24, fontWeight: 'bold', marginBottom: 8}}>{activeTab}</Text>
+              <Text style={{color: theme.subText, fontSize: 16}}>This section is coming soon or handled by external links.</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
@@ -129,59 +189,7 @@ export default function ProfileScreen() {
           </View>
         )}
 
-       {/* SECTION 1: Account Settings */}
-        <View style={[styles.cardGroup, { backgroundColor: theme.card }]}>
-          <MenuRow icon={User} title="Profile Information" onPress={() => navigation.navigate('EditProfile')} />
-          <MenuRow icon={Shield} title="Privacy & Security" onPress={() => Alert.alert("Navigate", "Go to Security Screen")} />
-          <MenuRow icon={CreditCard} title="Subscription & Billing" onPress={() => {}} />
-          
-          {/* --- NEW: Contact Manager --- */}
-          <MenuRow 
-            icon={Phone} 
-            title="Contact Details & Emergency" 
-            onPress={() => navigation.navigate('ContactManager')} 
-          />
-
-          <MenuRow 
-            icon={Archive} 
-            title="Archived Tags" 
-            isLast={true} 
-            onPress={() => navigation.navigate('FilteredTags', { filterType: 'archived' })} 
-          />
-        </View>
-
-        {/* SECTION 2: App Preferences */}
-        <View style={[styles.cardGroup, { backgroundColor: theme.card }]}>
-          <MenuRow 
-            icon={Moon} 
-            title="Dark Mode" 
-            rightElement={<Switch value={isDarkMode} onValueChange={setIsDarkMode} trackColor={{ false: '#D1D5DB', true: '#10B981' }} />} 
-          />
-          <MenuRow 
-            icon={Bell} 
-            title="Notifications" 
-            rightElement={<Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} trackColor={{ false: '#D1D5DB', true: '#10B981' }} />} 
-          />
-          <MenuRow 
-            icon={Clock} 
-            title="Save History" 
-            rightElement={<Switch value={saveHistory} onValueChange={setSaveHistory} trackColor={{ false: '#D1D5DB', true: '#10B981' }} />} 
-          />
-          <MenuRow 
-            icon={Globe} 
-            title="Language" 
-            rightElement={<View style={{flexDirection: 'row', alignItems: 'center'}}><Text style={{color: theme.subText, marginRight: 4}}>English</Text><ChevronRight color={theme.subText} size={20} /></View>} 
-            onPress={() => {}}
-          />
-          <MenuRow icon={HelpCircle} title="Help Center" onPress={() => {}} />
-          <MenuRow icon={Info} title="About" isLast={true} onPress={() => {}} />
-        </View>
-
-        {/* LOGOUT BUTTON */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <LogOut color="#DC2626" size={20} />
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
+        {renderMenus()}
 
       </RefreshableScroll>
     </View>
@@ -195,6 +203,13 @@ const styles = StyleSheet.create({
   header: { paddingTop: 60, paddingBottom: 16, paddingHorizontal: 24, justifyContent: 'center' },
   headerTitle: { fontSize: 28, fontWeight: 'bold' },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
+  
+  // Desktop Styles
+  desktopContainer: { flex: 1, flexDirection: 'row' },
+  desktopSidebar: { width: 320, borderRightWidth: 1, paddingHorizontal: 24, paddingTop: 40 },
+  desktopHeaderTitle: { fontSize: 32, fontWeight: 'bold', marginBottom: 32 },
+  desktopContent: { flex: 1, backgroundColor: '#FFFFFF' },
+  placeholderContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   
   // Completion Banner
   completionBanner: { backgroundColor: '#0F2D4D', borderRadius: 20, padding: 20, marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
