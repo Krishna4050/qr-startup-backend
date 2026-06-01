@@ -25,6 +25,9 @@ export default function DashboardScreen() {
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   
+  const windowWidth = useWindowDimensions().width;
+  const isMobileWeb = Platform.OS === 'web' && windowWidth < 768;
+
   const [tags, setTags] = useState<any[]>([]); // Combined array of My Tags + Shared Tags
   const [pausedTagsCount, setPausedTagsCount] = useState(0);
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -481,7 +484,7 @@ export default function DashboardScreen() {
         <View style={styles.webMaxWidth}>
         
         {Platform.OS === 'web' && user && !isGuest && (
-           <View style={{ marginBottom: 32, marginTop: 16 }}>
+           <View style={{ marginBottom: 32, marginTop: 40, paddingHorizontal: 24 }}>
              <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#0F2D4D' }}>{getGreeting()}</Text>
              <Text style={{ fontSize: 18, color: '#4B5563', marginTop: 4 }}>Welcome back, {displayName}</Text>
            </View>
@@ -497,10 +500,10 @@ export default function DashboardScreen() {
 
         <GridOrScroll>
           {tags.length === 0 ? (
-            <View style={styles.emptyCard}><Text style={styles.emptyCardText}>No tags added yet. Tap + to add!</Text></View>
+            <View style={[styles.emptyCard, isMobileWeb && { width: '100%' }]}><Text style={styles.emptyCardText}>No tags added yet. Tap + to add!</Text></View>
           ) : (
             tags.map((tag) => (
-              <TouchableOpacity key={tag.id} style={[styles.tagCard, tag.is_shared && { borderColor: '#BFDBFE', borderWidth: 1 }]} onPress={() => navigation.navigate('TagManage', { tagId: tag.id })}>
+              <TouchableOpacity key={tag.id} style={[styles.tagCard, tag.is_shared && { borderColor: '#BFDBFE', borderWidth: 1 }, isMobileWeb && { width: '47%', minWidth: 150, padding: 12 }]} onPress={() => navigation.navigate('TagManage', { tagId: tag.id })}>
                 <Text style={[styles.tagCategory, tag.is_shared && { color: '#2563EB' }]}>{tag.is_shared ? `SHARED BY ${tag.owner_name?.toUpperCase()}` : 'MY ITEM'}</Text>
                 <Text style={styles.tagTitle} numberOfLines={2}>{tag.item_name || 'Unnamed Item'}</Text>
                 <View style={styles.tagStatus}>
@@ -528,10 +531,10 @@ export default function DashboardScreen() {
 
         <GridOrScroll>
           {alerts.length === 0 ? (
-             <View style={styles.emptyCard}><Text style={styles.emptyCardText}>No new alerts.</Text></View>
+             <View style={[styles.emptyCard, isMobileWeb && { width: '100%' }]}><Text style={styles.emptyCardText}>No new alerts.</Text></View>
           ) : (
             alerts.map((alert) => (
-              <View key={alert.id} style={[styles.alertCard, { borderLeftColor: alert.alert_type === 'low_battery' ? '#EF4444' : '#F59E0B' }]}>
+              <View key={alert.id} style={[styles.alertCard, { borderLeftColor: alert.alert_type === 'low_battery' ? '#EF4444' : '#F59E0B' }, isMobileWeb && { width: '100%' }]}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={styles.alertCategory}>{alert.alert_type.replace('_', ' ').toUpperCase()}</Text>
                   {alert.alert_type === 'low_battery' ? <BatteryMedium color="#EF4444" size={16} /> : <AlertTriangle color="#F59E0B" size={16} />}
@@ -567,18 +570,18 @@ export default function DashboardScreen() {
         </View>
 
         <GridOrScroll>
-          <View style={[styles.overviewCard, { backgroundColor: '#6366F1' }]}>
-            <Text style={styles.overviewCardTitle}>Total Tags</Text>
-            <Text style={styles.overviewCardNumber}>{totalTags}</Text>
+          <View style={[styles.overviewCard, { backgroundColor: '#6366F1' }, isMobileWeb && { width: '47%', minWidth: 150, padding: 16, height: 130 }]}>
+            <Text style={[styles.overviewCardTitle, isMobileWeb && { fontSize: 14 }]}>Total Tags</Text>
+            <Text style={[styles.overviewCardNumber, isMobileWeb && { fontSize: 36 }]}>{totalTags}</Text>
           </View>
-          <View style={[styles.overviewCard, { backgroundColor: '#06B6D4' }]}>
-            <Text style={styles.overviewCardTitle}>Found Items</Text>
-            <Text style={styles.overviewCardNumber}>{foundItems}</Text>
+          <View style={[styles.overviewCard, { backgroundColor: '#06B6D4' }, isMobileWeb && { width: '47%', minWidth: 150, padding: 16, height: 130 }]}>
+            <Text style={[styles.overviewCardTitle, isMobileWeb && { fontSize: 14 }]}>Found Items</Text>
+            <Text style={[styles.overviewCardNumber, isMobileWeb && { fontSize: 36 }]}>{foundItems}</Text>
           </View>
-          <TouchableOpacity style={[styles.overviewCard, { backgroundColor: '#F59E0B' }]} activeOpacity={0.8} onPress={() => navigation.navigate('FilteredTags', { filterType: 'paused' })}>
+          <TouchableOpacity style={[styles.overviewCard, { backgroundColor: '#F59E0B' }, isMobileWeb && { width: '47%', minWidth: 150, padding: 16, height: 130 }]} activeOpacity={0.8} onPress={() => navigation.navigate('FilteredTags', { filterType: 'paused' })}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={styles.overviewCardTitle}>Paused Tags</Text>
-              <PauseCircle color="#FFFFFF" size={24} style={{ opacity: 0.8 }} />
+              <Text style={[styles.overviewCardTitle, isMobileWeb && { fontSize: 14 }]}>Paused Tags</Text>
+              {!isMobileWeb && <PauseCircle color="#FFFFFF" size={24} style={{ opacity: 0.8 }} />}
             </View>
             <Text style={styles.overviewCardNumber}>{pausedTagsCount}</Text>
           </TouchableOpacity>
@@ -619,7 +622,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   webMaxWidth: { maxWidth: Platform.OS === 'web' ? 1280 : '100%', alignSelf: 'center', width: '100%' },
-  webGridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 24, paddingHorizontal: 24, paddingBottom: 16 },
+  webGridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 24, paddingBottom: 16, justifyContent: 'space-between' },
   headerGradient: { paddingBottom: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
   headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: Platform.OS === 'android' ? 40 : 10 },
   greetingText: { fontSize: 14, color: '#DED1C6', marginBottom: 4 },
