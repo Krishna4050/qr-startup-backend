@@ -26,7 +26,7 @@ export default function WebLayout({ children, defaultService = 'Vehicle Repair' 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    minHeight: Platform.OS === 'web' ? '100vh' as any : '100%', // Ensures footer stays at bottom if content is short
+    minHeight: Platform.OS === 'web' ? '100dvh' as any : '100%', // Use 100dvh to fix mobile browser address bar height issues
     display: 'flex',
     flexDirection: 'column',
   },
