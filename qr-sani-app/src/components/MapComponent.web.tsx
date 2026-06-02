@@ -1,16 +1,92 @@
-import React from 'react';
-// @teovilla wrapper has some TS export issues. Use require or generic view for web fallback
-import { View, Text } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import { renderToString } from 'react-dom/server';
+
+// Inject CSS dynamically so we don't have to mess with Expo webpack config
+const injectLeafletCSS = () => {
+  if (typeof document !== 'undefined' && !document.getElementById('leaflet-css')) {
+    const link = document.createElement('link');
+    link.id = 'leaflet-css';
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+    
+    // Inject a small style fix for our custom markers
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .custom-leaflet-marker { background: transparent; border: none; }
+    `;
+    document.head.appendChild(style);
+  }
+};
 
 export const Map = (props: any) => {
+  useEffect(() => {
+    injectLeafletCSS();
+  }, []);
+
+  const center = props.initialRegion 
+    ? [props.initialRegion.latitude, props.initialRegion.longitude] 
+    : [60.1699, 24.9384];
+
+  // We use CartoDB Positron for a beautiful, minimalist, light map (Apple Maps aesthetic)
   return (
-    <View style={[{ backgroundColor: '#e2e8f0', justifyContent: 'center', alignItems: 'center' }, props.style]}>
-      <Text>Web Map Preview (Requires API Key for real map)</Text>
-      {props.children}
+    <View style={props.style || styles.mapContainer}>
+      <MapContainer 
+        center={center as any} 
+        zoom={13} 
+        style={{ height: '100%', width: '100%', zIndex: 0 }}
+        zoomControl={false}
+      >
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+        />
+        {props.children}
+      </MapContainer>
     </View>
   );
 };
 
 export const MapMarker = (props: any) => {
-  return <View style={{ position: 'absolute', top: '50%', left: '50%' }}>{props.children}</View>;
+  if (!props.coordinate) return null;
+  
+  const position = [props.coordinate.latitude, props.coordinate.longitude];
+  
+  // Render the RNW children into a static HTML string for Leaflet's divIcon
+  // This is a powerful hack to allow React Native views to be used as Leaflet markers
+  const htmlStr = renderToString(
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      {props.children}
+    </div>
+  );
+
+  const customIcon = L.divIcon({
+    html: htmlStr,
+    className: 'custom-leaflet-marker',
+    iconSize: [60, 30],
+    iconAnchor: [30, 15]
+  });
+
+  return (
+    <Marker 
+      position={position as any} 
+      icon={customIcon}
+      eventHandlers={{
+        click: () => {
+          if (props.onPress) props.onPress();
+        }
+      }}
+    />
+  );
 };
+
+const styles = StyleSheet.create({
+  mapContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%'
+  }
+});
