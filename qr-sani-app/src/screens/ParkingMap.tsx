@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, Dimensions, Platform, TextInput, TouchableOpacity } from 'react-native';
 import { Map, MapMarker } from '../components/MapComponent';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +22,7 @@ interface ParkingSpace {
 
 export default function ParkingMap() {
   const insets = useSafeAreaInsets();
+  const mapRef = useRef<any>(null);
   const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,10 +94,11 @@ export default function ParkingMap() {
       {loading && spaces.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#000" />
-          <Text style={styles.loadingText}>Finding parking spaces...</Text>
+          <Text style={styles.loadingText}>Loading mapping clusters...</Text>
         </View>
       ) : (
         <Map
+          ref={mapRef}
           style={styles.map}
           initialRegion={initialRegion}
           showsUserLocation={true}
@@ -123,6 +125,19 @@ export default function ParkingMap() {
                   key={`cluster-${cluster.id}`}
                   coordinate={{ latitude, longitude }}
                   tracksViewChanges={false}
+                  onPress={() => {
+                    const expansionZoom = supercluster.getClusterExpansionZoom(cluster.id as number);
+                    const zoomLevelToDelta = 360 / Math.pow(2, expansionZoom);
+                    
+                    if (mapRef.current?.animateToRegion) {
+                      mapRef.current.animateToRegion({
+                        latitude,
+                        longitude,
+                        latitudeDelta: zoomLevelToDelta,
+                        longitudeDelta: zoomLevelToDelta,
+                      }, 500);
+                    }
+                  }}
                 >
                   <View style={styles.clusterMarker}>
                     <Text style={styles.clusterText}>{pointCount}</Text>

@@ -168,11 +168,11 @@ func fetchOSMParking() []ParkingSpace {
 	client := &http.Client{Timeout: 15 * time.Second}
 
 	// Query OSM for street-side parking in Finland
-	// We use an area query for Finland (approx), and limit to 1000 nodes to prevent huge payloads
-	query := `[out:json][timeout:10];
+	// We use an area query for Finland (approx), and limit to 3000 nodes to prevent huge payloads
+	query := `[out:json][timeout:15];
 area["name"="Suomi"]->.searchArea;
 node["amenity"="parking"]["parking"="street_side"](area.searchArea);
-out 1000;`
+out 3000;`
 
 	resp, err := client.PostForm("https://overpass-api.de/api/interpreter", url.Values{"data": {query}})
 	if err != nil {
@@ -195,6 +195,9 @@ out 1000;`
 
 	for _, el := range overpassResp.Elements {
 		name := el.Tags["name"]
+		if name == "" {
+			name = el.Tags["addr:street"]
+		}
 		if name == "" {
 			name = "Street Parking"
 		}
@@ -221,9 +224,10 @@ out 1000;`
 
 func fetchHelsinkiParking() []ParkingSpace {
 	var spaces []ParkingSpace
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := &http.Client{Timeout: 60 * time.Second}
 
-	wfsURL := "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointipaikat_alue&outputFormat=application/json&srsName=EPSG:4326"
+	// We cap features at 4000 to prevent the Helsinki server from timing out on large polygon responses
+	wfsURL := "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointipaikat_alue&outputFormat=application/json&srsName=EPSG:4326&maxFeatures=4000"
 	
 	resp, err := client.Get(wfsURL)
 	if err != nil {
