@@ -108,7 +108,7 @@ export default function ServicesScreen() {
               {services.map((item) => (
                 <WebLink
                   key={item.id}
-                  screen="ServiceDirectory"
+                  screen={item.route as any}
                   params={{ service: item.title }}
                   style={[
                     styles.serviceBox, 
