@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, Dimensions, Platform, TextInput } from 'react-native';
 import { Map, MapMarker } from '../components/MapComponent';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -21,7 +21,12 @@ export default function ParkingMap() {
   const insets = useSafeAreaInsets();
   const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedSpace, setSelectedSpace] = useState<ParkingSpace | null>(null);
+
+  const filteredSpaces = spaces.filter(space => 
+    space.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Default to Helsinki Center
   const initialRegion = {
@@ -63,7 +68,7 @@ export default function ParkingMap() {
           showsMyLocationButton={false}
           mapType="mutedStandard" // gives a cleaner, minimalist look on iOS
         >
-          {spaces.map((space) => (
+          {filteredSpaces.map((space) => (
             <MapMarker
               key={space.id}
               coordinate={{ latitude: space.latitude, longitude: space.longitude }}
@@ -85,7 +90,14 @@ export default function ParkingMap() {
       <View style={[styles.searchContainer, { top: Math.max(insets.top + 10, 20) }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={styles.searchBar}>
           <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
-          <Text style={styles.searchText}>Find parking in Finland...</Text>
+          <TextInput 
+            style={styles.searchText} 
+            placeholder="Find parking in Finland..."
+            placeholderTextColor="#94a3b8"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
           <View style={styles.filterButton}>
             <Ionicons name="options-outline" size={18} color="#000" />
           </View>
