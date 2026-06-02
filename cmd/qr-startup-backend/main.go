@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os" 
+	"os"
+	"time"
 
 	"github.com/Krishna4050/qr-startup-backend/database"
 	"github.com/Krishna4050/qr-startup-backend/handlers"
@@ -139,6 +140,25 @@ func main(){
 
 	//start the server
 	fmt.Printf("Server is starting on http://localhost:%s\n", port)
+
+	// --- NEW: Keep-Alive Ping for Free Tier Hosts ---
+	// Render and other free hosts sleep after 15 mins of inactivity. 
+	// Pinging the external URL routes through the load balancer, keeping the instance awake!
+	externalURL := os.Getenv("RENDER_EXTERNAL_URL")
+	if externalURL != "" {
+		go func() {
+			ticker := time.NewTicker(14 * time.Minute)
+			for range ticker.C {
+				resp, err := http.Get(externalURL + "/api/health")
+				if err == nil {
+					resp.Body.Close()
+					log.Println("Keep-alive ping sent to prevent sleep")
+				} else {
+					log.Printf("Keep-alive ping failed: %v", err)
+				}
+			}
+		}()
+	}
 
 	//ListenAndServe pauses the program here and listens for web traffic
 	err = http.ListenAndServe(":"+port, enableCORS(mux))
