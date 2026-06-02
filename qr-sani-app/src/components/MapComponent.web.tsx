@@ -1,11 +1,16 @@
 import React from 'react';
-import MapView, { Marker } from '@teovilla/react-native-web-maps';
+// @teovilla wrapper has some TS export issues. Use require or generic view for web fallback
+import { View, Text } from 'react-native';
 
 export const Map = (props: any) => {
-  // We use any for props here to avoid strict typings from the web wrapper
-  return <MapView {...props} />;
+  return (
+    <View style={[{ backgroundColor: '#e2e8f0', justifyContent: 'center', alignItems: 'center' }, props.style]}>
+      <Text>Web Map Preview (Requires API Key for real map)</Text>
+      {props.children}
+    </View>
+  );
 };
 
 export const MapMarker = (props: any) => {
-  return <Marker {...props} />;
+  return <View style={{ position: 'absolute', top: '50%', left: '50%' }}>{props.children}</View>;
 };

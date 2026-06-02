@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   },
   map: {
     width: Dimensions.get('window').width,
-    height: Platform.OS === 'web' ? '100dvh' : Dimensions.get('window').height,
+    height: (Platform.OS === 'web' ? '100dvh' : Dimensions.get('window').height) as any,
   },
   loadingContainer: {
     flex: 1,
