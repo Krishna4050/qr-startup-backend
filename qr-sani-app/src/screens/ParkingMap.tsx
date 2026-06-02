@@ -6,6 +6,8 @@ import { BlurView } from 'expo-blur';
 import apiClient from '../utils/apiClient';
 import ParkingDetailsSheet from '../components/ParkingDetailsSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Supercluster from 'supercluster';
+import type { BBox } from 'geojson';
 
 interface ParkingSpace {
   id: string;
@@ -25,6 +27,11 @@ export default function ParkingMap() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<ParkingSpace | null>(null);
+  
+  // Supercluster State
+  const [zoom, setZoom] = useState(13);
+  const [bbox, setBBox] = useState<BBox>([24.7, 60.0, 25.1, 60.3]); // Default roughly Helsinki area
+  const [clusters, setClusters] = useState<any[]>([]);
 
   const filteredSpaces = spaces.filter(space => {
     const matchesSearch = space.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -32,8 +39,29 @@ export default function ParkingMap() {
     return matchesSearch && matchesFilter;
   });
 
-  // PERFORMANCE HOTFIX: Only render a maximum of 250 markers to prevent the browser/DOM from hanging
-  const displayedSpaces = filteredSpaces.slice(0, 250);
+  // Initialize Supercluster Engine
+  const supercluster = React.useMemo(() => {
+    const sc = new Supercluster({
+      radius: 50,
+      maxZoom: 16,
+    });
+    
+    const points = filteredSpaces.map(space => ({
+      type: 'Feature' as const,
+      properties: { cluster: false, spaceId: space.id, ...space },
+      geometry: { type: 'Point' as const, coordinates: [space.longitude, space.latitude] }
+    }));
+    
+    sc.load(points as any);
+    return sc;
+  }, [filteredSpaces]);
+
+  // Update visible clusters when map moves
+  useEffect(() => {
+    if (supercluster) {
+      setClusters(supercluster.getClusters(bbox, zoom));
+    }
+  }, [supercluster, bbox, zoom]);
 
   // Default to Helsinki Center
   const initialRegion = {
@@ -73,13 +101,41 @@ export default function ParkingMap() {
           initialRegion={initialRegion}
           showsUserLocation={true}
           showsMyLocationButton={false}
-          mapType="mutedStandard" // gives a cleaner, minimalist look on iOS
+          mapType="mutedStandard"
+          onRegionChangeComplete={(region: any) => {
+            const latDelta = region.latitudeDelta;
+            const lngDelta = region.longitudeDelta;
+            setBBox([
+              region.longitude - lngDelta / 2,
+              region.latitude - latDelta / 2,
+              region.longitude + lngDelta / 2,
+              region.latitude + latDelta / 2,
+            ] as BBox);
+          }}
         >
-          {displayedSpaces.map((space) => {
+          {clusters.map((cluster) => {
+            const [longitude, latitude] = cluster.geometry.coordinates;
+            const { cluster: isCluster, point_count: pointCount } = cluster.properties;
+
+            if (isCluster) {
+              return (
+                <MapMarker
+                  key={`cluster-${cluster.id}`}
+                  coordinate={{ latitude, longitude }}
+                  tracksViewChanges={false}
+                >
+                  <View style={styles.clusterMarker}>
+                    <Text style={styles.clusterText}>{pointCount}</Text>
+                  </View>
+                </MapMarker>
+              );
+            }
+
+            // Individual Point
+            const space = cluster.properties;
             const isStreet = space.source === 'osm';
             const isHelsinki = space.source === 'helsinki';
             
-            // Determine styles
             let markerStyle = space.is_free ? styles.markerFree : styles.markerPaid;
             let textStyle = space.is_free ? styles.markerTextFree : styles.markerTextPaid;
             let iconColor = space.is_free ? '#166534' : '#1e3a8a';
@@ -99,10 +155,10 @@ export default function ParkingMap() {
 
             return (
               <MapMarker
-                key={space.id}
-                coordinate={{ latitude: space.latitude, longitude: space.longitude }}
-                onPress={() => setSelectedSpace(space)}
-                tracksViewChanges={false} // Performance optimization
+                key={`point-${space.spaceId}`}
+                coordinate={{ latitude, longitude }}
+                onPress={() => setSelectedSpace(space as any)}
+                tracksViewChanges={false}
               >
                 <View style={[styles.customMarker, markerStyle]}>
                   <Ionicons 
@@ -120,7 +176,6 @@ export default function ParkingMap() {
         </Map>
       )}
 
-      {/* Floating Glass Search Bar */}
       <View style={[styles.searchContainer, { top: Math.max(insets.top + 10, 20) }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={styles.searchBar}>
           <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
@@ -141,7 +196,6 @@ export default function ParkingMap() {
         </BlurView>
       </View>
 
-      {/* Details Bottom Sheet */}
       <ParkingDetailsSheet 
         space={selectedSpace} 
         onClose={() => setSelectedSpace(null)} 
@@ -212,6 +266,25 @@ const styles = StyleSheet.create({
   },
   filterButtonActive: {
     backgroundColor: '#0f172a',
+  },
+  clusterMarker: {
+    backgroundColor: '#0f172a',
+    borderRadius: 25,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+  },
+  clusterText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 14,
   },
   customMarker: {
     flexDirection: 'row',
