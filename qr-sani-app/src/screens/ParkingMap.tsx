@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, Dimensions, Platform, TextInput } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, Dimensions, Platform, TextInput, TouchableOpacity } from 'react-native';
 import { Map, MapMarker } from '../components/MapComponent';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -22,11 +22,14 @@ export default function ParkingMap() {
   const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<ParkingSpace | null>(null);
 
-  const filteredSpaces = spaces.filter(space => 
-    space.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredSpaces = spaces.filter(space => {
+    const matchesSearch = space.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = showFreeOnly ? space.is_free : true;
+    return matchesSearch && matchesFilter;
+  });
 
   // Default to Helsinki Center
   const initialRegion = {
@@ -91,16 +94,19 @@ export default function ParkingMap() {
         <BlurView intensity={80} tint="light" style={styles.searchBar}>
           <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
           <TextInput 
-            style={styles.searchText} 
+            style={[styles.searchText, Platform.OS === 'web' && { outlineStyle: 'none' } as any]} 
             placeholder="Find parking in Finland..."
             placeholderTextColor="#94a3b8"
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
           />
-          <View style={styles.filterButton}>
-            <Ionicons name="options-outline" size={18} color="#000" />
-          </View>
+          <TouchableOpacity 
+            style={[styles.filterButton, showFreeOnly && styles.filterButtonActive]} 
+            onPress={() => setShowFreeOnly(!showFreeOnly)}
+          >
+            <Ionicons name="options-outline" size={18} color={showFreeOnly ? "#fff" : "#000"} />
+          </TouchableOpacity>
         </BlurView>
       </View>
 
@@ -172,6 +178,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
+  },
+  filterButtonActive: {
+    backgroundColor: '#0f172a',
   },
   customMarker: {
     flexDirection: 'row',
