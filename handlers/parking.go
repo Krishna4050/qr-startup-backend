@@ -59,6 +59,21 @@ type OverpassElement struct {
 	Tags map[string]string `json:"tags"`
 }
 
+type GeoJSONFeatureCollection struct {
+	Features []GeoJSONFeature `json:"features"`
+}
+
+type GeoJSONFeature struct {
+	ID         string                 `json:"id"`
+	Properties map[string]interface{} `json:"properties"`
+	Geometry   GeoJSONGeometry        `json:"geometry"`
+}
+
+type GeoJSONGeometry struct {
+	Type        string        `json:"type"`
+	Coordinates []interface{} `json:"coordinates"` // Can be highly nested depending on Polygon vs MultiPolygon
+}
+
 var parkingCache []ParkingSpace
 var lastCacheTime time.Time
 
@@ -129,9 +144,13 @@ func GetParkingLocations(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Fetch OSM Street Parking (Fallback to empty list on error to prevent blocking)
+	// Fetch OSM Street Parking
 	osmSpaces := fetchOSMParking()
 	parsedSpaces = append(parsedSpaces, osmSpaces...)
+
+	// Fetch Helsinki City WFS Parking
+	helsinkiSpaces := fetchHelsinkiParking()
+	parsedSpaces = append(parsedSpaces, helsinkiSpaces...)
 
 	// Update cache
 	parkingCache = parsedSpaces
@@ -194,6 +213,105 @@ out 1000;`
 			IsFree:      isFree,
 			PricingInfo: "Street Side Parking",
 			Source:      "osm",
+		})
+	}
+
+	return spaces
+}
+
+func fetchHelsinkiParking() []ParkingSpace {
+	var spaces []ParkingSpace
+	client := &http.Client{Timeout: 30 * time.Second}
+
+	wfsURL := "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointipaikat_alue&outputFormat=application/json&srsName=EPSG:4326"
+	
+	resp, err := client.Get(wfsURL)
+	if err != nil {
+		fmt.Println("Helsinki WFS Fetch Error:", err)
+		return spaces
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("Helsinki WFS Non-OK Status:", resp.StatusCode)
+		return spaces
+	}
+
+	var fc GeoJSONFeatureCollection
+	if err := json.NewDecoder(resp.Body).Decode(&fc); err != nil {
+		fmt.Println("Helsinki WFS Decode Error:", err)
+		return spaces
+	}
+
+	for _, feature := range fc.Features {
+		// Filter out No Parking zones
+		if tyyppi, ok := feature.Properties["tyyppi"].(string); ok {
+			if strings.Contains(strings.ToLower(tyyppi), "kielto") {
+				continue
+			}
+		}
+
+		// Extract a single point from the geometry (first coordinate found)
+		var lat, lng float64
+		foundCoords := false
+
+		// Naive coordinate extraction: just find the first [lng, lat] pair in the deeply nested slice
+		var extractFirstCoord func(coords []interface{}) bool
+		extractFirstCoord = func(coords []interface{}) bool {
+			if len(coords) == 2 {
+				if l1, ok1 := coords[0].(float64); ok1 {
+					if l2, ok2 := coords[1].(float64); ok2 {
+						lng = l1
+						lat = l2
+						return true
+					}
+				}
+			}
+			for _, c := range coords {
+				if childSlice, ok := c.([]interface{}); ok {
+					if extractFirstCoord(childSlice) {
+						return true
+					}
+				}
+			}
+			return false
+		}
+
+		if extractFirstCoord(feature.Geometry.Coordinates) {
+			foundCoords = true
+		}
+
+		if !foundCoords {
+			continue
+		}
+
+		// Determine Name / Type
+		name := "Helsinki City Parking"
+		if tyyppi, ok := feature.Properties["tyyppi"].(string); ok && tyyppi != "" {
+			name = tyyppi
+		}
+
+		capacity := 0
+		if capVal, ok := feature.Properties["paikat_des"].(float64); ok {
+			capacity = int(capVal)
+		} else if capVal, ok := feature.Properties["paikat_ala"].(float64); ok {
+			capacity = int(capVal)
+		}
+		
+		isFree := true
+		if strings.Contains(strings.ToLower(name), "maksullinen") {
+			isFree = false
+		}
+
+		spaces = append(spaces, ParkingSpace{
+			ID:          fmt.Sprintf("helsinki-%s", feature.ID),
+			Name:        name,
+			Latitude:    lat,
+			Longitude:   lng,
+			Capacity:    capacity,
+			IsFree:      isFree,
+			PricingInfo: "Helsinki City Parking Zone",
+			Source:      "helsinki",
 		})
 	}
 

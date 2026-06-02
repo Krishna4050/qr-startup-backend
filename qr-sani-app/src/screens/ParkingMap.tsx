@@ -74,6 +74,26 @@ export default function ParkingMap() {
         >
           {filteredSpaces.map((space) => {
             const isStreet = space.source === 'osm';
+            const isHelsinki = space.source === 'helsinki';
+            
+            // Determine styles
+            let markerStyle = space.is_free ? styles.markerFree : styles.markerPaid;
+            let textStyle = space.is_free ? styles.markerTextFree : styles.markerTextPaid;
+            let iconColor = space.is_free ? '#166534' : '#1e3a8a';
+            let label = space.is_free ? 'Free' : 'Pay';
+            
+            if (isStreet) {
+              markerStyle = styles.markerStreet;
+              textStyle = styles.markerTextStreet;
+              iconColor = '#854d0e';
+              label = 'Street';
+            } else if (isHelsinki) {
+              markerStyle = styles.markerHelsinki;
+              textStyle = styles.markerTextHelsinki;
+              iconColor = '#9a3412';
+              label = 'Hel';
+            }
+
             return (
               <MapMarker
                 key={space.id}
@@ -81,20 +101,14 @@ export default function ParkingMap() {
                 onPress={() => setSelectedSpace(space)}
                 tracksViewChanges={false} // Performance optimization
               >
-                <View style={[
-                  styles.customMarker, 
-                  isStreet ? styles.markerStreet : (space.is_free ? styles.markerFree : styles.markerPaid)
-                ]}>
+                <View style={[styles.customMarker, markerStyle]}>
                   <Ionicons 
-                    name={isStreet ? "car-sport" : "car"} 
+                    name={isStreet || isHelsinki ? "car-sport" : "car"} 
                     size={14} 
-                    color={isStreet ? '#854d0e' : (space.is_free ? '#166534' : '#1e3a8a')} 
+                    color={iconColor} 
                   />
-                  <Text style={[
-                    styles.markerText, 
-                    isStreet ? styles.markerTextStreet : (space.is_free ? styles.markerTextFree : styles.markerTextPaid)
-                  ]}>
-                    {isStreet ? 'Street' : (space.is_free ? 'Free' : 'Pay')}
+                  <Text style={[styles.markerText, textStyle]}>
+                    {label}
                   </Text>
                 </View>
               </MapMarker>
@@ -221,6 +235,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef08a',
     borderColor: '#facc15',
   },
+  markerHelsinki: {
+    backgroundColor: '#ffedd5',
+    borderColor: '#fdba74',
+  },
   markerText: {
     fontSize: 12,
     fontWeight: '700',
@@ -234,5 +252,8 @@ const styles = StyleSheet.create({
   },
   markerTextStreet: {
     color: '#854d0e',
+  },
+  markerTextHelsinki: {
+    color: '#9a3412',
   },
 });
