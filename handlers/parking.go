@@ -3,7 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -42,6 +45,18 @@ type ParkingSpace struct {
 	Capacity    int     `json:"capacity"`
 	IsFree      bool    `json:"is_free"`
 	PricingInfo string  `json:"pricing_info"`
+	Source      string  `json:"source"`
+}
+
+type OverpassResponse struct {
+	Elements []OverpassElement `json:"elements"`
+}
+
+type OverpassElement struct {
+	Id   int64             `json:"id"`
+	Lat  float64           `json:"lat"`
+	Lon  float64           `json:"lon"`
+	Tags map[string]string `json:"tags"`
 }
 
 var parkingCache []ParkingSpace
@@ -110,8 +125,13 @@ func GetParkingLocations(w http.ResponseWriter, r *http.Request) {
 			Capacity:    f.BuiltCapacity.Car,
 			IsFree:      isFree,
 			PricingInfo: f.PricingMethod,
+			Source:      "fintraffic",
 		})
 	}
+
+	// Fetch OSM Street Parking (Fallback to empty list on error to prevent blocking)
+	osmSpaces := fetchOSMParking()
+	parsedSpaces = append(parsedSpaces, osmSpaces...)
 
 	// Update cache
 	parkingCache = parsedSpaces
@@ -122,4 +142,60 @@ func GetParkingLocations(w http.ResponseWriter, r *http.Request) {
 		"status": "success",
 		"data":   parkingCache,
 	})
+}
+
+func fetchOSMParking() []ParkingSpace {
+	var spaces []ParkingSpace
+	client := &http.Client{Timeout: 15 * time.Second}
+
+	// Query OSM for street-side parking in Finland
+	// We use an area query for Finland (approx), and limit to 1000 nodes to prevent huge payloads
+	query := `[out:json][timeout:10];
+area["name"="Suomi"]->.searchArea;
+node["amenity"="parking"]["parking"="street_side"](area.searchArea);
+out 1000;`
+
+	resp, err := client.PostForm("https://overpass-api.de/api/interpreter", url.Values{"data": {query}})
+	if err != nil {
+		fmt.Println("OSM Fetch Error:", err)
+		return spaces
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("OSM Non-OK Status:", resp.StatusCode)
+		return spaces
+	}
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	var overpassResp OverpassResponse
+	if err := json.Unmarshal(bodyBytes, &overpassResp); err != nil {
+		fmt.Println("OSM Decode Error:", err)
+		return spaces
+	}
+
+	for _, el := range overpassResp.Elements {
+		name := el.Tags["name"]
+		if name == "" {
+			name = "Street Parking"
+		}
+		
+		isFree := true
+		if fee, ok := el.Tags["fee"]; ok && strings.ToLower(fee) == "yes" {
+			isFree = false
+		}
+
+		spaces = append(spaces, ParkingSpace{
+			ID:          fmt.Sprintf("osm-%d", el.Id),
+			Name:        name,
+			Latitude:    el.Lat,
+			Longitude:   el.Lon,
+			Capacity:    10, // Default arbitrary capacity for street parking if unknown
+			IsFree:      isFree,
+			PricingInfo: "Street Side Parking",
+			Source:      "osm",
+		})
+	}
+
+	return spaces
 }

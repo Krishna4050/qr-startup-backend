@@ -15,6 +15,7 @@ interface ParkingSpace {
   capacity: number;
   is_free: boolean;
   pricing_info: string;
+  source?: string;
 }
 
 export default function ParkingMap() {
@@ -71,21 +72,34 @@ export default function ParkingMap() {
           showsMyLocationButton={false}
           mapType="mutedStandard" // gives a cleaner, minimalist look on iOS
         >
-          {filteredSpaces.map((space) => (
-            <MapMarker
-              key={space.id}
-              coordinate={{ latitude: space.latitude, longitude: space.longitude }}
-              onPress={() => setSelectedSpace(space)}
-              tracksViewChanges={false} // Performance optimization
-            >
-              <View style={[styles.customMarker, space.is_free ? styles.markerFree : styles.markerPaid]}>
-                <Ionicons name="car" size={14} color={space.is_free ? '#166534' : '#1e3a8a'} />
-                <Text style={[styles.markerText, space.is_free ? styles.markerTextFree : styles.markerTextPaid]}>
-                  {space.is_free ? 'Free' : 'Pay'}
-                </Text>
-              </View>
-            </MapMarker>
-          ))}
+          {filteredSpaces.map((space) => {
+            const isStreet = space.source === 'osm';
+            return (
+              <MapMarker
+                key={space.id}
+                coordinate={{ latitude: space.latitude, longitude: space.longitude }}
+                onPress={() => setSelectedSpace(space)}
+                tracksViewChanges={false} // Performance optimization
+              >
+                <View style={[
+                  styles.customMarker, 
+                  isStreet ? styles.markerStreet : (space.is_free ? styles.markerFree : styles.markerPaid)
+                ]}>
+                  <Ionicons 
+                    name={isStreet ? "car-sport" : "car"} 
+                    size={14} 
+                    color={isStreet ? '#854d0e' : (space.is_free ? '#166534' : '#1e3a8a')} 
+                  />
+                  <Text style={[
+                    styles.markerText, 
+                    isStreet ? styles.markerTextStreet : (space.is_free ? styles.markerTextFree : styles.markerTextPaid)
+                  ]}>
+                    {isStreet ? 'Street' : (space.is_free ? 'Free' : 'Pay')}
+                  </Text>
+                </View>
+              </MapMarker>
+            );
+          })}
         </Map>
       )}
 
@@ -203,6 +217,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#bfdbfe',
     borderColor: '#60a5fa',
   },
+  markerStreet: {
+    backgroundColor: '#fef08a',
+    borderColor: '#facc15',
+  },
   markerText: {
     fontSize: 12,
     fontWeight: '700',
@@ -213,5 +231,8 @@ const styles = StyleSheet.create({
   },
   markerTextPaid: {
     color: '#1e3a8a',
+  },
+  markerTextStreet: {
+    color: '#854d0e',
   },
 });
