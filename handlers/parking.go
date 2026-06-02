@@ -223,7 +223,7 @@ func fetchHelsinkiParking() []ParkingSpace {
 	var spaces []ParkingSpace
 	client := &http.Client{Timeout: 30 * time.Second}
 
-	wfsURL := "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointipaikat_alue&outputFormat=application/json&srsName=EPSG:4326"
+	wfsURL := "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointipaikat_alue&outputFormat=application/json&srsName=EPSG:4326&maxFeatures=1000"
 	
 	resp, err := client.Get(wfsURL)
 	if err != nil {

@@ -32,6 +32,9 @@ export default function ParkingMap() {
     return matchesSearch && matchesFilter;
   });
 
+  // PERFORMANCE HOTFIX: Only render a maximum of 250 markers to prevent the browser/DOM from hanging
+  const displayedSpaces = filteredSpaces.slice(0, 250);
+
   // Default to Helsinki Center
   const initialRegion = {
     latitude: 60.1699,
@@ -72,7 +75,7 @@ export default function ParkingMap() {
           showsMyLocationButton={false}
           mapType="mutedStandard" // gives a cleaner, minimalist look on iOS
         >
-          {filteredSpaces.map((space) => {
+          {displayedSpaces.map((space) => {
             const isStreet = space.source === 'osm';
             const isHelsinki = space.source === 'helsinki';
             
