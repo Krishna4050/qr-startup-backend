@@ -8,6 +8,7 @@ import ParkingDetailsSheet from '../components/ParkingDetailsSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Supercluster from 'supercluster';
 import type { BBox } from 'geojson';
+import * as Location from 'expo-location';
 
 interface ParkingSpace {
   id: string;
@@ -26,18 +27,27 @@ export default function ParkingMap() {
   const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<ParkingSpace | null>(null);
   
+  // Advanced Filter State
+  const [showFilters, setShowFilters] = useState(false);
+  const [showFreeParking, setShowFreeParking] = useState(true);
+  const [showPaidParking, setShowPaidParking] = useState(true);
+  const [filterCity, setFilterCity] = useState('');
+  const [filterStreet, setFilterStreet] = useState('');
+  const [filterZip, setFilterZip] = useState('');
+
   // Supercluster State
   const [zoom, setZoom] = useState(13);
   const [bbox, setBBox] = useState<BBox>([24.7, 60.0, 25.1, 60.3]); // Default roughly Helsinki area
   const [clusters, setClusters] = useState<any[]>([]);
 
   const filteredSpaces = spaces.filter(space => {
-    const matchesSearch = space.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = showFreeOnly ? space.is_free : true;
-    return matchesSearch && matchesFilter;
+    // We remove the text search filter here, because search now moves the map!
+    // We only filter by Free/Paid toggles.
+    if (!showFreeParking && space.is_free) return false;
+    if (!showPaidParking && !space.is_free) return false;
+    return true;
   });
 
   // Initialize Supercluster Engine
@@ -86,6 +96,63 @@ export default function ParkingMap() {
       console.error('Failed to fetch parking spaces:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearch = async (customQuery?: string) => {
+    const query = customQuery || searchQuery;
+    if (!query.trim()) return;
+    
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        mapRef.current?.animateToRegion({
+          latitude: parseFloat(lat),
+          longitude: parseFloat(lon),
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        }, 1000);
+      } else {
+        alert("Location not found. Please try a different search.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to search location.");
+    }
+  };
+
+  const handleUserLocation = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission to access location was denied');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      mapRef.current?.animateToRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      }, 1000);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to get current location.");
+    }
+  };
+
+  const applyFilters = () => {
+    setShowFilters(false);
+    let advancedQuery = [];
+    if (filterStreet) advancedQuery.push(filterStreet);
+    if (filterCity) advancedQuery.push(filterCity);
+    if (filterZip) advancedQuery.push(filterZip);
+    
+    if (advancedQuery.length > 0) {
+      handleSearch(advancedQuery.join(', '));
     }
   };
 
@@ -200,16 +267,73 @@ export default function ParkingMap() {
             placeholderTextColor="#94a3b8"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onSubmitEditing={() => handleSearch()}
             returnKeyType="search"
           />
           <TouchableOpacity 
-            style={[styles.filterButton, showFreeOnly && styles.filterButtonActive]} 
-            onPress={() => setShowFreeOnly(!showFreeOnly)}
+            style={[styles.filterButton, showFilters && styles.filterButtonActive]} 
+            onPress={() => setShowFilters(!showFilters)}
           >
-            <Ionicons name="options-outline" size={18} color={showFreeOnly ? "#fff" : "#000"} />
+            <Ionicons name="options-outline" size={18} color={showFilters ? "#fff" : "#000"} />
           </TouchableOpacity>
         </BlurView>
+
+        {showFilters && (
+          <View style={styles.filterDropdown}>
+            <Text style={styles.filterTitle}>Advanced Filters</Text>
+            
+            <View style={styles.filterRow}>
+              <TouchableOpacity 
+                style={[styles.filterToggle, showFreeParking && styles.filterToggleActive]}
+                onPress={() => setShowFreeParking(!showFreeParking)}
+              >
+                <Text style={[styles.filterToggleText, showFreeParking && styles.filterToggleTextActive]}>Free Parking</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.filterToggle, showPaidParking && styles.filterToggleActive]}
+                onPress={() => setShowPaidParking(!showPaidParking)}
+              >
+                <Text style={[styles.filterToggleText, showPaidParking && styles.filterToggleTextActive]}>Paid Parking</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TextInput 
+              style={[styles.filterInput, Platform.OS === 'web' && { outlineStyle: 'none' } as any]} 
+              placeholder="City (e.g. Helsinki)" 
+              placeholderTextColor="#94a3b8"
+              value={filterCity}
+              onChangeText={setFilterCity}
+            />
+            <TextInput 
+              style={[styles.filterInput, Platform.OS === 'web' && { outlineStyle: 'none' } as any]} 
+              placeholder="Street Name" 
+              placeholderTextColor="#94a3b8"
+              value={filterStreet}
+              onChangeText={setFilterStreet}
+            />
+            <TextInput 
+              style={[styles.filterInput, Platform.OS === 'web' && { outlineStyle: 'none' } as any]} 
+              placeholder="Zip Code" 
+              placeholderTextColor="#94a3b8"
+              value={filterZip}
+              onChangeText={setFilterZip}
+            />
+
+            <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
+
+      {/* My Location Button */}
+      <TouchableOpacity 
+        style={[styles.locationButton, { top: Math.max(insets.top + 80, 90) }]} 
+        onPress={handleUserLocation}
+      >
+        <Ionicons name="navigate" size={24} color="#0f172a" />
+      </TouchableOpacity>
 
       <ParkingDetailsSheet 
         space={selectedSpace} 
@@ -281,6 +405,85 @@ const styles = StyleSheet.create({
   },
   filterButtonActive: {
     backgroundColor: '#0f172a',
+  },
+  filterDropdown: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  filterTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 12,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  filterToggle: {
+    flex: 1,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  filterToggleActive: {
+    backgroundColor: '#0f172a',
+    borderColor: '#0f172a',
+  },
+  filterToggleText: {
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  filterToggleTextActive: {
+    color: '#fff',
+  },
+  filterInput: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    color: '#0f172a',
+  },
+  applyButton: {
+    backgroundColor: '#0ea5e9',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  locationButton: {
+    position: 'absolute',
+    right: 20,
+    backgroundColor: '#fff',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 10,
   },
   clusterMarker: {
     backgroundColor: '#0f172a',

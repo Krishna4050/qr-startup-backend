@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { renderToString } from 'react-dom/server';
 
@@ -22,7 +22,27 @@ const injectLeafletCSS = () => {
   }
 };
 
-export const Map = (props: any) => {
+const MapEventsHandler = ({ onRegionChangeComplete }: { onRegionChangeComplete?: Function }) => {
+  useMapEvents({
+    moveend: (e) => {
+      if (!onRegionChangeComplete) return;
+      const map = e.target;
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      const lngDelta = 360 / Math.pow(2, zoom);
+      const latDelta = lngDelta * Math.cos(center.lat * Math.PI / 180);
+      onRegionChangeComplete({
+        latitude: center.lat,
+        longitude: center.lng,
+        latitudeDelta: latDelta,
+        longitudeDelta: lngDelta
+      });
+    }
+  });
+  return null;
+};
+
+export const Map = React.forwardRef((props: any, ref: any) => {
   useEffect(() => {
     injectLeafletCSS();
   }, []);
@@ -39,7 +59,23 @@ export const Map = (props: any) => {
         zoom={13} 
         style={{ height: '100%', width: '100%', zIndex: 0 }}
         zoomControl={false}
+        ref={(map) => {
+          if (map) {
+            if (ref) {
+              if (typeof ref === 'function') ref(map);
+              else {
+                ref.current = map;
+                // Emulate React Native Maps animateToRegion
+                ref.current.animateToRegion = (region: any) => {
+                  const zoom = region.longitudeDelta ? Math.round(Math.log2(360 / region.longitudeDelta)) : 14;
+                  map.flyTo([region.latitude, region.longitude], zoom, { duration: 1 });
+                };
+              }
+            }
+          }
+        }}
       >
+        <MapEventsHandler onRegionChangeComplete={props.onRegionChangeComplete} />
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
@@ -48,7 +84,7 @@ export const Map = (props: any) => {
       </MapContainer>
     </View>
   );
-};
+});
 
 export const MapMarker = (props: any) => {
   if (!props.coordinate) return null;
