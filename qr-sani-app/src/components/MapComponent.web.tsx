@@ -28,14 +28,15 @@ const MapEventsHandler = ({ onRegionChangeComplete }: { onRegionChangeComplete?:
       if (!onRegionChangeComplete) return;
       const map = e.target;
       const center = map.getCenter();
-      const zoom = map.getZoom();
-      const lngDelta = 360 / Math.pow(2, zoom);
-      const latDelta = lngDelta * Math.cos(center.lat * Math.PI / 180);
+      const bounds = map.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      
       onRegionChangeComplete({
         latitude: center.lat,
         longitude: center.lng,
-        latitudeDelta: latDelta,
-        longitudeDelta: lngDelta
+        latitudeDelta: ne.lat - sw.lat,
+        longitudeDelta: ne.lng - sw.lng
       });
     }
   });
