@@ -36,7 +36,8 @@ const MapEventsHandler = ({ onRegionChangeComplete }: { onRegionChangeComplete?:
         latitude: center.lat,
         longitude: center.lng,
         latitudeDelta: ne.lat - sw.lat,
-        longitudeDelta: ne.lng - sw.lng
+        longitudeDelta: ne.lng - sw.lng,
+        zoom: map.getZoom()
       });
     }
   });
