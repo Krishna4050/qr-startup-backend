@@ -92,9 +92,9 @@ export const MapMarker = (props: any) => {
   const position = [props.coordinate.latitude, props.coordinate.longitude];
   
   // Render the RNW children into a static HTML string for Leaflet's divIcon
-  // This is a powerful hack to allow React Native views to be used as Leaflet markers
+  // We MUST set pointerEvents: 'none' here so the inner HTML doesn't swallow clicks before they reach Leaflet's event handler
   const htmlStr = renderToString(
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
       {props.children}
     </div>
   );
