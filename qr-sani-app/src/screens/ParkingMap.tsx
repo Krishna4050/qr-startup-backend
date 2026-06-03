@@ -174,6 +174,13 @@ export default function ParkingMap() {
           onRegionChangeComplete={(region: any) => {
             const latDelta = region.latitudeDelta;
             const lngDelta = region.longitudeDelta;
+            
+            // Critical: Update zoom state so supercluster knows we zoomed in!
+            if (lngDelta) {
+              const newZoom = Math.round(Math.log2(360 / lngDelta));
+              setZoom(newZoom);
+            }
+
             setBBox([
               region.longitude - lngDelta / 2,
               region.latitude - latDelta / 2,
