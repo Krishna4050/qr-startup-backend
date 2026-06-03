@@ -108,6 +108,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
+  const [showFlightOriginDropdown, setShowFlightOriginDropdown] = useState(false);
+  const [showFlightDestinationDropdown, setShowFlightDestinationDropdown] = useState(false);
+  const [showReturnDateDropdown, setShowReturnDateDropdown] = useState(false);
 
   // --- MOBILE MODAL STATE ---
   const [showMobileSearchModal, setShowMobileSearchModal] = useState(false);
@@ -119,6 +122,12 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const [adults, setAdults] = useState(0);
   const [childrenCount, setChildrenCount] = useState(0);
 
+  // --- FLIGHT SEARCH STATE ---
+  const [flightOrigin, setFlightOrigin] = useState('HEL');
+  const [flightDestination, setFlightDestination] = useState('JFK');
+  const [flightType, setFlightType] = useState<'round-trip' | 'one-way'>('round-trip');
+  const [returnDate, setReturnDate] = useState<number | null>(null);
+
   // --- NEW: CATEGORY TABS STATE ---
   const [activeTab, setActiveTab] = useState('Explore');
 
@@ -127,6 +136,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const servicesList = ['Vehicle Repair', 'Bike Repair', 'Pay Parking', 'Hotels & Stays', 'City Transit', 'Train Tickets', 'Flights'];
   
   // Smart Search Context Checks
+  const isFlight = selectedService === 'Flights';
   const requiresGuests = ['Hotels & Stays', 'Train Tickets', 'Flights'].includes(selectedService);
   const isTravel = ['Flights', 'City Transit', 'Train Tickets'].includes(selectedService);
   
@@ -135,15 +145,29 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     setShowLocationDropdown(false);
     setShowDateDropdown(false);
     setShowGuestDropdown(false);
+    setShowFlightOriginDropdown(false);
+    setShowFlightDestinationDropdown(false);
+    setShowReturnDateDropdown(false);
     setShowMobileSearchModal(false);
 
-    // Route dynamically to the Service Directory with the selected context
-    navigation.navigate('ServiceDirectory', { 
-      service: selectedService, 
-      location: selectedLocation,
-      guests: adults + childrenCount,
-      date: selectedDate
-    });
+    if (isFlight) {
+      navigation.navigate('FlightSearch', { 
+        origin: flightOrigin, 
+        destination: flightDestination,
+        departureDate: selectedDate,
+        returnDate: flightType === 'round-trip' ? returnDate : null,
+        type: flightType,
+        guests: adults + childrenCount
+      });
+    } else {
+      // Route dynamically to the Service Directory with the selected context
+      navigation.navigate('ServiceDirectory', { 
+        service: selectedService, 
+        location: selectedLocation,
+        guests: adults + childrenCount,
+        date: selectedDate
+      });
+    }
   };
 
   // ================= MOBILE HEADER =================
@@ -303,6 +327,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             setShowDateDropdown(false);
             setShowGuestDropdown(false);
             setShowProfileDropdown(false);
+            setShowFlightOriginDropdown(false);
+            setShowFlightDestinationDropdown(false);
+            setShowReturnDateDropdown(false);
           }} 
           style={{ position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 90, cursor: 'default' } as any}
         />
@@ -384,10 +411,10 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
       {/* Bottom Row: Search Pill */}
       <View style={styles.searchPillContainer}>
         <View style={{ position: 'relative', width: '100%', maxWidth: 700, zIndex: 10 }}>
-          <View style={styles.searchPill}>
+          <View style={[styles.searchPill, isFlight && { maxWidth: 850 }]}>
             <TouchableOpacity 
-              style={[styles.searchSection, showServiceDropdown && styles.activeSection]} 
-              onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
+              style={[styles.searchSection, showServiceDropdown && styles.activeSection, isFlight && { flex: 0.8 }]} 
+              onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(false); setShowReturnDateDropdown(false); }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flex: 1, paddingRight: 8 }}>
@@ -399,41 +426,90 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             </TouchableOpacity>
             
             <View style={styles.divider} />
-            
-            <TouchableOpacity 
-              style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
-              onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
-            >
-              <View>
-                <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Destination' : 'Where'}</Text>
-                <Text style={styles.searchSub} numberOfLines={1}>{selectedLocation}</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <View style={styles.divider} />
-            
-            <TouchableOpacity 
-              style={[styles.searchSection, showDateDropdown && styles.activeSection]}
-              onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
-            >
-              <View>
-                <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Departure' : 'When'}</Text>
-                <Text style={styles.searchSub} numberOfLines={1}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
-              </View>
-            </TouchableOpacity>
-            
-            {requiresGuests && (
+
+            {isFlight ? (
               <>
+                <TouchableOpacity 
+                  style={[styles.searchSection, showFlightOriginDropdown && styles.activeSection]}
+                  onPress={() => { setShowFlightOriginDropdown(!showFlightOriginDropdown); setShowServiceDropdown(false); setShowFlightDestinationDropdown(false); setShowDateDropdown(false); setShowReturnDateDropdown(false); setShowGuestDropdown(false); }}
+                >
+                  <View>
+                    <Text style={styles.searchTitle} numberOfLines={1}>From</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>{flightOrigin}</Text>
+                  </View>
+                </TouchableOpacity>
                 <View style={styles.divider} />
                 <TouchableOpacity 
-                  style={[styles.searchSection, showGuestDropdown && styles.activeSection]}
-                  onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
+                  style={[styles.searchSection, showFlightDestinationDropdown && styles.activeSection]}
+                  onPress={() => { setShowFlightDestinationDropdown(!showFlightDestinationDropdown); setShowServiceDropdown(false); setShowFlightOriginDropdown(false); setShowDateDropdown(false); setShowReturnDateDropdown(false); setShowGuestDropdown(false); }}
+                >
+                  <View>
+                    <Text style={styles.searchTitle} numberOfLines={1}>To</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>{flightDestination}</Text>
+                  </View>
+                </TouchableOpacity>
+                <View style={styles.divider} />
+                <TouchableOpacity 
+                  style={[styles.searchSection, (showDateDropdown || showReturnDateDropdown) && styles.activeSection]}
+                  onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(false); setShowGuestDropdown(false); }}
+                >
+                  <View>
+                    <Text style={styles.searchTitle} numberOfLines={1}>{flightType === 'one-way' ? 'Departure' : 'Dates'}</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>
+                      {selectedDate ? `May ${selectedDate}` : 'Add date'}
+                      {flightType === 'round-trip' ? (returnDate ? ` - May ${returnDate}` : ' - Return') : ''}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <View style={styles.divider} />
+                <TouchableOpacity 
+                  style={[styles.searchSection, showGuestDropdown && styles.activeSection, { flex: 0.8 }]}
+                  onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowReturnDateDropdown(false); setShowServiceDropdown(false); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(false); }}
                 >
                   <View>
                     <Text style={styles.searchTitle} numberOfLines={1}>Who</Text>
-                    <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} pax` : 'Add guests'}</Text>
                   </View>
                 </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity 
+                  style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
+                  onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
+                >
+                  <View>
+                    <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Destination' : 'Where'}</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>{selectedLocation}</Text>
+                  </View>
+                </TouchableOpacity>
+                
+                <View style={styles.divider} />
+                
+                <TouchableOpacity 
+                  style={[styles.searchSection, showDateDropdown && styles.activeSection]}
+                  onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
+                >
+                  <View>
+                    <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Departure' : 'When'}</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
+                  </View>
+                </TouchableOpacity>
+                
+                {requiresGuests && (
+                  <>
+                    <View style={styles.divider} />
+                    <TouchableOpacity 
+                      style={[styles.searchSection, showGuestDropdown && styles.activeSection]}
+                      onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
+                    >
+                      <View>
+                        <Text style={styles.searchTitle} numberOfLines={1}>Who</Text>
+                        <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </>
+                )}
               </>
             )}
             
