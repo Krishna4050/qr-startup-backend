@@ -445,12 +445,8 @@ func loadAirports() {
 }
 
 // SearchAirports handles GET /api/flights/airports?q=...
+// It now hits the live Duffel Places API for real-time global autocomplete!
 func SearchAirports(w http.ResponseWriter, r *http.Request) {
-	if !airportsLoaded {
-		loadAirports()
-	}
-
-	// Set CORS headers for the frontend to be able to call this endpoint
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
@@ -460,27 +456,79 @@ func SearchAirports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
+	q := r.URL.Query().Get("q")
 	if q == "" {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]Airport{})
 		return
 	}
 
-	airportsMutex.RLock()
-	defer airportsMutex.RUnlock()
+	apiKey := os.Getenv("DUFFEL_API_KEY")
+	if apiKey == "" {
+		log.Println("WARNING: DUFFEL_API_KEY not set. Cannot search airports.")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]Airport{})
+		return
+	}
+
+	url := fmt.Sprintf("https://api.duffel.com/places/suggestions?query=%s", q)
+	httpReq, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		http.Error(w, "Failed to create request", http.StatusInternalServerError)
+		return
+	}
+
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	httpReq.Header.Set("Duffel-Version", "v1")
+	httpReq.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		log.Printf("Error calling duffel places: %v", err)
+		http.Error(w, "Failed to fetch places", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Failed to read response", http.StatusInternalServerError)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		log.Printf("Duffel Places API error %d: %s", resp.StatusCode, string(body))
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]Airport{})
+		return
+	}
+
+	var duffelRes struct {
+		Data []struct {
+			Name            string `json:"name"`
+			IataCode        string `json:"iata_code"`
+			Type            string `json:"type"`
+			CountryName     string `json:"country_name"`
+			IataCountryCode string `json:"iata_country_code"`
+		} `json:"data"`
+	}
+
+	if err := json.Unmarshal(body, &duffelRes); err != nil {
+		log.Printf("Error unmarshaling duffel places response: %v", err)
+		http.Error(w, "Failed to parse places", http.StatusInternalServerError)
+		return
+	}
 
 	var results []Airport
-	for _, a := range airportsCache {
-		if strings.Contains(strings.ToLower(a.Name), q) || 
-		   strings.Contains(strings.ToLower(a.Iata), q) || 
-		   strings.Contains(strings.ToLower(a.Iso), q) ||
-		   strings.Contains(strings.ToLower(a.Country), q) {
-			results = append(results, a)
-			if len(results) >= 15 { // Max 15 suggestions
-				break
-			}
-		}
+	for _, p := range duffelRes.Data {
+		results = append(results, Airport{
+			Name:    p.Name,
+			Iata:    p.IataCode,
+			Type:    p.Type,
+			Country: p.CountryName,
+			Iso:     p.IataCountryCode,
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")

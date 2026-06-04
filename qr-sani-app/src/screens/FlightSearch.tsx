@@ -44,9 +44,15 @@ export default function FlightSearch() {
   const [datesLoading, setDatesLoading] = useState(false);
 
   // Filters State
-  const [directOnly, setDirectOnly] = useState(initDirectOnly);
+  const [stopFilters, setStopFilters] = useState({
+    direct: initDirectOnly,
+    oneStop: false,
+    multiStop: false
+  });
   const [requireCarryOn, setRequireCarryOn] = useState(false);
   const [requireChecked, setRequireChecked] = useState(false);
+  const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
+  const [maxDurationMin, setMaxDurationMin] = useState<number>(9999);
 
   // Sort State
   const [sortType, setSortType] = useState<'best' | 'cheapest' | 'fastest'>('best');
@@ -58,6 +64,13 @@ export default function FlightSearch() {
   useEffect(() => {
     fetchFlights(currentDate);
   }, [routeOrigin, routeDestination, currentDate, guests, flightType, cabinClass]);
+
+  // Set initial max duration when flights load
+  useEffect(() => {
+    if (flights.length > 0) {
+      setMaxDurationMin(Math.max(...flights.map(f => getDurationMinutes(f.duration))));
+    }
+  }, [flights]);
 
   const fetchDatePrices = async (targetDate: string) => {
     try {
@@ -84,7 +97,7 @@ export default function FlightSearch() {
         type: flightType,
         guests,
         cabinClass,
-        directOnly: false // Fetch all, we filter locally for instant UI changes
+        directOnly: false // Fetch all, filter locally
       });
       
       if (res.data?.status === 'success') {
@@ -104,7 +117,6 @@ export default function FlightSearch() {
     alert(`Initiating booking for ${flight.airline} ${flight.flightNum} via ${flight.provider} provider at ${flight.price} ${flight.currency}. Phase 3 Checkout coming next!`);
   };
 
-  // Parsing duration string "PT2H30M" to minutes for sorting
   const getDurationMinutes = (dur: string) => {
     let minutes = 0;
     const hMatch = dur.match(/(\d+)H/);
@@ -120,11 +132,47 @@ export default function FlightSearch() {
     return `${Math.floor(minutes/60)}h ${minutes%60}m`;
   };
 
+  const formatMinDuration = (minutes: number) => {
+    if (minutes === 9999) return 'Any';
+    return `${Math.floor(minutes/60)}h ${minutes%60}m`;
+  };
+
+  const availableAirlines = Array.from(new Set(flights.map(f => f.airline))).sort();
+
+  const toggleAirline = (airline: string) => {
+    setSelectedAirlines(prev => 
+      prev.includes(airline) ? prev.filter(a => a !== airline) : [...prev, airline]
+    );
+  };
+
+  const toggleStop = (type: 'direct' | 'oneStop' | 'multiStop') => {
+    setStopFilters(prev => ({ ...prev, [type]: !prev[type] }));
+  };
+
   // Filter Logic
   const filteredFlights = flights.filter(f => {
-    if (directOnly && !f.isDirect) return false;
+    // Stops
+    const stopsActive = stopFilters.direct || stopFilters.oneStop || stopFilters.multiStop;
+    if (stopsActive) {
+      const isDirect = f.isDirect;
+      // Heuristic for multi-stop based on duration or lack of direct
+      // Duffel segments data tells us exactly, but we mock "1 stop" vs "2+ stops" since we don't pass segments to frontend yet
+      // For now, if it's not direct, we assume it's 1 stop to simplify
+      if (stopFilters.direct && isDirect) { /* valid */ }
+      else if (stopFilters.oneStop && !isDirect) { /* valid */ }
+      else return false;
+    }
+
+    // Baggage
     if (requireCarryOn && !f.hasCarryOnBag) return false;
     if (requireChecked && !f.hasCheckedBag) return false;
+
+    // Airlines
+    if (selectedAirlines.length > 0 && !selectedAirlines.includes(f.airline)) return false;
+
+    // Duration
+    if (getDurationMinutes(f.duration) > maxDurationMin) return false;
+
     return true;
   });
 
@@ -132,18 +180,15 @@ export default function FlightSearch() {
   const sortedFlights = [...filteredFlights].sort((a, b) => {
     if (sortType === 'cheapest') return a.price - b.price;
     if (sortType === 'fastest') return getDurationMinutes(a.duration) - getDurationMinutes(b.duration);
-    // 'best': heuristic (price + (duration_in_mins * 0.5)) to balance
     const aScore = a.price + (getDurationMinutes(a.duration) * 0.5);
     const bScore = b.price + (getDurationMinutes(b.duration) * 0.5);
     return aScore - bScore;
   });
 
-  // Generate Date Navigator Items
   const availableDates = Object.keys(datePrices).sort();
 
   return (
     <View style={styles.container}>
-      {/* Search Header Summary */}
       <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.routeHeader}>
@@ -161,7 +206,6 @@ export default function FlightSearch() {
         </View>
       </LinearGradient>
 
-      {/* Date Navigator Bar */}
       <View style={styles.dateNavigatorContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateNavigator}>
           {datesLoading && availableDates.length === 0 ? (
@@ -182,23 +226,42 @@ export default function FlightSearch() {
       </View>
 
       <View style={styles.contentWrapper}>
-        {/* Left Sidebar Filters */}
         {Platform.OS === 'web' && (
           <View style={styles.sidebar}>
+            {/* Stops */}
             <View style={styles.filterSection}>
               <Text style={styles.filterTitle}>Stops</Text>
-              
-              <TouchableOpacity style={styles.checkboxRow} onPress={() => setDirectOnly(!directOnly)}>
-                <View style={[styles.checkbox, directOnly && styles.checkboxActive]}>
-                  {directOnly && <CheckCircle2 color="#0A192F" size={14} />}
+              <TouchableOpacity style={styles.checkboxRow} onPress={() => toggleStop('direct')}>
+                <View style={[styles.checkbox, stopFilters.direct && styles.checkboxActive]}>
+                  {stopFilters.direct && <CheckCircle2 color="#0A192F" size={14} />}
                 </View>
-                <Text style={styles.checkboxLabel}>Direct flights only</Text>
+                <Text style={styles.checkboxLabel}>Direct</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.checkboxRow} onPress={() => toggleStop('oneStop')}>
+                <View style={[styles.checkbox, stopFilters.oneStop && styles.checkboxActive]}>
+                  {stopFilters.oneStop && <CheckCircle2 color="#0A192F" size={14} />}
+                </View>
+                <Text style={styles.checkboxLabel}>1 Stop</Text>
               </TouchableOpacity>
             </View>
 
+            {/* Trip Duration Slider */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterTitle}>Max Trip Duration</Text>
+              <Text style={{fontSize: 14, color: '#00E5FF', fontWeight: 'bold', marginBottom: 12}}>{formatMinDuration(maxDurationMin)}</Text>
+              <input 
+                type="range" 
+                min="60" 
+                max={Math.max(...flights.map(f => getDurationMinutes(f.duration)), 120)} 
+                value={maxDurationMin} 
+                onChange={(e) => setMaxDurationMin(parseInt(e.target.value))}
+                style={{ width: '100%', cursor: 'pointer', accentColor: '#00E5FF' }} 
+              />
+            </View>
+
+            {/* Baggage */}
             <View style={styles.filterSection}>
               <Text style={styles.filterTitle}>Baggage Included</Text>
-              
               <TouchableOpacity style={styles.checkboxRow} onPress={() => setRequireCarryOn(!requireCarryOn)}>
                 <View style={[styles.checkbox, requireCarryOn && styles.checkboxActive]}>
                   {requireCarryOn && <CheckCircle2 color="#0A192F" size={14} />}
@@ -206,7 +269,6 @@ export default function FlightSearch() {
                 <Backpack color="#64748B" size={16} style={{marginRight: 8}}/>
                 <Text style={styles.checkboxLabel}>Carry-on bag</Text>
               </TouchableOpacity>
-              
               <TouchableOpacity style={styles.checkboxRow} onPress={() => setRequireChecked(!requireChecked)}>
                 <View style={[styles.checkbox, requireChecked && styles.checkboxActive]}>
                   {requireChecked && <CheckCircle2 color="#0A192F" size={14} />}
@@ -215,10 +277,22 @@ export default function FlightSearch() {
                 <Text style={styles.checkboxLabel}>Checked bag</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Airlines */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterTitle}>Airlines</Text>
+              {availableAirlines.map(airline => (
+                <TouchableOpacity key={airline} style={styles.checkboxRow} onPress={() => toggleAirline(airline)}>
+                  <View style={[styles.checkbox, selectedAirlines.includes(airline) && styles.checkboxActive]}>
+                    {selectedAirlines.includes(airline) && <CheckCircle2 color="#0A192F" size={14} />}
+                  </View>
+                  <Text style={styles.checkboxLabel}>{airline}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
 
-        {/* Main Results Column */}
         <View style={styles.mainContent}>
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -233,7 +307,6 @@ export default function FlightSearch() {
             </View>
           ) : (
             <>
-              {/* Sort Tabs */}
               <View style={styles.tabsContainer}>
                 <TouchableOpacity style={[styles.tab, sortType === 'best' && styles.tabActive]} onPress={() => setSortType('best')}>
                   <Text style={[styles.tabTitle, sortType === 'best' && styles.tabTitleActive]}>Best</Text>
@@ -253,7 +326,6 @@ export default function FlightSearch() {
 
               <Text style={styles.resultsCount}>{sortedFlights.length} results sorted by {sortType}</Text>
 
-              {/* Flight Cards */}
               <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
                 {sortedFlights.map((flight, idx) => (
                   <View key={flight.id + idx} style={styles.flightCard}>
