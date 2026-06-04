@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView } from 'react-native';
-import { Search, Globe, Menu, User, Building2, ChevronDown, Plus, Minus, X, ArrowLeft } from 'lucide-react-native';
+import { Search, Globe, Menu, User, Building2, ChevronDown, Plus, Minus, X, ArrowLeft, ArrowLeftRight } from 'lucide-react-native';
 import { useNavigation, useLinkTo } from '@react-navigation/native';
 import WebLink from './WebLink';
 import { useAuth } from '../context/AuthContext';
@@ -429,25 +429,38 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
             {isFlight ? (
               <>
-                <TouchableOpacity 
-                  style={[styles.searchSection, showFlightOriginDropdown && styles.activeSection]}
-                  onPress={() => { setShowFlightOriginDropdown(!showFlightOriginDropdown); setShowServiceDropdown(false); setShowFlightDestinationDropdown(false); setShowDateDropdown(false); setShowReturnDateDropdown(false); setShowGuestDropdown(false); }}
-                >
-                  <View>
-                    <Text style={styles.searchTitle} numberOfLines={1}>From</Text>
-                    <Text style={styles.searchSub} numberOfLines={1}>{flightOrigin}</Text>
-                  </View>
-                </TouchableOpacity>
-                <View style={styles.divider} />
-                <TouchableOpacity 
-                  style={[styles.searchSection, showFlightDestinationDropdown && styles.activeSection]}
-                  onPress={() => { setShowFlightDestinationDropdown(!showFlightDestinationDropdown); setShowServiceDropdown(false); setShowFlightOriginDropdown(false); setShowDateDropdown(false); setShowReturnDateDropdown(false); setShowGuestDropdown(false); }}
-                >
-                  <View>
-                    <Text style={styles.searchTitle} numberOfLines={1}>To</Text>
-                    <Text style={styles.searchSub} numberOfLines={1}>{flightDestination}</Text>
-                  </View>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', flex: 1.5, alignItems: 'center' }}>
+                  <TouchableOpacity 
+                    style={[styles.searchSection, showFlightOriginDropdown && styles.activeSection, { flex: 1 }]}
+                    onPress={() => { setShowFlightOriginDropdown(!showFlightOriginDropdown); setShowServiceDropdown(false); setShowFlightDestinationDropdown(false); setShowDateDropdown(false); setShowReturnDateDropdown(false); setShowGuestDropdown(false); }}
+                  >
+                    <View>
+                      <Text style={styles.searchTitle} numberOfLines={1}>From</Text>
+                      <Text style={styles.searchSub} numberOfLines={1}>{flightOrigin}</Text>
+                    </View>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={{ padding: 8, backgroundColor: '#0A192F', borderRadius: 20, borderWidth: 1, borderColor: '#1E293B', zIndex: 20, marginHorizontal: -16 }}
+                    onPress={() => {
+                      const temp = flightOrigin;
+                      setFlightOrigin(flightDestination);
+                      setFlightDestination(temp);
+                    }}
+                  >
+                    <ArrowLeftRight color="#00E5FF" size={16} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.searchSection, showFlightDestinationDropdown && styles.activeSection, { flex: 1, paddingLeft: 32 }]}
+                    onPress={() => { setShowFlightDestinationDropdown(!showFlightDestinationDropdown); setShowServiceDropdown(false); setShowFlightOriginDropdown(false); setShowDateDropdown(false); setShowReturnDateDropdown(false); setShowGuestDropdown(false); }}
+                  >
+                    <View>
+                      <Text style={styles.searchTitle} numberOfLines={1}>To</Text>
+                      <Text style={styles.searchSub} numberOfLines={1}>{flightDestination}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
                 <View style={styles.divider} />
                 <TouchableOpacity 
                   style={[styles.searchSection, (showDateDropdown || showReturnDateDropdown) && styles.activeSection]}
@@ -531,6 +544,50 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   onPress={() => { setSelectedService(service); setShowServiceDropdown(false); }}
                 >
                   <Text style={[styles.dropdownItemText, selectedService === service && styles.dropdownItemTextActive]}>{service}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Absolute Flight Origin Dropdown */}
+          {showFlightOriginDropdown && (
+            <View style={[styles.dropdownMenu, { left: 160 }]}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#94A3B8', marginBottom: 8, paddingHorizontal: 16 }}>Popular Airports</Text>
+              {[
+                { name: 'Helsinki', code: 'HEL' },
+                { name: 'New York', code: 'JFK' },
+                { name: 'London', code: 'LHR' },
+                { name: 'Tokyo', code: 'NRT' },
+                { name: 'Paris', code: 'CDG' }
+              ].map((loc, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={[styles.dropdownItem, flightOrigin === loc.code && styles.dropdownItemActive]}
+                  onPress={() => { setFlightOrigin(loc.code); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(true); }}
+                >
+                  <Text style={[styles.dropdownItemText, flightOrigin === loc.code && styles.dropdownItemTextActive]}>{loc.name} ({loc.code})</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Absolute Flight Destination Dropdown */}
+          {showFlightDestinationDropdown && (
+            <View style={[styles.dropdownMenu, { left: 320 }]}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#94A3B8', marginBottom: 8, paddingHorizontal: 16 }}>Popular Airports</Text>
+              {[
+                { name: 'New York', code: 'JFK' },
+                { name: 'London', code: 'LHR' },
+                { name: 'Tokyo', code: 'NRT' },
+                { name: 'Paris', code: 'CDG' },
+                { name: 'Helsinki', code: 'HEL' }
+              ].map((loc, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={[styles.dropdownItem, flightDestination === loc.code && styles.dropdownItemActive]}
+                  onPress={() => { setFlightDestination(loc.code); setShowFlightDestinationDropdown(false); setShowDateDropdown(true); }}
+                >
+                  <Text style={[styles.dropdownItemText, flightDestination === loc.code && styles.dropdownItemTextActive]}>{loc.name} ({loc.code})</Text>
                 </TouchableOpacity>
               ))}
             </View>
