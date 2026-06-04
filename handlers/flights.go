@@ -479,7 +479,7 @@ func SearchAirports(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
-	httpReq.Header.Set("Duffel-Version", "v1")
+	httpReq.Header.Set("Duffel-Version", "v2")
 	httpReq.Header.Set("Accept", "application/json")
 
 	client := &http.Client{Timeout: 5 * time.Second}
