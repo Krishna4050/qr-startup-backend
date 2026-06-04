@@ -232,7 +232,7 @@ export default function FlightSearch() {
 
       <View style={styles.contentWrapper}>
         {Platform.OS === 'web' && (
-          <View style={styles.sidebar}>
+          <ScrollView style={styles.sidebar} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
             {/* Stops */}
             <View style={styles.filterSection}>
               <Text style={styles.filterTitle}>Stops</Text>
@@ -301,7 +301,7 @@ export default function FlightSearch() {
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
+          </ScrollView>
         )}
 
         <View style={styles.mainContent}>

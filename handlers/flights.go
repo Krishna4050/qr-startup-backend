@@ -597,8 +597,12 @@ func SearchAirports(w http.ResponseWriter, r *http.Request) {
 
 	var results []Airport
 	for _, p := range duffelRes.Data {
+		name := p.Name
+		if p.Type == "city" {
+			name = name + " (Any)"
+		}
 		results = append(results, Airport{
-			Name:    p.Name,
+			Name:    name,
 			Iata:    p.IataCode,
 			Type:    p.Type,
 			Country: p.CountryName,
