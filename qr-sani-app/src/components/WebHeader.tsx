@@ -411,152 +411,162 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
       {/* Bottom Row: Search Pill */}
       <View style={styles.searchPillContainer}>
         <View style={{ position: 'relative', width: '100%', maxWidth: isFlight ? 950 : 700, zIndex: 10 }}>
-          <View style={[styles.searchPill, isFlight && { maxWidth: 950 }]}>
-            <TouchableOpacity 
-              style={[styles.searchSection, showServiceDropdown && styles.activeSection, isFlight && { flex: 0.8 }]} 
-              onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(false); setShowReturnDateDropdown(false); }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={styles.searchTitle} numberOfLines={1}>Service</Text>
-                  <Text style={styles.searchSub} numberOfLines={1}>{selectedService}</Text>
-                </View>
-                <ChevronDown color="#94A3B8" size={16} />
-              </View>
-            </TouchableOpacity>
-            
-            <View style={styles.divider} />
+          
+          {isFlight ? (
+            <View style={{ width: '100%' }}>
+              {/* Top Options Row */}
+              <View style={{ flexDirection: 'row', marginBottom: 12, zIndex: 20, alignItems: 'center' }}>
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, marginRight: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}
+                  onPress={() => setShowServiceDropdown(!showServiceDropdown)}
+                >
+                  <Text style={{ color: '#F8FAFC', fontWeight: 'bold', fontSize: 14 }}>Service: Flights</Text>
+                  <ChevronDown color="#F8FAFC" size={14} style={{ marginLeft: 6 }} />
+                </TouchableOpacity>
 
-            {isFlight ? (
-              <>
-                <View style={{ flexDirection: 'row', flex: 1.5, alignItems: 'center' }}>
-                  <View style={[styles.searchSection, showFlightOriginDropdown && styles.activeSection, { flex: 1, paddingHorizontal: 16 }]}>
-                    <Text style={styles.searchTitle} numberOfLines={1}>From</Text>
+                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ color: '#F8FAFC', fontWeight: 'bold', fontSize: 14 }}>Roundtrip</Text>
+                  <ChevronDown color="#F8FAFC" size={14} style={{ marginLeft: 6 }} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Main White Pill */}
+              <View style={{ flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 8, height: 60, width: '100%', alignItems: 'center' }}>
+                
+                <View style={{ flex: 1.5, flexDirection: 'row', alignItems: 'center', height: '100%' }}>
+                  <View style={{ flex: 1, paddingHorizontal: 16, justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4B5563' }}>From</Text>
                     <TextInput 
-                      style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none', fontSize: 16, fontWeight: '600', minWidth: 120 } as any]}
+                      style={{ padding: 0, margin: 0, outlineStyle: 'none', fontSize: 16, fontWeight: '700', color: '#111827', minWidth: 120 } as any}
                       value={flightOrigin}
-                      onChangeText={(text) => {
-                        setFlightOrigin(text);
-                        setShowFlightOriginDropdown(true);
-                      }}
-                      onFocus={() => {
-                        setShowFlightOriginDropdown(true);
-                        setShowServiceDropdown(false);
-                        setShowFlightDestinationDropdown(false);
-                        setShowDateDropdown(false);
-                        setShowReturnDateDropdown(false);
-                        setShowGuestDropdown(false);
-                      }}
-                      placeholder="City or airport"
-                      placeholderTextColor="#94A3B8"
+                      onChangeText={setFlightOrigin}
+                      placeholder="Country, city or airport"
+                      placeholderTextColor="#9CA3AF"
                     />
                   </View>
                   
                   <TouchableOpacity 
-                    style={{ padding: 8, backgroundColor: '#0A192F', borderRadius: 20, borderWidth: 1, borderColor: '#1E293B', zIndex: 20, marginHorizontal: -16 }}
+                    style={{ padding: 6, backgroundColor: '#F3F4F6', borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB', zIndex: 20, marginHorizontal: -16 }}
                     onPress={() => {
                       const temp = flightOrigin;
                       setFlightOrigin(flightDestination);
                       setFlightDestination(temp);
                     }}
                   >
-                    <ArrowLeftRight color="#00E5FF" size={16} />
+                    <ArrowLeftRight color="#4B5563" size={14} />
                   </TouchableOpacity>
 
-                  <View style={[styles.searchSection, showFlightDestinationDropdown && styles.activeSection, { flex: 1, paddingLeft: 32, paddingRight: 16 }]}>
-                    <Text style={styles.searchTitle} numberOfLines={1}>To</Text>
+                  <View style={{ flex: 1, paddingLeft: 24, paddingRight: 16, justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E5E7EB', height: '100%' }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4B5563' }}>To</Text>
                     <TextInput 
-                      style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none', fontSize: 16, fontWeight: '600', minWidth: 120 } as any]}
+                      style={{ padding: 0, margin: 0, outlineStyle: 'none', fontSize: 16, fontWeight: '700', color: '#111827', minWidth: 120 } as any}
                       value={flightDestination}
-                      onChangeText={(text) => {
-                        setFlightDestination(text);
-                        setShowFlightDestinationDropdown(true);
-                      }}
-                      onFocus={() => {
-                        setShowFlightDestinationDropdown(true);
-                        setShowServiceDropdown(false);
-                        setShowFlightOriginDropdown(false);
-                        setShowDateDropdown(false);
-                        setShowReturnDateDropdown(false);
-                        setShowGuestDropdown(false);
-                      }}
-                      placeholder="City or airport"
-                      placeholderTextColor="#94A3B8"
+                      onChangeText={setFlightDestination}
+                      placeholder="Country, city or airport"
+                      placeholderTextColor="#9CA3AF"
                     />
                   </View>
                 </View>
-                <View style={styles.divider} />
-                <TouchableOpacity 
-                  style={[styles.searchSection, (showDateDropdown || showReturnDateDropdown) && styles.activeSection]}
-                  onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(false); setShowGuestDropdown(false); }}
-                >
-                  <View>
-                    <Text style={styles.searchTitle} numberOfLines={1}>{flightType === 'one-way' ? 'Departure' : 'Dates'}</Text>
-                    <Text style={styles.searchSub} numberOfLines={1}>
-                      {selectedDate ? `May ${selectedDate}` : 'Add date'}
-                      {flightType === 'round-trip' ? (returnDate ? ` - May ${returnDate}` : ' - Return') : ''}
-                    </Text>
+
+                <View style={{ flex: 1, flexDirection: 'row', height: '100%', borderRightWidth: 1, borderRightColor: '#E5E7EB' }}>
+                  <View style={{ flex: 1, paddingHorizontal: 16, justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E5E7EB' }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4B5563' }}>Depart</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '500', color: '#6B7280' }}>Add date</Text>
                   </View>
-                </TouchableOpacity>
-                <View style={styles.divider} />
-                <TouchableOpacity 
-                  style={[styles.searchSection, showGuestDropdown && styles.activeSection, { flex: 0.8 }]}
-                  onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowReturnDateDropdown(false); setShowServiceDropdown(false); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(false); }}
-                >
-                  <View>
-                    <Text style={styles.searchTitle} numberOfLines={1}>Who</Text>
-                    <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} pax` : 'Add guests'}</Text>
+                  <View style={{ flex: 1, paddingHorizontal: 16, justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4B5563' }}>Return</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '500', color: '#6B7280' }}>Add date</Text>
                   </View>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
+                </View>
+
+                <View style={{ flex: 1, paddingHorizontal: 16, justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4B5563' }}>Travelers and cabin class</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>1 Adult, Economy</Text>
+                </View>
+
                 <TouchableOpacity 
-                  style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
-                  onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
+                  style={{ backgroundColor: '#006CE4', height: '100%', paddingHorizontal: 32, borderTopRightRadius: 8, borderBottomRightRadius: 8, justifyContent: 'center' }}
+                  onPress={handleSearchExecute}
                 >
-                  <View>
-                    <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Destination' : 'Where'}</Text>
-                    <Text style={styles.searchSub} numberOfLines={1}>{selectedLocation}</Text>
-                  </View>
+                  <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 18 }}>Search</Text>
                 </TouchableOpacity>
-                
-                <View style={styles.divider} />
-                
-                <TouchableOpacity 
-                  style={[styles.searchSection, showDateDropdown && styles.activeSection]}
-                  onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
-                >
-                  <View>
-                    <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Departure' : 'When'}</Text>
-                    <Text style={styles.searchSub} numberOfLines={1}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
-                  </View>
-                </TouchableOpacity>
-                
-                {requiresGuests && (
-                  <>
-                    <View style={styles.divider} />
-                    <TouchableOpacity 
-                      style={[styles.searchSection, showGuestDropdown && styles.activeSection]}
-                      onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
-                    >
-                      <View>
-                        <Text style={styles.searchTitle} numberOfLines={1}>Who</Text>
-                        <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </>
-            )}
-            
-            <View style={styles.searchButtonContainer}>
-              <TouchableOpacity style={styles.searchIconBg} onPress={handleSearchExecute}>
-                <Search color="#0A192F" size={16} />
-                <Text style={{ color: '#0A192F', fontWeight: 'bold', marginLeft: 6 }}>Search</Text>
-              </TouchableOpacity>
+
+              </View>
+
+              {/* Bottom Options Row */}
+              <View style={{ flexDirection: 'row', marginTop: 16, gap: 24 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 16, height: 16, backgroundColor: '#FFFFFF', marginRight: 8, borderRadius: 2 }} />
+                  <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 13 }}>Add nearby airports</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 16, height: 16, backgroundColor: '#FFFFFF', marginRight: 8, borderRadius: 2 }} />
+                  <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 13 }}>Direct flights</Text>
+                </View>
+              </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.searchPill}>
+              <TouchableOpacity 
+                style={[styles.searchSection, showServiceDropdown && styles.activeSection]} 
+                onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={styles.searchTitle} numberOfLines={1}>Service</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>{selectedService}</Text>
+                  </View>
+                  <ChevronDown color="#94A3B8" size={16} />
+                </View>
+              </TouchableOpacity>
+              
+              <View style={styles.divider} />
+              
+              <TouchableOpacity 
+                style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
+                onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
+              >
+                <View>
+                  <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Destination' : 'Where'}</Text>
+                  <Text style={styles.searchSub} numberOfLines={1}>{selectedLocation}</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <View style={styles.divider} />
+              
+              <TouchableOpacity 
+                style={[styles.searchSection, showDateDropdown && styles.activeSection]}
+                onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
+              >
+                <View>
+                  <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Departure' : 'When'}</Text>
+                  <Text style={styles.searchSub} numberOfLines={1}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
+                </View>
+              </TouchableOpacity>
+              
+              {requiresGuests && (
+                <>
+                  <View style={styles.divider} />
+                  <TouchableOpacity 
+                    style={[styles.searchSection, showGuestDropdown && styles.activeSection]}
+                    onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
+                  >
+                    <View>
+                      <Text style={styles.searchTitle} numberOfLines={1}>Who</Text>
+                      <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
+              )}
+              
+              <View style={styles.searchButtonContainer}>
+                <TouchableOpacity style={styles.searchIconBg} onPress={handleSearchExecute}>
+                  <Search color="#0A192F" size={16} />
+                  <Text style={{ color: '#0A192F', fontWeight: 'bold', marginLeft: 6 }}>Search</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {/* Absolute Service Dropdown */}
           {showServiceDropdown && (

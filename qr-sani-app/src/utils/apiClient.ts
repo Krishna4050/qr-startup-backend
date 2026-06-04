@@ -9,6 +9,9 @@ const getBackendUrl = () => {
   let backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
   if (!backendUrl) {
     console.error("CRITICAL ERROR: EXPO_PUBLIC_BACKEND_URL is not set in Vercel/Expo Environment Variables!");
+    if (typeof window !== 'undefined') {
+      return `http://${window.location.hostname}:8080`;
+    }
     return "http://localhost:8080"; // Fallback for dev if env missing
   }
   return backendUrl.replace(/\/$/, "");
