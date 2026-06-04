@@ -1,14 +1,16 @@
 package handlers
 
-import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
+	"strconv"
 )
 
 // FlightSearchRequest payload from the frontend
@@ -19,6 +21,8 @@ type FlightSearchRequest struct {
 	ReturnDate    string `json:"returnDate,omitempty"`
 	Type          string `json:"type"`
 	Guests        int    `json:"guests"`
+	CabinClass    string `json:"cabinClass"`
+	DirectOnly    bool   `json:"directOnly"`
 }
 
 // FlightOffer represents a standard ticket offer from either Duffel or Amadeus
@@ -88,37 +92,164 @@ func SearchFlights(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Mock Duffel API call
+// Real Duffel API call
 func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
-	// Simulate network latency
-	time.Sleep(600 * time.Millisecond)
-	
-	return []FlightOffer{
+	apiKey := os.Getenv("DUFFEL_API_KEY")
+	if apiKey == "" {
+		log.Println("WARNING: DUFFEL_API_KEY not set. Returning empty duffel results.")
+		return []FlightOffer{}
+	}
+
+	url := "https://api.duffel.com/air/offer_requests"
+
+	// Construct passenger array based on Guests count
+	var passengers []map[string]interface{}
+	guests := req.Guests
+	if guests < 1 {
+		guests = 1
+	}
+	for i := 0; i < guests; i++ {
+		passengers = append(passengers, map[string]interface{}{"type": "adult"})
+	}
+
+	// Determine cabin class
+	cabinClass := "economy"
+	switch strings.ToLower(req.CabinClass) {
+	case "premium economy":
+		cabinClass = "premium_economy"
+	case "business":
+		cabinClass = "business"
+	case "first":
+		cabinClass = "first"
+	}
+
+	// Construct slices
+	slices := []map[string]interface{}{
 		{
-			ID:        "duf_1",
-			Provider:  "duffel",
-			Airline:   "Finnair",
-			FlightNum: "AY131",
-			Departure: fmt.Sprintf("%s 08:00", req.DepartureDate),
-			Arrival:   fmt.Sprintf("%s 11:30", req.DepartureDate),
-			Duration:  "3h 30m",
-			Price:     145.50,
-			Currency:  "EUR",
-			IsDirect:  true,
-		},
-		{
-			ID:        "duf_2",
-			Provider:  "duffel",
-			Airline:   "Norwegian",
-			FlightNum: "D8-442",
-			Departure: fmt.Sprintf("%s 14:00", req.DepartureDate),
-			Arrival:   fmt.Sprintf("%s 17:45", req.DepartureDate),
-			Duration:  "3h 45m",
-			Price:     89.00,
-			Currency:  "EUR",
-			IsDirect:  true,
+			"origin":         req.Origin,
+			"destination":    req.Destination,
+			"departure_date": req.DepartureDate,
 		},
 	}
+	
+	if req.Type == "round-trip" && req.ReturnDate != "" {
+		slices = append(slices, map[string]interface{}{
+			"origin":         req.Destination,
+			"destination":    req.Origin,
+			"departure_date": req.ReturnDate,
+		})
+	}
+
+	payload := map[string]interface{}{
+		"data": map[string]interface{}{
+			"slices":     slices,
+			"passengers": passengers,
+			"cabin_class": cabinClass,
+		},
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshaling duffel request: %v", err)
+		return []FlightOffer{}
+	}
+
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return []FlightOffer{}
+	}
+
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	httpReq.Header.Set("Duffel-Version", "v1")
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		log.Printf("Error calling duffel: %v", err)
+		return []FlightOffer{}
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return []FlightOffer{}
+	}
+
+	if resp.StatusCode != 200 {
+		log.Printf("Duffel API error %d: %s", resp.StatusCode, string(body))
+		return []FlightOffer{}
+	}
+
+	var duffelRes struct {
+		Data struct {
+			Offers []struct {
+				ID         string `json:"id"`
+				TotalAmount string `json:"total_amount"`
+				TotalCurrency string `json:"total_currency"`
+				Slices     []struct {
+					Duration string `json:"duration"`
+					Segments []struct {
+						Origin struct {
+							IATA string `json:"iata_code"`
+						} `json:"origin"`
+						Destination struct {
+							IATA string `json:"iata_code"`
+						} `json:"destination"`
+						OperatingCarrier struct {
+							Name string `json:"name"`
+						} `json:"operating_carrier"`
+						OperatingCarrierFlightNumber string `json:"operating_carrier_flight_number"`
+						DepartingAt string `json:"departing_at"`
+						ArrivingAt  string `json:"arriving_at"`
+					} `json:"segments"`
+				} `json:"slices"`
+			} `json:"offers"`
+		} `json:"data"`
+	}
+
+	if err := json.Unmarshal(body, &duffelRes); err != nil {
+		log.Printf("Error unmarshaling duffel response: %v", err)
+		return []FlightOffer{}
+	}
+
+	var offers []FlightOffer
+	for _, offer := range duffelRes.Data.Offers {
+		if len(offer.Slices) == 0 || len(offer.Slices[0].Segments) == 0 {
+			continue
+		}
+
+		// Filter for direct flights if requested
+		if req.DirectOnly && len(offer.Slices[0].Segments) > 1 {
+			continue
+		}
+		
+		// If round trip, check return slice too
+		if req.DirectOnly && len(offer.Slices) > 1 && len(offer.Slices[1].Segments) > 1 {
+			continue
+		}
+
+		firstSegment := offer.Slices[0].Segments[0]
+		price, _ := strconv.ParseFloat(offer.TotalAmount, 64)
+		
+		isDirect := len(offer.Slices[0].Segments) == 1
+		
+		offers = append(offers, FlightOffer{
+			ID:        offer.ID,
+			Provider:  "duffel",
+			Airline:   firstSegment.OperatingCarrier.Name,
+			FlightNum: firstSegment.OperatingCarrierFlightNumber,
+			Departure: firstSegment.DepartingAt,
+			Arrival:   offer.Slices[0].Segments[len(offer.Slices[0].Segments)-1].ArrivingAt,
+			Duration:  offer.Slices[0].Duration,
+			Price:     price,
+			Currency:  offer.TotalCurrency,
+			IsDirect:  isDirect,
+		})
+	}
+
+	return offers
 }
 
 // Mock Amadeus API call
@@ -171,6 +302,19 @@ var (
 	airportsLoaded bool
 )
 
+var isoToCountry = map[string]string{
+	"US": "United States", "GB": "United Kingdom", "IT": "Italy", "ES": "Spain",
+	"FR": "France", "DE": "Germany", "JP": "Japan", "CN": "China",
+	"IN": "India", "BR": "Brazil", "CA": "Canada", "AU": "Australia",
+	"RU": "Russia", "MX": "Mexico", "ZA": "South Africa", "TR": "Turkey",
+	"AE": "United Arab Emirates", "SA": "Saudi Arabia", "EG": "Egypt", "FI": "Finland",
+	"SE": "Sweden", "NO": "Norway", "DK": "Denmark", "NL": "Netherlands",
+	"CH": "Switzerland", "AT": "Austria", "BE": "Belgium", "GR": "Greece",
+	"PT": "Portugal", "IE": "Ireland", "NZ": "New Zealand", "SG": "Singapore",
+	"MY": "Malaysia", "TH": "Thailand", "VN": "Vietnam", "ID": "Indonesia",
+	"PH": "Philippines", "KR": "South Korea", "TW": "Taiwan", "HK": "Hong Kong",
+}
+
 func loadAirports() {
 	airportsMutex.Lock()
 	defer airportsMutex.Unlock()
@@ -194,7 +338,11 @@ func loadAirports() {
 	// Filter out empty iata codes
 	for _, a := range allAirports {
 		if a.Iata != "" {
-			a.Country = a.Iso
+			if countryName, exists := isoToCountry[a.Iso]; exists {
+				a.Country = countryName
+			} else {
+				a.Country = a.Iso
+			}
 			airportsCache = append(airportsCache, a)
 		}
 	}
@@ -231,7 +379,10 @@ func SearchAirports(w http.ResponseWriter, r *http.Request) {
 
 	var results []Airport
 	for _, a := range airportsCache {
-		if strings.Contains(strings.ToLower(a.Name), q) || strings.Contains(strings.ToLower(a.Iata), q) || strings.Contains(strings.ToLower(a.Iso), q) {
+		if strings.Contains(strings.ToLower(a.Name), q) || 
+		   strings.Contains(strings.ToLower(a.Iata), q) || 
+		   strings.Contains(strings.ToLower(a.Iso), q) ||
+		   strings.Contains(strings.ToLower(a.Country), q) {
 			results = append(results, a)
 			if len(results) >= 15 { // Max 15 suggestions
 				break
