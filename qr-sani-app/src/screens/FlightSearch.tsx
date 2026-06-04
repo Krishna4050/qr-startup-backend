@@ -30,7 +30,13 @@ export default function FlightSearch() {
   // Params from WebHeader
   const routeOrigin = route.params?.origin || 'HEL';
   const routeDestination = route.params?.destination || 'JFK';
-  const routeDate = route.params?.departureDate || '2026-05-12';
+  
+  // Create a default date for tomorrow to prevent Duffel 400 errors on refresh
+  const tmrw = new Date();
+  tmrw.setDate(tmrw.getDate() + 1);
+  const fallbackDate = tmrw.toISOString().split('T')[0];
+  const routeDate = route.params?.departureDate || fallbackDate;
+
   const guests = route.params?.guests || 1;
   const flightType = route.params?.type || 'round-trip';
   const cabinClass = route.params?.cabinClass || 'economy';
@@ -108,9 +114,9 @@ export default function FlightSearch() {
       } else {
         setError("Could not find flights. Please try again.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Flight Search Error:", err);
-      setError("Network error connecting to flight engine.");
+      setError(err.message || "Network error connecting to flight engine.");
     } finally {
       setIsLoading(false);
     }
@@ -121,10 +127,11 @@ export default function FlightSearch() {
   };
 
   const getDurationMinutes = (dur: string) => {
+    if (!dur) return 9999;
     let minutes = 0;
-    const dMatch = dur.match(/P(\d+)D/);
-    const hMatch = dur.match(/(\d+)H/);
-    const mMatch = dur.match(/(\d+)M/);
+    const dMatch = dur.match(/P(\d+)D/i);
+    const hMatch = dur.match(/(\d+)H/i);
+    const mMatch = dur.match(/(\d+)M/i);
     if (dMatch) minutes += parseInt(dMatch[1]) * 24 * 60;
     if (hMatch) minutes += parseInt(hMatch[1]) * 60;
     if (mMatch) minutes += parseInt(mMatch[1]);
@@ -335,7 +342,12 @@ export default function FlightSearch() {
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.resultsCount}>{sortedFlights.length} results sorted by {sortType}</Text>
+              <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
+                <Text style={styles.resultsCount}>{sortedFlights.length} results sorted by {sortType}</Text>
+                <TouchableOpacity onPress={() => fetchFlights(currentDate)} style={{backgroundColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16}}>
+                  <Text style={{fontSize: 12, color: '#0A192F', fontWeight: '600'}}>Refresh Live Prices</Text>
+                </TouchableOpacity>
+              </View>
 
               <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
                 {sortedFlights.map((flight, idx) => (
