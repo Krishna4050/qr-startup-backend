@@ -249,14 +249,14 @@ export default function FlightSearch() {
             <View style={styles.filterSection}>
               <Text style={styles.filterTitle}>Max Trip Duration</Text>
               <Text style={{fontSize: 14, color: '#00E5FF', fontWeight: 'bold', marginBottom: 12}}>{formatMinDuration(maxDurationMin)}</Text>
-              <input 
-                type="range" 
-                min="60" 
-                max={Math.max(...flights.map(f => getDurationMinutes(f.duration)), 120)} 
-                value={maxDurationMin} 
-                onChange={(e) => setMaxDurationMin(parseInt(e.target.value))}
-                style={{ width: '100%', cursor: 'pointer', accentColor: '#00E5FF' }} 
-              />
+              {React.createElement('input', {
+                type: 'range',
+                min: '60',
+                max: Math.max(...flights.map(f => getDurationMinutes(f.duration)), 120),
+                value: maxDurationMin,
+                onChange: (e: any) => setMaxDurationMin(parseInt(e.target.value)),
+                style: { width: '100%', cursor: 'pointer', accentColor: '#00E5FF' } as any
+              })}
             </View>
 
             {/* Baggage */}
