@@ -33,6 +33,13 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
   const mIndex = parseInt(displayMonth) - 1;
   const mName = mIndex >= 0 && mIndex < 12 ? monthNames[mIndex] : displayMonth;
 
+  const firstDay = new Date(parseInt(displayYear), mIndex, 1).getDay();
+  const blanks = firstDay === 0 ? 6 : firstDay - 1;
+  const blankArr = Array.from({ length: blanks });
+  
+  const daysInMonth = new Date(parseInt(displayYear), mIndex + 1, 0).getDate();
+  const daysArr = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
   return (
     <View style={[styles.dropdownMenu, { top: 70, left: 0, width: 320, padding: 20 }]}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -44,14 +51,19 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
           <Text style={{ color: '#00E5FF', fontSize: 18 }}>{'>'}</Text>
         </TouchableOpacity>
       </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-start' }}>
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
-          <Text key={`h-${i}`} style={{ width: 40, textAlign: 'center', color: '#94A3B8', fontSize: 12, marginBottom: 8 }}>{day}</Text>
+          <Text key={`h-${i}`} style={{ width: 35, textAlign: 'center', color: '#94A3B8', fontSize: 12, marginBottom: 8 }}>{day}</Text>
         ))}
-        {[1, 2, 3, 4, 5].map((_, i) => <View key={`e-${i}`} style={{ width: 40, height: 40 }} />)}
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31].map(d => {
-          const isToday = d === todayDate;
-          const isSelected = selectedDate === d || returnDate === d;
+        {blankArr.map((_, i) => <View key={`e-${i}`} style={{ width: 35, height: 35 }} />)}
+        {daysArr.map(d => {
+          const dStr = `${displayYear}-${displayMonth.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+          // Calculate today string correctly
+          const today = new Date();
+          const tStr = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+          
+          const isToday = dStr === tStr;
+          const isSelected = selectedDate === dStr || returnDate === dStr;
           const bg = isSelected ? '#00E5FF' : isToday ? 'rgba(0, 229, 255, 0.1)' : 'transparent';
           const bw = isToday && !isSelected ? 1 : 0;
           const txtColor = isSelected ? '#0A192F' : isToday ? '#00E5FF' : '#E2E8F0';
@@ -66,17 +78,17 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
               key={d} 
               onPress={() => {
                 if (flightType === 'one-way') {
-                  setSelectedDate(d);
+                  setSelectedDate(dStr);
                   setShowDateDropdown(false);
                   setShowGuestDropdown(true);
                 } else {
-                  if (!selectedDate) setSelectedDate(d);
-                  else if (!returnDate) { setReturnDate(d); setShowDateDropdown(false); setShowGuestDropdown(true); }
-                  else { setSelectedDate(d); setReturnDate(null); }
+                  if (!selectedDate) setSelectedDate(dStr);
+                  else if (!returnDate) { setReturnDate(dStr); setShowDateDropdown(false); setShowGuestDropdown(true); }
+                  else { setSelectedDate(dStr); setReturnDate(null); }
                 }
               }}
               style={{ 
-                width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 20, 
+                width: 35, height: 35, justifyContent: 'center', alignItems: 'center', borderRadius: 17.5, 
                 backgroundColor: bg,
                 borderWidth: bw,
                 borderColor: '#00E5FF',
@@ -118,8 +130,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const [selectedLocation, setSelectedLocation] = useState('Helsinki');
   const [flightOrigin, setFlightOrigin] = useState('HEL');
   const [flightDestination, setFlightDestination] = useState('JFK');
-  const [selectedDate, setSelectedDate] = useState<number | null>(null);
-  const [returnDate, setReturnDate] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [returnDate, setReturnDate] = useState<string | null>(null);
   const [adults, setAdults] = useState(1);
   const [childrenCount, setChildrenCount] = useState(0);
   const [cabinClass, setCabinClass] = useState('Economy');
@@ -170,8 +182,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
       navigation.navigate('FlightSearch' as never, {
         origin: flightOrigin,
         destination: flightDestination,
-        departureDate: `2026-05-${selectedDate?.toString().padStart(2, '0') || '01'}`,
-        returnDate: returnDate ? `2026-05-${returnDate.toString().padStart(2, '0')}` : undefined,
+        departureDate: selectedDate || '2026-05-12',
+        returnDate: returnDate || undefined,
         type: flightType,
         guests: adults + childrenCount,
         cabinClass: cabinClass,
@@ -585,7 +597,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   <View>
                     <Text style={styles.searchTitle} numberOfLines={1}>Depart</Text>
                     <Text style={[styles.searchSub, !selectedDate && { color: '#94A3B8' }]} numberOfLines={1}>
-                      {selectedDate ? `May ${selectedDate}` : 'Add date'}
+                      {selectedDate ? (() => {
+                        const [y, m, d] = selectedDate.split('-');
+                        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                        return `${monthNames[parseInt(m) - 1]} ${parseInt(d)}`;
+                      })() : 'Add date'}
                     </Text>
                   </View>
                   {showDateDropdown && (
@@ -616,7 +632,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                       <View>
                         <Text style={styles.searchTitle} numberOfLines={1}>Return</Text>
                         <Text style={[styles.searchSub, !returnDate && { color: '#94A3B8' }]} numberOfLines={1}>
-                          {returnDate ? `May ${returnDate}` : 'Add date'}
+                          {returnDate ? (() => {
+                            const [y, m, d] = returnDate.split('-');
+                            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                            return `${monthNames[parseInt(m) - 1]} ${parseInt(d)}`;
+                          })() : 'Add date'}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -697,7 +717,13 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               >
                 <View>
                   <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Departure' : 'When'}</Text>
-                  <Text style={styles.searchSub} numberOfLines={1}>{selectedDate ? `May ${selectedDate}, 2026` : 'Add dates'}</Text>
+                  <Text style={styles.searchSub} numberOfLines={1}>
+                    {selectedDate ? (() => {
+                      const [y, m, d] = selectedDate.split('-');
+                      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                      return `${monthNames[parseInt(m) - 1]} ${parseInt(d)}, ${y}`;
+                    })() : 'Add dates'}
+                  </Text>
                 </View>
               </TouchableOpacity>
               
