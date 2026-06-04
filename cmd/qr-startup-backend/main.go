@@ -73,6 +73,7 @@ func main(){
 	mux.HandleFunc("POST /api/verify/check", handlers.CheckVerificationAndCall)
 	mux.HandleFunc("GET /api/tags/{id}", handlers.GetTagHandler)
 	mux.HandleFunc("POST /api/flights/search", handlers.SearchFlights)
+	mux.HandleFunc("GET /api/flights/dates", handlers.SearchFlightDates)
 	mux.HandleFunc("GET /api/flights/airports", handlers.SearchAirports)
 	mux.HandleFunc("POST /api/invite", handlers.SendInviteEmail)
 	mux.HandleFunc("POST /api/security/login", handlers.LoginSecurityCheck)

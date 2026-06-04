@@ -35,9 +35,11 @@ type FlightOffer struct {
 	Departure   string  `json:"departure"`
 	Arrival     string  `json:"arrival"`
 	Duration    string  `json:"duration"`
-	Price       float64 `json:"price"`
-	Currency    string  `json:"currency"`
-	IsDirect    bool    `json:"isDirect"`
+	Price         float64 `json:"price"`
+	Currency      string  `json:"currency"`
+	IsDirect      bool    `json:"isDirect"`
+	HasCheckedBag bool    `json:"hasCheckedBag"`
+	HasCarryOnBag bool    `json:"hasCarryOnBag"`
 }
 
 // SearchFlights handles the POST /api/flights/search endpoint
@@ -206,6 +208,12 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 						ArrivingAt  string `json:"arriving_at"`
 					} `json:"segments"`
 				} `json:"slices"`
+				Passengers []struct {
+					Baggages []struct {
+						Type     string `json:"type"`
+						Quantity int    `json:"quantity"`
+					} `json:"baggages"`
+				} `json:"passengers"`
 			} `json:"offers"`
 		} `json:"data"`
 	}
@@ -236,21 +244,105 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 		
 		isDirect := len(offer.Slices[0].Segments) == 1
 		
+		hasChecked := false
+		hasCarryOn := false
+		if len(offer.Passengers) > 0 {
+			for _, bag := range offer.Passengers[0].Baggages {
+				if bag.Type == "checked" && bag.Quantity > 0 {
+					hasChecked = true
+				}
+				if bag.Type == "carry_on" && bag.Quantity > 0 {
+					hasCarryOn = true
+				}
+			}
+		}
+
 		offers = append(offers, FlightOffer{
-			ID:        offer.ID,
-			Provider:  "duffel",
-			Airline:   firstSegment.OperatingCarrier.Name,
-			FlightNum: firstSegment.OperatingCarrierFlightNumber,
-			Departure: firstSegment.DepartingAt,
-			Arrival:   offer.Slices[0].Segments[len(offer.Slices[0].Segments)-1].ArrivingAt,
-			Duration:  offer.Slices[0].Duration,
-			Price:     price,
-			Currency:  offer.TotalCurrency,
-			IsDirect:  isDirect,
+			ID:            offer.ID,
+			Provider:      "duffel",
+			Airline:       firstSegment.OperatingCarrier.Name,
+			FlightNum:     firstSegment.OperatingCarrierFlightNumber,
+			Departure:     firstSegment.DepartingAt,
+			Arrival:       offer.Slices[0].Segments[len(offer.Slices[0].Segments)-1].ArrivingAt,
+			Duration:      offer.Slices[0].Duration,
+			Price:         price,
+			Currency:      offer.TotalCurrency,
+			IsDirect:      isDirect,
+			HasCheckedBag: hasChecked,
+			HasCarryOnBag: hasCarryOn,
 		})
 	}
 
 	return offers
+}
+
+// SearchFlightDates handles GET /api/flights/dates
+// It fetches the lowest prices for +/- 3 days from the target date concurrently.
+func SearchFlightDates(w http.ResponseWriter, r *http.Request) {
+	origin := r.URL.Query().Get("origin")
+	destination := r.URL.Query().Get("destination")
+	dateStr := r.URL.Query().Get("date") // Format: YYYY-MM-DD
+
+	if origin == "" || destination == "" || dateStr == "" {
+		http.Error(w, "Missing params", http.StatusBadRequest)
+		return
+	}
+
+	targetDate, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		http.Error(w, "Invalid date format", http.StatusBadRequest)
+		return
+	}
+
+	// Calculate +/- 3 days
+	var datesToFetch []string
+	for i := -3; i <= 3; i++ {
+		d := targetDate.AddDate(0, 0, i)
+		if d.Before(time.Now().Truncate(24 * time.Hour)) {
+			continue // Skip past dates
+		}
+		datesToFetch = append(datesToFetch, d.Format("2006-01-02"))
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	datePrices := make(map[string]float64)
+
+	for _, d := range datesToFetch {
+		wg.Add(1)
+		go func(fetchDate string) {
+			defer wg.Done()
+			req := FlightSearchRequest{
+				Origin:        origin,
+				Destination:   destination,
+				DepartureDate: fetchDate,
+				Type:          "one-way",
+				Guests:        1,
+				CabinClass:    "economy",
+			}
+			offers := fetchDuffelFlights(req)
+			
+			if len(offers) > 0 {
+				minPrice := offers[0].Price
+				for _, o := range offers {
+					if o.Price < minPrice {
+						minPrice = o.Price
+					}
+				}
+				mu.Lock()
+				datePrices[fetchDate] = minPrice
+				mu.Unlock()
+			}
+		}(d)
+	}
+
+	wg.Wait()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"data":   datePrices,
+	})
 }
 
 // Mock Amadeus API call
