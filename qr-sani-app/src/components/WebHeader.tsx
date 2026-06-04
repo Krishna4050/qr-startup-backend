@@ -138,6 +138,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
+  const servicesList = ['Vehicle Repair', 'Bike Repair', 'Pay Parking', 'Hotels & Stays', 'City Transit', 'Train Tickets', 'Flights'];
+
   useEffect(() => {
     if (user) {
       apiClient.get('/api/dashboard')
@@ -189,6 +191,12 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     const anyDropdownOpen = showProfileDropdown || showServiceDropdown || showLocationDropdown || showDateDropdown || showGuestDropdown || showFlightOriginDropdown || showFlightDestinationDropdown || showReturnDateDropdown || showFlightTypeDropdown;
     return (
       <>
+        <View style={[styles.headerContainer, { paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 24 : 0 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, zIndex: 9999 }}>
+            <WebLink style={styles.logoSection} screen="Dashboard">
+              <Image source={require('../../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12 }} />
+              <Text style={[styles.logoText, { fontSize: 24 }]}>ATS finland</Text>
+            </WebLink>
             <View style={{ position: 'relative' }}>
               {isGuest ? (
                 <WebLink screen="Login" style={{ backgroundColor: '#00E5FF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}>
