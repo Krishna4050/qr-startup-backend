@@ -16,8 +16,11 @@ interface FlightOffer {
   price: number;
   currency: string;
   isDirect: boolean;
+  stops: number;
   hasCheckedBag: boolean;
   hasCarryOnBag: boolean;
+  checkedBagPrice: number;
+  carryOnBagPrice: number;
 }
 
 export default function FlightSearch() {
@@ -119,8 +122,10 @@ export default function FlightSearch() {
 
   const getDurationMinutes = (dur: string) => {
     let minutes = 0;
+    const dMatch = dur.match(/P(\d+)D/);
     const hMatch = dur.match(/(\d+)H/);
     const mMatch = dur.match(/(\d+)M/);
+    if (dMatch) minutes += parseInt(dMatch[1]) * 24 * 60;
     if (hMatch) minutes += parseInt(hMatch[1]) * 60;
     if (mMatch) minutes += parseInt(mMatch[1]);
     return minutes || 9999;
@@ -154,18 +159,11 @@ export default function FlightSearch() {
     // Stops
     const stopsActive = stopFilters.direct || stopFilters.oneStop || stopFilters.multiStop;
     if (stopsActive) {
-      const isDirect = f.isDirect;
-      // Heuristic for multi-stop based on duration or lack of direct
-      // Duffel segments data tells us exactly, but we mock "1 stop" vs "2+ stops" since we don't pass segments to frontend yet
-      // For now, if it's not direct, we assume it's 1 stop to simplify
-      if (stopFilters.direct && isDirect) { /* valid */ }
-      else if (stopFilters.oneStop && !isDirect) { /* valid */ }
+      if (stopFilters.direct && f.stops === 0) { /* valid */ }
+      else if (stopFilters.oneStop && f.stops === 1) { /* valid */ }
+      else if (stopFilters.multiStop && f.stops > 1) { /* valid */ }
       else return false;
     }
-
-    // Baggage
-    if (requireCarryOn && !f.hasCarryOnBag) return false;
-    if (requireChecked && !f.hasCheckedBag) return false;
 
     // Airlines
     if (selectedAirlines.length > 0 && !selectedAirlines.includes(f.airline)) return false;
@@ -176,12 +174,19 @@ export default function FlightSearch() {
     return true;
   });
 
+  const getCalculatedPrice = (f: FlightOffer) => {
+    let p = f.price;
+    if (requireChecked && !f.hasCheckedBag) p += f.checkedBagPrice;
+    if (requireCarryOn && !f.hasCarryOnBag) p += f.carryOnBagPrice;
+    return p;
+  };
+
   // Sort Logic
   const sortedFlights = [...filteredFlights].sort((a, b) => {
-    if (sortType === 'cheapest') return a.price - b.price;
+    if (sortType === 'cheapest') return getCalculatedPrice(a) - getCalculatedPrice(b);
     if (sortType === 'fastest') return getDurationMinutes(a.duration) - getDurationMinutes(b.duration);
-    const aScore = a.price + (getDurationMinutes(a.duration) * 0.5);
-    const bScore = b.price + (getDurationMinutes(b.duration) * 0.5);
+    const aScore = getCalculatedPrice(a) + (getDurationMinutes(a.duration) * 0.5);
+    const bScore = getCalculatedPrice(b) + (getDurationMinutes(b.duration) * 0.5);
     return aScore - bScore;
   });
 
@@ -242,6 +247,12 @@ export default function FlightSearch() {
                   {stopFilters.oneStop && <CheckCircle2 color="#0A192F" size={14} />}
                 </View>
                 <Text style={styles.checkboxLabel}>1 Stop</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.checkboxRow} onPress={() => toggleStop('multiStop')}>
+                <View style={[styles.checkbox, stopFilters.multiStop && styles.checkboxActive]}>
+                  {stopFilters.multiStop && <CheckCircle2 color="#0A192F" size={14} />}
+                </View>
+                <Text style={styles.checkboxLabel}>2+ Stops</Text>
               </TouchableOpacity>
             </View>
 
@@ -353,7 +364,7 @@ export default function FlightSearch() {
                             {!flight.isDirect && <View style={styles.stopDot} />}
                           </View>
                           <Text style={[styles.directText, !flight.isDirect && {color: '#EF4444'}]}>
-                            {flight.isDirect ? 'Direct' : '1 Stop'}
+                            {flight.isDirect ? 'Direct' : flight.stops + (flight.stops > 1 ? ' Stops' : ' Stop')}
                           </Text>
                         </View>
                         
@@ -364,8 +375,12 @@ export default function FlightSearch() {
                       </View>
 
                       <View style={styles.priceActionBlock}>
+                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, justifyContent: 'flex-end'}}>
+                          <Briefcase size={12} color={flight.hasCarryOnBag || !requireCarryOn ? "#10B981" : "#F59E0B"} />
+                          <Backpack size={12} color={flight.hasCheckedBag || !requireChecked ? "#10B981" : "#F59E0B"} />
+                        </View>
                         <Text style={styles.providerHint}>via {flight.provider}</Text>
-                        <Text style={styles.priceText}>€{Math.round(flight.price)}</Text>
+                        <Text style={styles.priceText}>€{Math.round(getCalculatedPrice(flight))}</Text>
                         <TouchableOpacity style={styles.bookButton} onPress={() => handleBook(flight)}>
                           <Text style={styles.bookButtonText}>Select</Text>
                           <ArrowRight color="#FFF" size={16} />

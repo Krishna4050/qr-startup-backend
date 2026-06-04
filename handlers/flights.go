@@ -8,10 +8,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"strconv"
 )
 
 // FlightSearchRequest payload from the frontend
@@ -28,18 +29,21 @@ type FlightSearchRequest struct {
 
 // FlightOffer represents a standard ticket offer from either Duffel or Amadeus
 type FlightOffer struct {
-	ID          string  `json:"id"`
-	Provider    string  `json:"provider"` // "duffel" or "amadeus"
-	Airline     string  `json:"airline"`
-	FlightNum   string  `json:"flightNum"`
-	Departure   string  `json:"departure"`
-	Arrival     string  `json:"arrival"`
-	Duration    string  `json:"duration"`
-	Price         float64 `json:"price"`
-	Currency      string  `json:"currency"`
-	IsDirect      bool    `json:"isDirect"`
-	HasCheckedBag bool    `json:"hasCheckedBag"`
-	HasCarryOnBag bool    `json:"hasCarryOnBag"`
+	ID              string  `json:"id"`
+	Provider        string  `json:"provider"`
+	Airline         string  `json:"airline"`
+	FlightNum       string  `json:"flightNum"`
+	Departure       string  `json:"departure"`
+	Arrival         string  `json:"arrival"`
+	Duration        string  `json:"duration"`
+	Price           float64 `json:"price"`
+	Currency        string  `json:"currency"`
+	IsDirect        bool    `json:"isDirect"`
+	Stops           int     `json:"stops"`
+	HasCheckedBag   bool    `json:"hasCheckedBag"`
+	HasCarryOnBag   bool    `json:"hasCarryOnBag"`
+	CheckedBagPrice float64 `json:"checkedBagPrice"`
+	CarryOnBagPrice float64 `json:"carryOnBagPrice"`
 }
 
 // SearchFlights handles the POST /api/flights/search endpoint
@@ -243,6 +247,7 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 		price, _ := strconv.ParseFloat(offer.TotalAmount, 64)
 		
 		isDirect := len(offer.Slices[0].Segments) == 1
+		stops := len(offer.Slices[0].Segments) - 1
 		
 		hasChecked := false
 		hasCarryOn := false
@@ -268,10 +273,80 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 			Price:         price,
 			Currency:      offer.TotalCurrency,
 			IsDirect:      isDirect,
+			Stops:         stops,
 			HasCheckedBag: hasChecked,
 			HasCarryOnBag: hasCarryOn,
 		})
 	}
+
+	// Sort offers by price ascending
+	sort.Slice(offers, func(i, j int) bool {
+		return offers[i].Price < offers[j].Price
+	})
+
+	// Take Top 20 offers to avoid massive parallel requests
+	limit := 20
+	if len(offers) < limit {
+		limit = len(offers)
+	}
+	offers = offers[:limit]
+
+	// Concurrently fetch available_services for these 20 offers
+	var wg sync.WaitGroup
+	for i := range offers {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			
+			// Default estimated prices if Duffel doesn't return any
+			offers[idx].CheckedBagPrice = 40.0
+			offers[idx].CarryOnBagPrice = 15.0
+
+			reqURL := fmt.Sprintf("https://api.duffel.com/air/offers/%s?return_available_services=true", offers[idx].ID)
+			svcReq, err := http.NewRequest("GET", reqURL, nil)
+			if err != nil { return }
+			svcReq.Header.Set("Authorization", "Bearer "+apiKey)
+			svcReq.Header.Set("Duffel-Version", "v2")
+			svcReq.Header.Set("Accept", "application/json")
+
+			client := &http.Client{Timeout: 5 * time.Second}
+			res, err := client.Do(svcReq)
+			if err != nil || res.StatusCode != 200 { return }
+			defer res.Body.Close()
+
+			body, _ := io.ReadAll(res.Body)
+			
+			var singleOffer struct {
+				Data struct {
+					AvailableServices []struct {
+						Type        string `json:"type"`
+						TotalAmount string `json:"total_amount"`
+						Metadata    struct {
+							Type string `json:"type"`
+						} `json:"metadata"`
+					} `json:"available_services"`
+				} `json:"data"`
+			}
+			
+			if err := json.Unmarshal(body, &singleOffer); err == nil {
+				foundChecked := false
+				foundCarry := false
+				for _, svc := range singleOffer.Data.AvailableServices {
+					if svc.Type == "baggage" {
+						amt, _ := strconv.ParseFloat(svc.TotalAmount, 64)
+						if svc.Metadata.Type == "checked" && !foundChecked {
+							offers[idx].CheckedBagPrice = amt
+							foundChecked = true
+						} else if svc.Metadata.Type == "carry_on" && !foundCarry {
+							offers[idx].CarryOnBagPrice = amt
+							foundCarry = true
+						}
+					}
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
 
 	return offers
 }
