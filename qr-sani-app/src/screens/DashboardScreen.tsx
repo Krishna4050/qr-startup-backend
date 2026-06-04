@@ -40,6 +40,7 @@ export default function DashboardScreen() {
   const [searchFilters, setSearchFilters] = useState<any>(null);
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [flightDealsCity, setFlightDealsCity] = useState('');
 
   const [showWebPushPrompt, setShowWebPushPrompt] = useState(false);
 
@@ -57,6 +58,15 @@ export default function DashboardScreen() {
   useEffect(() => {
     if (isAuthLoading) return;
     
+    // IP Geolocation for flight deals
+    fetch('https://ipapi.co/json/')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.city) {
+          setFlightDealsCity(data.city);
+        }
+      }).catch(e => console.log('Location fetch failed'));
+
     if (!user) {
       setIsGuest(true);
       setLoading(false);
@@ -495,6 +505,30 @@ export default function DashboardScreen() {
           </View>
           <TouchableOpacity><Text style={styles.seeAllText}>SEE ALL</Text></TouchableOpacity>
         </View>
+
+        {flightDealsCity ? (
+          <View style={{ marginBottom: 32 }}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Flight Deals from {flightDealsCity}</Text>
+              <TouchableOpacity><Text style={styles.seeAllText}>SEE ALL</Text></TouchableOpacity>
+            </View>
+            <GridOrScroll>
+              {[
+                { to: 'London, UK', price: '€45', img: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&q=80&w=400&h=300' },
+                { to: 'Paris, France', price: '€55', img: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&q=80&w=400&h=300' },
+                { to: 'Rome, Italy', price: '€65', img: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=400&h=300' }
+              ].map((deal, i) => (
+                <TouchableOpacity key={i} style={{ width: isMobileWeb ? '100%' : 220, marginRight: 16, borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5, marginBottom: isMobileWeb ? 16 : 0 }}>
+                  <Image source={{ uri: deal.img }} style={{ width: '100%', height: 120 }} />
+                  <View style={{ padding: 16 }}>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0F2D4D' }}>To {deal.to}</Text>
+                    <Text style={{ fontSize: 14, color: '#10B981', fontWeight: '900', marginTop: 4 }}>from {deal.price}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </GridOrScroll>
+          </View>
+        ) : null}
 
         <GridOrScroll>
           {tags.length === 0 ? (

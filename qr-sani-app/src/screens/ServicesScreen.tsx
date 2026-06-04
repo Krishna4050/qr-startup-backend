@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   ArrowRight
 } from 'lucide-react-native';
+import { DeviceEventEmitter } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import RefreshableScroll from '../components/RefreshableScroll';
 import WebLayout from '../components/WebLayout';
@@ -105,7 +106,34 @@ export default function ServicesScreen() {
           <Text style={[styles.sectionHeading, isDesktopWeb && { fontSize: 24, marginBottom: 24 }]}>Categories</Text>
           
           <View style={[styles.gridContainer, isDesktopWeb && { gap: 24 }]}>
-              {services.map((item) => (
+            {services.map((item) => {
+              if (item.id === 'flight') {
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    onPress={() => {
+                      DeviceEventEmitter.emit('openFlightSearch');
+                      navigation.navigate('Dashboard');
+                    }}
+                    style={[
+                      styles.serviceBox, 
+                      isDesktopWeb ? { width: '23%', minWidth: 220, padding: 24 } : { width: isWeb ? '47%' : mobileCardWidth }
+                    ]}
+                  >
+                    <View style={styles.serviceBoxTop}>
+                      <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
+                        {item.icon}
+                      </View>
+                      {isDesktopWeb && <ChevronRight color="#CBD5E1" size={24} />}
+                    </View>
+                    <View style={styles.serviceBoxBottom}>
+                      <Text style={[styles.serviceTitle, isDesktopWeb && { fontSize: 18, textAlign: 'left' }]}>{item.title}</Text>
+                      {isDesktopWeb && <Text style={styles.serviceDesc}>{item.desc}</Text>}
+                    </View>
+                  </TouchableOpacity>
+                );
+              }
+              return (
                 <WebLink
                   key={item.id}
                   screen={item.route as any}
@@ -126,7 +154,8 @@ export default function ServicesScreen() {
                     {isDesktopWeb && <Text style={styles.serviceDesc}>{item.desc}</Text>}
                   </View>
                 </WebLink>
-              ))}
+              );
+            })}
           </View>
         </View>
       </RefreshableScroll>

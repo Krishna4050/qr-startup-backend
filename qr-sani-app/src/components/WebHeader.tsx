@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView, TextInput, DeviceEventEmitter } from 'react-native';
 import { Search, Globe, Menu, User, Building2, ChevronDown, Plus, Minus, X, ArrowLeft, ArrowLeftRight } from 'lucide-react-native';
 import { useNavigation, useLinkTo } from '@react-navigation/native';
 import WebLink from './WebLink';
@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase_lucifer_core } from '../utils/supabase';
 import apiClient from '../utils/apiClient';
 
-const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedDate, setShowDateDropdown, setSelectedDate, styles }: any) => {
+const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedDate, returnDate, flightType, setShowDateDropdown, setSelectedDate, setReturnDate, setShowGuestDropdown, styles }: any) => {
   return (
     <View style={[styles.dropdownMenu, { left: 180, width: 320, padding: 20 }]}>
       <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 16, textAlign: 'center', color: '#E2E8F0' }}>{currentMonth} {currentYear}</Text>
@@ -18,24 +18,40 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
         {[1, 2, 3, 4, 5].map((_, i) => <View key={`e-${i}`} style={{ width: 40, height: 40 }} />)}
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31].map(d => {
           const isToday = d === todayDate;
-          const isSelected = selectedDate === d;
+          const isSelected = selectedDate === d || returnDate === d;
           const bg = isSelected ? '#00E5FF' : isToday ? 'rgba(0, 229, 255, 0.1)' : 'transparent';
           const bw = isToday && !isSelected ? 1 : 0;
           const txtColor = isSelected ? '#0A192F' : isToday ? '#00E5FF' : '#E2E8F0';
           const fw = isToday ? 'bold' : 'normal';
           
+          let priceColor = '#F59E0B'; // medium
+          if (d >= 12 && d <= 15) priceColor = '#10B981'; // cheap
+          if (d >= 16 && d <= 20) priceColor = '#EF4444'; // expensive
+          
           return (
             <TouchableOpacity 
               key={d} 
-              onPress={() => { setShowDateDropdown(false); setSelectedDate(d); }}
+              onPress={() => {
+                if (flightType === 'one-way') {
+                  setSelectedDate(d);
+                  setShowDateDropdown(false);
+                  setShowGuestDropdown(true);
+                } else {
+                  if (!selectedDate) setSelectedDate(d);
+                  else if (!returnDate) { setReturnDate(d); setShowDateDropdown(false); setShowGuestDropdown(true); }
+                  else { setSelectedDate(d); setReturnDate(null); }
+                }
+              }}
               style={{ 
                 width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 20, 
                 backgroundColor: bg,
                 borderWidth: bw,
-                borderColor: '#00E5FF'
+                borderColor: '#00E5FF',
+                marginBottom: 4
               }}
             >
               <Text style={{ color: txtColor, fontWeight: fw as 'bold' | 'normal' }}>{d}</Text>
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: priceColor, marginTop: 2 }} />
             </TouchableOpacity>
           )
         })}
@@ -111,6 +127,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const [showFlightOriginDropdown, setShowFlightOriginDropdown] = useState(false);
   const [showFlightDestinationDropdown, setShowFlightDestinationDropdown] = useState(false);
   const [showReturnDateDropdown, setShowReturnDateDropdown] = useState(false);
+  const [showFlightTypeDropdown, setShowFlightTypeDropdown] = useState(false);
 
   // --- MOBILE MODAL STATE ---
   const [showMobileSearchModal, setShowMobileSearchModal] = useState(false);
@@ -119,14 +136,34 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const [selectedService, setSelectedService] = useState(defaultService);
   const [selectedLocation, setSelectedLocation] = useState('Helsinki');
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
-  const [adults, setAdults] = useState(0);
+  const [adults, setAdults] = useState(1);
   const [childrenCount, setChildrenCount] = useState(0);
+  const [cabinClass, setCabinClass] = useState('Economy');
 
   // --- FLIGHT SEARCH STATE ---
   const [flightOrigin, setFlightOrigin] = useState('HEL');
   const [flightDestination, setFlightDestination] = useState('JFK');
   const [flightType, setFlightType] = useState<'round-trip' | 'one-way'>('round-trip');
   const [returnDate, setReturnDate] = useState<number | null>(null);
+  const [flightDealsCity, setFlightDealsCity] = useState('');
+
+  // --- LISTENERS & LOCATION ---
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('openFlightSearch', () => {
+      setSelectedService('Flights');
+    });
+    
+    fetch('https://ipapi.co/json/')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.city) {
+          setFlightOrigin(data.city);
+          setFlightDealsCity(data.city);
+        }
+      }).catch(e => console.log('Location fetch failed'));
+
+    return () => sub.remove();
+  }, []);
 
   // --- NEW: CATEGORY TABS STATE ---
   const [activeTab, setActiveTab] = useState('Explore');
@@ -424,84 +461,131 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   <ChevronDown color="#F8FAFC" size={14} style={{ marginLeft: 6 }} />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ color: '#F8FAFC', fontWeight: 'bold', fontSize: 14 }}>Roundtrip</Text>
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                  onPress={() => setShowFlightTypeDropdown(!showFlightTypeDropdown)}
+                >
+                  <Text style={{ color: '#F8FAFC', fontWeight: 'bold', fontSize: 14 }}>{flightType === 'round-trip' ? 'Roundtrip' : 'One-way'}</Text>
                   <ChevronDown color="#F8FAFC" size={14} style={{ marginLeft: 6 }} />
                 </TouchableOpacity>
               </View>
 
-              {/* Main White Pill */}
-              <View style={{ flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 8, height: 60, width: '100%', alignItems: 'center' }}>
-                
-                <View style={{ flex: 1.5, flexDirection: 'row', alignItems: 'center', height: '100%' }}>
-                  <View style={{ flex: 1, paddingHorizontal: 16, justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4B5563' }}>From</Text>
-                    <TextInput 
-                      style={{ padding: 0, margin: 0, outlineStyle: 'none', fontSize: 16, fontWeight: '700', color: '#111827', minWidth: 120 } as any}
-                      value={flightOrigin}
-                      onChangeText={setFlightOrigin}
-                      placeholder="Country, city or airport"
-                      placeholderTextColor="#9CA3AF"
-                    />
-                  </View>
-                  
-                  <TouchableOpacity 
-                    style={{ padding: 6, backgroundColor: '#F3F4F6', borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB', zIndex: 20, marginHorizontal: -16 }}
-                    onPress={() => {
-                      const temp = flightOrigin;
-                      setFlightOrigin(flightDestination);
-                      setFlightDestination(temp);
-                    }}
-                  >
-                    <ArrowLeftRight color="#4B5563" size={14} />
+              {/* Absolute Flight Type Dropdown */}
+              {showFlightTypeDropdown && (
+                <View style={{ position: 'absolute', top: 36, left: 140, backgroundColor: '#FFFFFF', borderRadius: 8, padding: 8, zIndex: 30, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 }}>
+                  <TouchableOpacity onPress={() => { setFlightType('round-trip'); setShowFlightTypeDropdown(false); }} style={{ padding: 8 }}>
+                    <Text style={{ color: flightType === 'round-trip' ? '#0A192F' : '#64748B', fontWeight: flightType === 'round-trip' ? 'bold' : 'normal' }}>Roundtrip</Text>
                   </TouchableOpacity>
-
-                  <View style={{ flex: 1, paddingLeft: 24, paddingRight: 16, justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E5E7EB', height: '100%' }}>
-                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4B5563' }}>To</Text>
-                    <TextInput 
-                      style={{ padding: 0, margin: 0, outlineStyle: 'none', fontSize: 16, fontWeight: '700', color: '#111827', minWidth: 120 } as any}
-                      value={flightDestination}
-                      onChangeText={setFlightDestination}
-                      placeholder="Country, city or airport"
-                      placeholderTextColor="#9CA3AF"
-                    />
-                  </View>
+                  <TouchableOpacity onPress={() => { setFlightType('one-way'); setShowFlightTypeDropdown(false); if(returnDate) setReturnDate(null); }} style={{ padding: 8 }}>
+                    <Text style={{ color: flightType === 'one-way' ? '#0A192F' : '#64748B', fontWeight: flightType === 'one-way' ? 'bold' : 'normal' }}>One-way</Text>
+                  </TouchableOpacity>
                 </View>
+              )}
 
-                <View style={{ flex: 1, flexDirection: 'row', height: '100%', borderRightWidth: 1, borderRightColor: '#E5E7EB' }}>
-                  <View style={{ flex: 1, paddingHorizontal: 16, justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E5E7EB' }}>
-                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4B5563' }}>Depart</Text>
-                    <Text style={{ fontSize: 16, fontWeight: '500', color: '#6B7280' }}>Add date</Text>
-                  </View>
-                  <View style={{ flex: 1, paddingHorizontal: 16, justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4B5563' }}>Return</Text>
-                    <Text style={{ fontSize: 16, fontWeight: '500', color: '#6B7280' }}>Add date</Text>
-                  </View>
+              {/* Glassmorphism Pill */}
+              <View style={styles.searchPill}>
+                {/* From Input */}
+                <View style={[styles.searchSection, showFlightOriginDropdown && styles.activeSection]}>
+                  <Text style={styles.searchTitle} numberOfLines={1}>From</Text>
+                  <TextInput 
+                    style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none' }] as any}
+                    value={flightOrigin}
+                    onChangeText={(val) => { setFlightOrigin(val); setShowFlightOriginDropdown(true); }}
+                    placeholder="Where from?"
+                    placeholderTextColor="#94A3B8"
+                  />
                 </View>
-
-                <View style={{ flex: 1, paddingHorizontal: 16, justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4B5563' }}>Travelers and cabin class</Text>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>1 Adult, Economy</Text>
-                </View>
-
+                
+                <View style={styles.divider} />
+                
                 <TouchableOpacity 
-                  style={{ backgroundColor: '#006CE4', height: '100%', paddingHorizontal: 32, borderTopRightRadius: 8, borderBottomRightRadius: 8, justifyContent: 'center' }}
-                  onPress={handleSearchExecute}
+                  style={{ position: 'absolute', left: '22%', zIndex: 10, padding: 4, backgroundColor: '#1E293B', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+                  onPress={() => {
+                    const temp = flightOrigin;
+                    setFlightOrigin(flightDestination);
+                    setFlightDestination(temp);
+                  }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 18 }}>Search</Text>
+                  <ArrowLeftRight color="#94A3B8" size={14} />
                 </TouchableOpacity>
+
+                {/* To Input */}
+                <View style={[styles.searchSection, showFlightDestinationDropdown && styles.activeSection]}>
+                  <Text style={styles.searchTitle} numberOfLines={1}>To</Text>
+                  <TextInput 
+                    style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none' }] as any}
+                    value={flightDestination}
+                    onChangeText={(val) => { setFlightDestination(val); setShowFlightDestinationDropdown(true); }}
+                    placeholder="Where to?"
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
+                
+                <View style={styles.divider} />
+
+                {/* Depart */}
+                <TouchableOpacity 
+                  style={[styles.searchSection, showDateDropdown && styles.activeSection, { flex: 0.8 }]}
+                  onPress={() => { setShowDateDropdown(!showDateDropdown); setShowGuestDropdown(false); }}
+                >
+                  <View>
+                    <Text style={styles.searchTitle} numberOfLines={1}>Depart</Text>
+                    <Text style={[styles.searchSub, !selectedDate && { color: '#94A3B8' }]} numberOfLines={1}>
+                      {selectedDate ? `May ${selectedDate}` : 'Add date'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {flightType === 'round-trip' && (
+                  <>
+                    <View style={styles.divider} />
+                    {/* Return */}
+                    <TouchableOpacity 
+                      style={[styles.searchSection, showDateDropdown && styles.activeSection, { flex: 0.8 }]}
+                      onPress={() => { setShowDateDropdown(!showDateDropdown); setShowGuestDropdown(false); }}
+                    >
+                      <View>
+                        <Text style={styles.searchTitle} numberOfLines={1}>Return</Text>
+                        <Text style={[styles.searchSub, !returnDate && { color: '#94A3B8' }]} numberOfLines={1}>
+                          {returnDate ? `May ${returnDate}` : 'Add date'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  </>
+                )}
+                
+                <View style={styles.divider} />
+
+                {/* Travelers */}
+                <TouchableOpacity 
+                  style={[styles.searchSection, showGuestDropdown && styles.activeSection, { flex: 1.2 }]}
+                  onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(false); }}
+                >
+                  <View>
+                    <Text style={styles.searchTitle} numberOfLines={1}>Travelers and cabin</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount} Pax, {cabinClass}</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Search Button */}
+                <View style={styles.searchButtonContainer}>
+                  <TouchableOpacity style={styles.searchIconBg} onPress={handleSearchExecute}>
+                    <Search color="#0A192F" size={16} />
+                    <Text style={{ color: '#0A192F', fontWeight: 'bold', marginLeft: 6 }}>Search</Text>
+                  </TouchableOpacity>
+                </View>
 
               </View>
 
               {/* Bottom Options Row */}
-              <View style={{ flexDirection: 'row', marginTop: 16, gap: 24 }}>
+              <View style={{ flexDirection: 'row', marginTop: 16, gap: 24, paddingLeft: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 16, height: 16, backgroundColor: '#FFFFFF', marginRight: 8, borderRadius: 2 }} />
-                  <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 13 }}>Add nearby airports</Text>
+                  <View style={{ width: 16, height: 16, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#94A3B8', marginRight: 8, borderRadius: 4 }} />
+                  <Text style={{ color: '#E2E8F0', fontSize: 13 }}>Add nearby airports</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 16, height: 16, backgroundColor: '#FFFFFF', marginRight: 8, borderRadius: 2 }} />
-                  <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 13 }}>Direct flights</Text>
+                  <View style={{ width: 16, height: 16, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#94A3B8', marginRight: 8, borderRadius: 4 }} />
+                  <Text style={{ color: '#E2E8F0', fontSize: 13 }}>Direct flights</Text>
                 </View>
               </View>
             </View>
@@ -548,14 +632,14 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 <>
                   <View style={styles.divider} />
                   <TouchableOpacity 
-                    style={[styles.searchSection, showGuestDropdown && styles.activeSection]}
-                    onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowLocationDropdown(false); }}
-                  >
-                    <View>
-                      <Text style={styles.searchTitle} numberOfLines={1}>Who</Text>
-                      <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount > 0 ? `${adults + childrenCount} guests` : 'Add guests'}</Text>
-                    </View>
-                  </TouchableOpacity>
+                  style={[styles.searchSection, showGuestDropdown && styles.activeSection, { flex: 0.8 }]}
+                  onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(false); }}
+                >
+                  <View>
+                    <Text style={styles.searchTitle} numberOfLines={1}>Travelers and cabin</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount} Pax, {cabinClass}</Text>
+                  </View>
+                </TouchableOpacity>
                 </>
               )}
               
@@ -648,9 +732,13 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                currentMonth={currentMonth} 
                currentYear={currentYear} 
                todayDate={todayDate} 
-               selectedDate={selectedDate} 
+               selectedDate={selectedDate}
+               returnDate={returnDate}
+               flightType={flightType}
                setShowDateDropdown={setShowDateDropdown} 
-               setSelectedDate={setSelectedDate} 
+               setSelectedDate={setSelectedDate}
+               setReturnDate={setReturnDate}
+               setShowGuestDropdown={setShowGuestDropdown}
                styles={styles} 
             />
           )}
@@ -661,18 +749,18 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <View>
                   <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Adults</Text>
-                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 13 or above</Text>
+                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 16 or above</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                  <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
+                  <TouchableOpacity onPress={() => setAdults(Math.max(1, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
                   <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{adults}</Text>
                   <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <View>
                   <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Children</Text>
-                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 2-12</Text>
+                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 0-15</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
                   <TouchableOpacity onPress={() => setChildrenCount(Math.max(0, childrenCount - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
@@ -680,6 +768,18 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   <TouchableOpacity onPress={() => setChildrenCount(childrenCount + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
                 </View>
               </View>
+
+              {isFlight && (
+                <>
+                  <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 16 }} />
+                  <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0', marginBottom: 16 }}>Cabin Class</Text>
+                  {['Economy', 'Premium Economy', 'Business', 'First Class'].map(c => (
+                    <TouchableOpacity key={c} onPress={() => { setCabinClass(c); setShowGuestDropdown(false); }} style={{ paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ color: cabinClass === c ? '#00E5FF' : '#94A3B8', fontWeight: cabinClass === c ? 'bold' : 'normal', fontSize: 16 }}>{c}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
             </View>
           )}
         </View>
