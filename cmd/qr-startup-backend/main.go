@@ -20,22 +20,11 @@ func enableCORS(next http.Handler) http.Handler {
 		//  Get the website trying to talk to us
 		origin := r.Header.Get("Origin")
 
-		// 2. Our VIP list of allowed Next.js websites
-		allowedOrigins := []string{
-			"http://localhost:3000",
-			"http://localhost:3001",
-			"http://localhost:8081",
-			"https://ats.krishnaadhikari.com",
-			"https://sani.krishnaadhikari.com",
-			"https://app.krishnaadhikari.com",
-		}
-
-		//  If the website is on the list, let them through!
-		for _, allowed := range allowedOrigins {
-			if origin == allowed {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-				break
-			}
+		// For dev, allow all origins so Expo physical devices work
+		if origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		} else {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
@@ -84,6 +73,7 @@ func main(){
 	mux.HandleFunc("POST /api/verify/check", handlers.CheckVerificationAndCall)
 	mux.HandleFunc("GET /api/tags/{id}", handlers.GetTagHandler)
 	mux.HandleFunc("POST /api/flights/search", handlers.SearchFlights)
+	mux.HandleFunc("GET /api/flights/airports", handlers.SearchAirports)
 	mux.HandleFunc("POST /api/invite", handlers.SendInviteEmail)
 	mux.HandleFunc("POST /api/security/login", handlers.LoginSecurityCheck)
 	mux.HandleFunc("/api/host/welcome-email", handlers.WelcomeEmailHandler)

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -150,4 +152,93 @@ func fetchAmadeusFlights(req FlightSearchRequest) []FlightOffer {
 			IsDirect:  false,
 		},
 	}
+}
+
+// --- AIRPORT AUTOCOMPLETE LOGIC ---
+
+type Airport struct {
+	Iata    string `json:"iata"`
+	Iso     string `json:"iso"`
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Size    string `json:"size"`
+	Country string `json:"country,omitempty"` // we map ISO to a generic name or just use iso
+}
+
+var (
+	airportsCache []Airport
+	airportsMutex sync.RWMutex
+	airportsLoaded bool
+)
+
+func loadAirports() {
+	airportsMutex.Lock()
+	defer airportsMutex.Unlock()
+
+	if airportsLoaded {
+		return
+	}
+
+	data, err := os.ReadFile("data/airports.json")
+	if err != nil {
+		log.Printf("Failed to read airports.json: %v", err)
+		return
+	}
+
+	var allAirports []Airport
+	if err := json.Unmarshal(data, &allAirports); err != nil {
+		log.Printf("Failed to unmarshal airports.json: %v", err)
+		return
+	}
+
+	// Filter out empty iata codes
+	for _, a := range allAirports {
+		if a.Iata != "" {
+			a.Country = a.Iso
+			airportsCache = append(airportsCache, a)
+		}
+	}
+
+	airportsLoaded = true
+	log.Printf("Loaded %d airports into memory", len(airportsCache))
+}
+
+// SearchAirports handles GET /api/flights/airports?q=...
+func SearchAirports(w http.ResponseWriter, r *http.Request) {
+	if !airportsLoaded {
+		loadAirports()
+	}
+
+	// Set CORS headers for the frontend to be able to call this endpoint
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
+	if q == "" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]Airport{})
+		return
+	}
+
+	airportsMutex.RLock()
+	defer airportsMutex.RUnlock()
+
+	var results []Airport
+	for _, a := range airportsCache {
+		if strings.Contains(strings.ToLower(a.Name), q) || strings.Contains(strings.ToLower(a.Iata), q) || strings.Contains(strings.ToLower(a.Iso), q) {
+			results = append(results, a)
+			if len(results) >= 15 { // Max 15 suggestions
+				break
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
 }
