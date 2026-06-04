@@ -7,20 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase_lucifer_core } from '../utils/supabase';
 import apiClient from '../utils/apiClient';
 
-const mockAirports = [
-  { name: 'Helsinki', code: 'HEL', type: 'airport', country: 'Finland' },
-  { name: 'New York', code: 'JFK', type: 'airport', country: 'United States' },
-  { name: 'Milan (Any)', code: 'MIL', type: 'city', country: 'Italy' },
-  { name: 'Milan Bergamo', code: 'BGY', type: 'airport', country: 'Italy' },
-  { name: 'Milan Malpensa', code: 'MXP', type: 'airport', country: 'Italy' },
-  { name: 'Milan Linate', code: 'LIN', type: 'airport', country: 'Italy' },
-  { name: 'London (Any)', code: 'LON', type: 'city', country: 'United Kingdom' },
-  { name: 'London Heathrow', code: 'LHR', type: 'airport', country: 'United Kingdom' },
-  { name: 'Tokyo', code: 'NRT', type: 'airport', country: 'Japan' },
-  { name: 'Paris', code: 'CDG', type: 'airport', country: 'France' },
-  { name: 'Rome', code: 'FCO', type: 'airport', country: 'Italy' },
-  { name: 'Dubai', code: 'DXB', type: 'airport', country: 'United Arab Emirates' }
-];
+const mockAirports: any[] = [];
 
 const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedDate, returnDate, flightType, setShowDateDropdown, setSelectedDate, setReturnDate, setShowGuestDropdown, styles }: any) => {
   return (
@@ -143,6 +130,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const [showFlightDestinationDropdown, setShowFlightDestinationDropdown] = useState(false);
   const [showReturnDateDropdown, setShowReturnDateDropdown] = useState(false);
   const [showFlightTypeDropdown, setShowFlightTypeDropdown] = useState(false);
+
+  // --- AUTOCOMPLETE STATE ---
+  const [originSuggestions, setOriginSuggestions] = useState<any[]>([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState<any[]>([]);
+  const [isSearchingAirports, setIsSearchingAirports] = useState(false);
 
   // --- MOBILE MODAL STATE ---
   const [showMobileSearchModal, setShowMobileSearchModal] = useState(false);
@@ -505,7 +497,18 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   <TextInput 
                     style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none' }] as any}
                     value={flightOrigin}
-                    onChangeText={(val) => { setFlightOrigin(val); setShowFlightOriginDropdown(true); }}
+                    onChangeText={async (val) => { 
+                      setFlightOrigin(val); 
+                      setShowFlightOriginDropdown(true);
+                      if (val.length > 1) {
+                        try {
+                          setIsSearchingAirports(true);
+                          const res = await apiClient.get(`/api/flights/airports?q=${val}`);
+                          setOriginSuggestions(res.data || res);
+                        } catch (e) { console.log('Error fetching airports', e); }
+                        finally { setIsSearchingAirports(false); }
+                      } else { setOriginSuggestions([]); }
+                    }}
                     placeholder="Where from?"
                     placeholderTextColor="#94A3B8"
                   />
@@ -530,7 +533,18 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   <TextInput 
                     style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none' }] as any}
                     value={flightDestination}
-                    onChangeText={(val) => { setFlightDestination(val); setShowFlightDestinationDropdown(true); }}
+                    onChangeText={async (val) => { 
+                      setFlightDestination(val); 
+                      setShowFlightDestinationDropdown(true);
+                      if (val.length > 1) {
+                        try {
+                          setIsSearchingAirports(true);
+                          const res = await apiClient.get(`/api/flights/airports?q=${val}`);
+                          setDestinationSuggestions(res.data || res);
+                        } catch (e) { console.log('Error fetching airports', e); }
+                        finally { setIsSearchingAirports(false); }
+                      } else { setDestinationSuggestions([]); }
+                    }}
                     placeholder="Where to?"
                     placeholderTextColor="#94A3B8"
                   />
@@ -683,56 +697,56 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
           )}
 
           {/* Absolute Flight Origin Dropdown */}
-          {showFlightOriginDropdown && (
+          {showFlightOriginDropdown && originSuggestions && (
             <View style={[styles.dropdownMenu, { left: 160, maxHeight: 350, backgroundColor: '#FFFFFF', padding: 0, borderRadius: 16, overflow: 'hidden' }]}>
               <ScrollView keyboardShouldPersistTaps="handled">
                 <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B', marginVertical: 12, paddingHorizontal: 16 }}>SUGGESTIONS</Text>
-                {mockAirports.filter(a => a.name.toLowerCase().includes(flightOrigin.toLowerCase()) || a.code.toLowerCase().includes(flightOrigin.toLowerCase())).length > 0 ? (
-                  mockAirports.filter(a => a.name.toLowerCase().includes(flightOrigin.toLowerCase()) || a.code.toLowerCase().includes(flightOrigin.toLowerCase())).map((loc, idx) => (
+                {originSuggestions.length > 0 ? (
+                  originSuggestions.map((loc, idx) => (
                     <TouchableOpacity 
                       key={idx} 
                       style={{ paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}
-                      onPress={() => { setFlightOrigin(loc.code); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(true); }}
+                      onPress={() => { setFlightOrigin(loc.iata); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(true); }}
                     >
                       <View style={{ width: 32, alignItems: 'center' }}>
                         {loc.type === 'city' ? <MapPin color="#64748B" size={20} /> : <Plane color="#64748B" size={20} />}
                       </View>
                       <View style={{ marginLeft: 8 }}>
-                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0F172A' }}>{loc.name} <Text style={{ fontWeight: 'normal', color: '#64748B' }}>({loc.code})</Text></Text>
+                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0F172A' }}>{loc.name} <Text style={{ fontWeight: 'normal', color: '#64748B' }}>({loc.iata})</Text></Text>
                         <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>{loc.country}</Text>
                       </View>
                     </TouchableOpacity>
                   ))
                 ) : (
-                  <Text style={{ padding: 16, color: '#64748B' }}>No matches found</Text>
+                  <Text style={{ padding: 16, color: '#64748B' }}>{isSearchingAirports ? 'Searching...' : 'No matches found'}</Text>
                 )}
               </ScrollView>
             </View>
           )}
 
           {/* Absolute Flight Destination Dropdown */}
-          {showFlightDestinationDropdown && (
+          {showFlightDestinationDropdown && destinationSuggestions && (
             <View style={[styles.dropdownMenu, { left: 320, maxHeight: 350, backgroundColor: '#FFFFFF', padding: 0, borderRadius: 16, overflow: 'hidden' }]}>
               <ScrollView keyboardShouldPersistTaps="handled">
                 <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B', marginVertical: 12, paddingHorizontal: 16 }}>SUGGESTIONS</Text>
-                {mockAirports.filter(a => a.name.toLowerCase().includes(flightDestination.toLowerCase()) || a.code.toLowerCase().includes(flightDestination.toLowerCase())).length > 0 ? (
-                  mockAirports.filter(a => a.name.toLowerCase().includes(flightDestination.toLowerCase()) || a.code.toLowerCase().includes(flightDestination.toLowerCase())).map((loc, idx) => (
+                {destinationSuggestions.length > 0 ? (
+                  destinationSuggestions.map((loc, idx) => (
                     <TouchableOpacity 
                       key={idx} 
                       style={{ paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}
-                      onPress={() => { setFlightDestination(loc.code); setShowFlightDestinationDropdown(false); setShowDateDropdown(true); }}
+                      onPress={() => { setFlightDestination(loc.iata); setShowFlightDestinationDropdown(false); setShowDateDropdown(true); }}
                     >
                       <View style={{ width: 32, alignItems: 'center' }}>
                         {loc.type === 'city' ? <MapPin color="#64748B" size={20} /> : <Plane color="#64748B" size={20} />}
                       </View>
                       <View style={{ marginLeft: 8 }}>
-                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0F172A' }}>{loc.name} <Text style={{ fontWeight: 'normal', color: '#64748B' }}>({loc.code})</Text></Text>
+                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0F172A' }}>{loc.name} <Text style={{ fontWeight: 'normal', color: '#64748B' }}>({loc.iata})</Text></Text>
                         <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>{loc.country}</Text>
                       </View>
                     </TouchableOpacity>
                   ))
                 ) : (
-                  <Text style={{ padding: 16, color: '#64748B' }}>No matches found</Text>
+                  <Text style={{ padding: 16, color: '#64748B' }}>{isSearchingAirports ? 'Searching...' : 'No matches found'}</Text>
                 )}
               </ScrollView>
             </View>
