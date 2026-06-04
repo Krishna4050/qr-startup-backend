@@ -16,20 +16,23 @@ func ConnectDB(){
 	//Get the URL from .env file
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		log.Fatal("Database URL is missing from .env file")
+		log.Println("Warning: Database URL is missing from .env file. Database will be disabled.")
+		return
 	}
 
 	// Open the connection
 	var err error
 	DB, err = sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
+		log.Printf("Failed to open database: %v. Database will be disabled.\n", err)
+		return
 	}
 
 	// Ping the database to make sure the password and links are actualy correct
 	err = DB.Ping()
 	if err != nil {
-		log.Fatalf("Database connection Failed! Check your password and URL. Error: %v", err)
+		log.Printf("Database connection Failed! Check your password and URL. Error: %v\n", err)
+		return
 	}
 	fmt.Println("Successfully connected to Database")
 }

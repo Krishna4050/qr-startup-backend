@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView, TextInput } from 'react-native';
 import { Search, Globe, Menu, User, Building2, ChevronDown, Plus, Minus, X, ArrowLeft, ArrowLeftRight } from 'lucide-react-native';
 import { useNavigation, useLinkTo } from '@react-navigation/native';
 import WebLink from './WebLink';
@@ -410,8 +410,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
       {/* Bottom Row: Search Pill */}
       <View style={styles.searchPillContainer}>
-        <View style={{ position: 'relative', width: '100%', maxWidth: 700, zIndex: 10 }}>
-          <View style={[styles.searchPill, isFlight && { maxWidth: 850 }]}>
+        <View style={{ position: 'relative', width: '100%', maxWidth: isFlight ? 950 : 700, zIndex: 10 }}>
+          <View style={[styles.searchPill, isFlight && { maxWidth: 950 }]}>
             <TouchableOpacity 
               style={[styles.searchSection, showServiceDropdown && styles.activeSection, isFlight && { flex: 0.8 }]} 
               onPress={() => { setShowServiceDropdown(!showServiceDropdown); setShowLocationDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(false); setShowReturnDateDropdown(false); }}
@@ -430,15 +430,27 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             {isFlight ? (
               <>
                 <View style={{ flexDirection: 'row', flex: 1.5, alignItems: 'center' }}>
-                  <TouchableOpacity 
-                    style={[styles.searchSection, showFlightOriginDropdown && styles.activeSection, { flex: 1 }]}
-                    onPress={() => { setShowFlightOriginDropdown(!showFlightOriginDropdown); setShowServiceDropdown(false); setShowFlightDestinationDropdown(false); setShowDateDropdown(false); setShowReturnDateDropdown(false); setShowGuestDropdown(false); }}
-                  >
-                    <View>
-                      <Text style={styles.searchTitle} numberOfLines={1}>From</Text>
-                      <Text style={styles.searchSub} numberOfLines={1}>{flightOrigin}</Text>
-                    </View>
-                  </TouchableOpacity>
+                  <View style={[styles.searchSection, showFlightOriginDropdown && styles.activeSection, { flex: 1, paddingHorizontal: 16 }]}>
+                    <Text style={styles.searchTitle} numberOfLines={1}>From</Text>
+                    <TextInput 
+                      style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none', fontSize: 16, fontWeight: '600', minWidth: 120 } as any]}
+                      value={flightOrigin}
+                      onChangeText={(text) => {
+                        setFlightOrigin(text);
+                        setShowFlightOriginDropdown(true);
+                      }}
+                      onFocus={() => {
+                        setShowFlightOriginDropdown(true);
+                        setShowServiceDropdown(false);
+                        setShowFlightDestinationDropdown(false);
+                        setShowDateDropdown(false);
+                        setShowReturnDateDropdown(false);
+                        setShowGuestDropdown(false);
+                      }}
+                      placeholder="City or airport"
+                      placeholderTextColor="#94A3B8"
+                    />
+                  </View>
                   
                   <TouchableOpacity 
                     style={{ padding: 8, backgroundColor: '#0A192F', borderRadius: 20, borderWidth: 1, borderColor: '#1E293B', zIndex: 20, marginHorizontal: -16 }}
@@ -451,15 +463,27 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                     <ArrowLeftRight color="#00E5FF" size={16} />
                   </TouchableOpacity>
 
-                  <TouchableOpacity 
-                    style={[styles.searchSection, showFlightDestinationDropdown && styles.activeSection, { flex: 1, paddingLeft: 32 }]}
-                    onPress={() => { setShowFlightDestinationDropdown(!showFlightDestinationDropdown); setShowServiceDropdown(false); setShowFlightOriginDropdown(false); setShowDateDropdown(false); setShowReturnDateDropdown(false); setShowGuestDropdown(false); }}
-                  >
-                    <View>
-                      <Text style={styles.searchTitle} numberOfLines={1}>To</Text>
-                      <Text style={styles.searchSub} numberOfLines={1}>{flightDestination}</Text>
-                    </View>
-                  </TouchableOpacity>
+                  <View style={[styles.searchSection, showFlightDestinationDropdown && styles.activeSection, { flex: 1, paddingLeft: 32, paddingRight: 16 }]}>
+                    <Text style={styles.searchTitle} numberOfLines={1}>To</Text>
+                    <TextInput 
+                      style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none', fontSize: 16, fontWeight: '600', minWidth: 120 } as any]}
+                      value={flightDestination}
+                      onChangeText={(text) => {
+                        setFlightDestination(text);
+                        setShowFlightDestinationDropdown(true);
+                      }}
+                      onFocus={() => {
+                        setShowFlightDestinationDropdown(true);
+                        setShowServiceDropdown(false);
+                        setShowFlightOriginDropdown(false);
+                        setShowDateDropdown(false);
+                        setShowReturnDateDropdown(false);
+                        setShowGuestDropdown(false);
+                      }}
+                      placeholder="City or airport"
+                      placeholderTextColor="#94A3B8"
+                    />
+                  </View>
                 </View>
                 <View style={styles.divider} />
                 <TouchableOpacity 
@@ -832,7 +856,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
     height: 66,
     width: '100%',
-    maxWidth: 700,
     // @ts-ignore: React Native web specific CSS
     backdropFilter: 'blur(10px)',
   },
