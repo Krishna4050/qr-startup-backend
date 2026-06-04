@@ -7,6 +7,24 @@ import { useAuth } from '../context/AuthContext';
 import { supabase_lucifer_core } from '../utils/supabase';
 import apiClient from '../utils/apiClient';
 
+const mockAirports = [
+  { name: 'Helsinki', code: 'HEL' },
+  { name: 'New York', code: 'JFK' },
+  { name: 'London', code: 'LHR' },
+  { name: 'Tokyo', code: 'NRT' },
+  { name: 'Paris', code: 'CDG' },
+  { name: 'Milan', code: 'MXP' },
+  { name: 'Rome', code: 'FCO' },
+  { name: 'Berlin', code: 'BER' },
+  { name: 'Madrid', code: 'MAD' },
+  { name: 'Amsterdam', code: 'AMS' },
+  { name: 'Dubai', code: 'DXB' },
+  { name: 'Singapore', code: 'SIN' },
+  { name: 'Los Angeles', code: 'LAX' },
+  { name: 'Toronto', code: 'YYZ' },
+  { name: 'Sydney', code: 'SYD' }
+];
+
 const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedDate, returnDate, flightType, setShowDateDropdown, setSelectedDate, setReturnDate, setShowGuestDropdown, styles }: any) => {
   return (
     <View style={[styles.dropdownMenu, { left: 180, width: 320, padding: 20 }]}>
@@ -669,45 +687,45 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
           {/* Absolute Flight Origin Dropdown */}
           {showFlightOriginDropdown && (
-            <View style={[styles.dropdownMenu, { left: 160 }]}>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#94A3B8', marginBottom: 8, paddingHorizontal: 16 }}>Popular Airports</Text>
-              {[
-                { name: 'Helsinki', code: 'HEL' },
-                { name: 'New York', code: 'JFK' },
-                { name: 'London', code: 'LHR' },
-                { name: 'Tokyo', code: 'NRT' },
-                { name: 'Paris', code: 'CDG' }
-              ].map((loc, idx) => (
-                <TouchableOpacity 
-                  key={idx} 
-                  style={[styles.dropdownItem, flightOrigin === loc.code && styles.dropdownItemActive]}
-                  onPress={() => { setFlightOrigin(loc.code); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(true); }}
-                >
-                  <Text style={[styles.dropdownItemText, flightOrigin === loc.code && styles.dropdownItemTextActive]}>{loc.name} ({loc.code})</Text>
-                </TouchableOpacity>
-              ))}
+            <View style={[styles.dropdownMenu, { left: 160, maxHeight: 300 }]}>
+              <ScrollView>
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#94A3B8', marginBottom: 8, paddingHorizontal: 16 }}>Suggestions</Text>
+                {mockAirports.filter(a => a.name.toLowerCase().includes(flightOrigin.toLowerCase()) || a.code.toLowerCase().includes(flightOrigin.toLowerCase())).length > 0 ? (
+                  mockAirports.filter(a => a.name.toLowerCase().includes(flightOrigin.toLowerCase()) || a.code.toLowerCase().includes(flightOrigin.toLowerCase())).map((loc, idx) => (
+                    <TouchableOpacity 
+                      key={idx} 
+                      style={[styles.dropdownItem, flightOrigin === loc.code && styles.dropdownItemActive]}
+                      onPress={() => { setFlightOrigin(loc.code); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(true); }}
+                    >
+                      <Text style={[styles.dropdownItemText, flightOrigin === loc.code && styles.dropdownItemTextActive]}>{loc.name} ({loc.code})</Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text style={{ padding: 16, color: '#94A3B8' }}>No matches found</Text>
+                )}
+              </ScrollView>
             </View>
           )}
 
           {/* Absolute Flight Destination Dropdown */}
           {showFlightDestinationDropdown && (
-            <View style={[styles.dropdownMenu, { left: 320 }]}>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#94A3B8', marginBottom: 8, paddingHorizontal: 16 }}>Popular Airports</Text>
-              {[
-                { name: 'New York', code: 'JFK' },
-                { name: 'London', code: 'LHR' },
-                { name: 'Tokyo', code: 'NRT' },
-                { name: 'Paris', code: 'CDG' },
-                { name: 'Helsinki', code: 'HEL' }
-              ].map((loc, idx) => (
-                <TouchableOpacity 
-                  key={idx} 
-                  style={[styles.dropdownItem, flightDestination === loc.code && styles.dropdownItemActive]}
-                  onPress={() => { setFlightDestination(loc.code); setShowFlightDestinationDropdown(false); setShowDateDropdown(true); }}
-                >
-                  <Text style={[styles.dropdownItemText, flightDestination === loc.code && styles.dropdownItemTextActive]}>{loc.name} ({loc.code})</Text>
-                </TouchableOpacity>
-              ))}
+            <View style={[styles.dropdownMenu, { left: 320, maxHeight: 300 }]}>
+              <ScrollView>
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#94A3B8', marginBottom: 8, paddingHorizontal: 16 }}>Suggestions</Text>
+                {mockAirports.filter(a => a.name.toLowerCase().includes(flightDestination.toLowerCase()) || a.code.toLowerCase().includes(flightDestination.toLowerCase())).length > 0 ? (
+                  mockAirports.filter(a => a.name.toLowerCase().includes(flightDestination.toLowerCase()) || a.code.toLowerCase().includes(flightDestination.toLowerCase())).map((loc, idx) => (
+                    <TouchableOpacity 
+                      key={idx} 
+                      style={[styles.dropdownItem, flightDestination === loc.code && styles.dropdownItemActive]}
+                      onPress={() => { setFlightDestination(loc.code); setShowFlightDestinationDropdown(false); setShowDateDropdown(true); }}
+                    >
+                      <Text style={[styles.dropdownItemText, flightDestination === loc.code && styles.dropdownItemTextActive]}>{loc.name} ({loc.code})</Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text style={{ padding: 16, color: '#94A3B8' }}>No matches found</Text>
+                )}
+              </ScrollView>
             </View>
           )}
 
