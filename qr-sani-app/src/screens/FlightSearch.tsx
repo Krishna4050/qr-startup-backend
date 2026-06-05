@@ -686,28 +686,28 @@ const styles = StyleSheet.create({
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     alignItems: Platform.OS === 'web' ? 'center' : 'stretch',
   },
-  airlineRow: { width: 200, flexDirection: 'row', alignItems: 'center', marginBottom: Platform.OS === 'web' ? 0 : 16 },
+  airlineRow: { flex: 1, flexDirection: 'row', alignItems: 'center', marginBottom: Platform.OS === 'web' ? 0 : 16 },
   airlineLogoPlaceholder: { width: 40, height: 40, borderRadius: 4, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
   airlineName: { fontSize: 15, fontWeight: 'bold', color: '#0A192F' },
 
-  timeRow: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: Platform.OS === 'web' ? 32 : 0 },
+  timeRow: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: Platform.OS === 'web' ? 16 : 0 },
   timeBlock: { alignItems: 'center', width: 64 },
   timeText: { fontSize: 22, fontWeight: 'bold', color: '#0A192F' },
   airportText: { fontSize: 14, color: '#64748B', marginTop: 4 },
 
-  durationBlock: { flex: 1, alignItems: 'center', paddingHorizontal: 24, maxWidth: 200 },
+  durationBlock: { flex: 1, alignItems: 'center', paddingHorizontal: 16, minWidth: 100 },
   durationText: { fontSize: 13, color: '#64748B', marginBottom: 6 },
   durationLineContainer: { flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 6 },
   durationLine: { flex: 1, height: 1, backgroundColor: '#CBD5E1' },
   directText: { fontSize: 12, color: '#10B981' },
 
   priceActionBlock: { 
+    flex: 1,
     alignItems: 'flex-end', 
     borderLeftWidth: Platform.OS === 'web' ? 1 : 0,
     borderColor: '#E2E8F0',
     paddingLeft: Platform.OS === 'web' ? 24 : 0,
     marginTop: Platform.OS === 'web' ? 0 : 24,
-    width: Platform.OS === 'web' ? 220 : '100%'
   },
   priceText: { fontSize: 28, fontWeight: 'bold', color: '#0A192F', marginBottom: 12 },
   providerHint: { fontSize: 12, color: '#64748B', marginBottom: 2 },
