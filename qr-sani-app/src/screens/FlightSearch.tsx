@@ -253,7 +253,7 @@ export default function FlightSearch() {
   const availableDates = Object.keys(datePrices).sort();
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.dateNavigatorContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateNavigator}>
           {datesLoading && availableDates.length === 0 ? (
@@ -275,7 +275,7 @@ export default function FlightSearch() {
 
       <View style={styles.contentWrapper}>
         {Platform.OS === 'web' && (
-          <ScrollView style={styles.sidebar} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          <View style={styles.sidebar}>
             {/* Stops */}
             <Accordion title="Stops">
               <TouchableOpacity style={styles.checkboxRow} onPress={() => toggleStop('direct')}>
@@ -391,7 +391,7 @@ export default function FlightSearch() {
                 <Text style={styles.checkboxLabel}>Only show flights with lower CO2 emissions</Text>
               </TouchableOpacity>
             </Accordion>
-          </ScrollView>
+          </View>
         )}
 
         <View style={styles.mainContent}>
@@ -432,7 +432,7 @@ export default function FlightSearch() {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+              <View style={{ paddingBottom: 100 }}>
                 {sortedFlights.map((flight, idx) => (
                   <View key={flight.id + idx} style={styles.flightCard}>
                     <View style={styles.cardHeader}>
@@ -498,7 +498,7 @@ export default function FlightSearch() {
                     </View>
                   </View>
                 ))}
-              </ScrollView>
+              </View>
             </>
           )}
         </View>
@@ -533,7 +533,7 @@ export default function FlightSearch() {
           </View>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -587,10 +587,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start' 
   },
   sidebar: {
-    width: 220,
+    width: 200,
     backgroundColor: '#FFF',
     borderRadius: 16,
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 2
   },
   filterSection: { marginBottom: 24 },
