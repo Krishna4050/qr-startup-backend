@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Image } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { Plane, ArrowRight, Clock, Info, CheckCircle2, AlertCircle, Briefcase, Backpack, X, Leaf, ChevronUp, ChevronDown, Bed, Car } from 'lucide-react-native';
+import { Plane, ArrowRight, Clock, Info, CheckCircle2, AlertCircle, Briefcase, Backpack, X, Leaf, ChevronUp, ChevronDown, Bed, Car, Heart } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import apiClient from '../utils/apiClient';
 
@@ -454,14 +454,18 @@ export default function FlightSearch() {
                   <View key={flight.id + idx} style={styles.flightCard}>
                     <View style={styles.cardHeader}>
                       <Text style={styles.emissionText}>This flight emits less CO2e than typical on this route</Text>
+                      <Info color="#64748B" size={14} style={{marginLeft: 6}} />
                     </View>
                     
                     <View style={styles.cardContent}>
                       <View style={styles.airlineRow}>
                         <View style={styles.airlineLogoPlaceholder}>
-                          <Plane color="#0A192F" size={16} />
+                          <Plane color="#0A192F" size={20} />
                         </View>
-                        <Text style={styles.airlineName} numberOfLines={1}>{flight.airline}</Text>
+                        <View style={{flex: 1}}>
+                          <Text style={styles.airlineName} numberOfLines={1}>{flight.airline}</Text>
+                          {flight.provider !== 'duffel' && <Text style={{fontSize: 10, color: '#94A3B8'}}>Operated by {flight.airline}</Text>}
+                        </View>
                       </View>
                       
                       <View style={styles.timeRow}>
@@ -472,8 +476,10 @@ export default function FlightSearch() {
                         
                         <View style={styles.durationBlock}>
                           <Text style={styles.durationText}>{formatDuration(flight.duration)}</Text>
-                          <View style={styles.durationLine}>
-                            {!flight.isDirect && <View style={styles.stopDot} />}
+                          <View style={styles.durationLineContainer}>
+                            <View style={styles.durationLine} />
+                            <Plane color="#CBD5E1" size={14} style={{marginHorizontal: 8}} />
+                            <View style={styles.durationLine} />
                           </View>
                           <Text style={[styles.directText, !flight.isDirect && {color: '#EF4444'}]}>
                             {flight.isDirect ? 'Direct' : flight.stops + (flight.stops > 1 ? ' Stops' : ' Stop')}
@@ -492,11 +498,14 @@ export default function FlightSearch() {
                       </View>
 
                       <View style={styles.priceActionBlock}>
-                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, justifyContent: 'flex-end'}}>
-                          <Briefcase size={12} color={flight.hasCarryOnBag || !requireCarryOn ? "#10B981" : "#F59E0B"} />
-                          <Backpack size={12} color={flight.hasCheckedBag || !requireChecked ? "#10B981" : "#F59E0B"} />
+                        <View style={{flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'flex-start'}}>
+                          <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8}}>
+                            <Briefcase size={14} color={flight.hasCarryOnBag || !requireCarryOn ? "#10B981" : "#F59E0B"} />
+                            <Backpack size={14} color={flight.hasCheckedBag || !requireChecked ? "#10B981" : "#F59E0B"} />
+                          </View>
+                          <Heart size={20} color="#94A3B8" />
                         </View>
-                        <Text style={styles.providerHint}>via {flight.provider}</Text>
+                        <Text style={styles.providerHint}>1 deal from</Text>
                         <Text style={styles.priceText}>€{Math.round(getCalculatedPrice(flight))}</Text>
                         <TouchableOpacity style={styles.bookButton} onPress={() => handleBook(flight)}>
                           <Text style={styles.bookButtonText}>Select</Text>
@@ -665,32 +674,32 @@ const styles = StyleSheet.create({
 
   flightCard: {
     backgroundColor: '#FFF',
-    borderRadius: 16,
+    borderRadius: 8,
     marginBottom: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 2,
+    borderWidth: 1, borderColor: '#E2E8F0',
     overflow: 'hidden'
   },
-  cardHeader: { backgroundColor: '#F8FAFC', paddingHorizontal: 20, paddingVertical: 8, borderBottomWidth: 1, borderColor: '#E2E8F0' },
+  cardHeader: { backgroundColor: '#F8FAFC', paddingHorizontal: 20, paddingVertical: 10, borderBottomWidth: 1, borderColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center' },
   emissionText: { fontSize: 12, color: '#10B981', fontWeight: '600' },
   cardContent: {
     padding: 24,
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     alignItems: Platform.OS === 'web' ? 'center' : 'stretch',
   },
-  airlineRow: { width: 140, flexDirection: 'row', alignItems: 'center', marginBottom: Platform.OS === 'web' ? 0 : 16 },
-  airlineLogoPlaceholder: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  airlineName: { fontSize: 14, fontWeight: '700', color: '#0A192F', flex: 1 },
+  airlineRow: { width: 200, flexDirection: 'row', alignItems: 'center', marginBottom: Platform.OS === 'web' ? 0 : 16 },
+  airlineLogoPlaceholder: { width: 40, height: 40, borderRadius: 4, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  airlineName: { fontSize: 15, fontWeight: 'bold', color: '#0A192F' },
 
-  timeRow: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Platform.OS === 'web' ? 24 : 0 },
-  timeBlock: { alignItems: 'center', width: 60 },
-  timeText: { fontSize: 18, fontWeight: '900', color: '#0A192F' },
-  airportText: { fontSize: 14, color: '#64748B', fontWeight: '600', marginTop: 4 },
+  timeRow: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: Platform.OS === 'web' ? 32 : 0 },
+  timeBlock: { alignItems: 'center', width: 64 },
+  timeText: { fontSize: 22, fontWeight: 'bold', color: '#0A192F' },
+  airportText: { fontSize: 14, color: '#64748B', marginTop: 4 },
 
-  durationBlock: { flex: 1, alignItems: 'center', paddingHorizontal: 16 },
-  durationText: { fontSize: 12, color: '#64748B', marginBottom: 4, fontWeight: '600' },
-  durationLine: { height: 2, width: '100%', backgroundColor: '#E2E8F0', marginVertical: 4, justifyContent: 'center', alignItems: 'center' },
-  stopDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
-  directText: { fontSize: 12, color: '#10B981', fontWeight: 'bold' },
+  durationBlock: { flex: 1, alignItems: 'center', paddingHorizontal: 24, maxWidth: 200 },
+  durationText: { fontSize: 13, color: '#64748B', marginBottom: 6 },
+  durationLineContainer: { flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 6 },
+  durationLine: { flex: 1, height: 1, backgroundColor: '#CBD5E1' },
+  directText: { fontSize: 12, color: '#10B981' },
 
   priceActionBlock: { 
     alignItems: 'flex-end', 
@@ -698,22 +707,22 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     paddingLeft: Platform.OS === 'web' ? 24 : 0,
     marginTop: Platform.OS === 'web' ? 0 : 24,
-    width: Platform.OS === 'web' ? 180 : '100%'
+    width: Platform.OS === 'web' ? 220 : '100%'
   },
-  priceText: { fontSize: 24, fontWeight: '900', color: '#0A192F', marginBottom: 12 },
-  providerHint: { fontSize: 11, color: '#94A3B8', marginBottom: 4 },
+  priceText: { fontSize: 28, fontWeight: 'bold', color: '#0A192F', marginBottom: 12 },
+  providerHint: { fontSize: 12, color: '#64748B', marginBottom: 2 },
   bookButton: {
     backgroundColor: '#0A192F',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 6,
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
     justifyContent: 'center',
     gap: 8
   },
-  bookButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 15 },
+  bookButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
   
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
   loadingText: { fontSize: 20, fontWeight: 'bold', color: '#0A192F', marginTop: 24 },
