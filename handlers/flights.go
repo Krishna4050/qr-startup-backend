@@ -161,12 +161,12 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Error marshaling duffel request: %v", err)
-		return []FlightOffer{}
+		return []FlightOffer{{Provider: "Error", Airline: "Marshal Failed"}}
 	}
 
 	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return []FlightOffer{}
+		return []FlightOffer{{Provider: "Error", Airline: "NewRequest Failed"}}
 	}
 
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
@@ -178,7 +178,7 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 	resp, err := client.Do(httpReq)
 	if err != nil {
 		log.Printf("Error calling duffel: %v", err)
-		return []FlightOffer{}
+		return []FlightOffer{{Provider: "Error", Airline: "Client.Do Failed: " + err.Error()}}
 	}
 	defer resp.Body.Close()
 
@@ -189,7 +189,7 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 
 	if resp.StatusCode != 200 {
 		log.Printf("Duffel API error %d: %s", resp.StatusCode, string(body))
-		return []FlightOffer{}
+		return []FlightOffer{{Provider: fmt.Sprintf("Duffel Error %d", resp.StatusCode), Airline: string(body)}}
 	}
 
 	var duffelRes struct {
@@ -227,7 +227,7 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 
 	if err := json.Unmarshal(body, &duffelRes); err != nil {
 		log.Printf("Error unmarshaling duffel response: %v", err)
-		return []FlightOffer{}
+		return []FlightOffer{{Provider: "Error", Airline: "Unmarshal Failed: " + err.Error()}}
 	}
 
 	var offers []FlightOffer
