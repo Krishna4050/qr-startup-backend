@@ -187,7 +187,7 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 		return []FlightOffer{}
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
 		log.Printf("Duffel API error %d: %s", resp.StatusCode, string(body))
 		return []FlightOffer{{Provider: fmt.Sprintf("Duffel Error %d", resp.StatusCode), Airline: string(body)}}
 	}
