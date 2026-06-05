@@ -170,7 +170,7 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 	}
 
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
-	httpReq.Header.Set("Duffel-Version", "v1")
+	httpReq.Header.Set("Duffel-Version", "v2")
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
 

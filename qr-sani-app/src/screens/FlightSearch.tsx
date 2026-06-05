@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     gap: 24
   },
   sidebar: {
-    width: 250,
+    width: 220,
     backgroundColor: '#FFF',
     borderRadius: 16,
     padding: 20,

@@ -129,7 +129,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const [selectedService, setSelectedService] = useState(defaultService);
   const [selectedLocation, setSelectedLocation] = useState('Helsinki');
   const [flightOrigin, setFlightOrigin] = useState('HEL');
+  const [flightOriginDisplay, setFlightOriginDisplay] = useState('Helsinki (HEL)');
   const [flightDestination, setFlightDestination] = useState('JFK');
+  const [flightDestinationDisplay, setFlightDestinationDisplay] = useState('New York (JFK)');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [returnDate, setReturnDate] = useState<string | null>(null);
   const [adults, setAdults] = useState(1);
@@ -481,9 +483,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   <Text style={styles.searchTitle} numberOfLines={1}>From</Text>
                   <TextInput 
                     style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none' }] as any}
-                    value={flightOrigin}
+                    value={flightOriginDisplay}
                     onChangeText={async (val) => { 
-                      setFlightOrigin(val); 
+                      setFlightOriginDisplay(val); 
+                      // Fallback: If they type an IATA code directly
+                      if (val.length === 3) setFlightOrigin(val.toUpperCase());
                       setShowFlightOriginDropdown(true);
                       if (val.length > 1) {
                         try {
@@ -506,7 +510,12 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                             <TouchableOpacity 
                               key={idx} 
                               style={{ paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}
-                              onPress={() => { setFlightOrigin(loc.iata); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(true); }}
+                              onPress={() => { 
+                                setFlightOrigin(loc.iata); 
+                                setFlightOriginDisplay(`${loc.name} (${loc.iata})`);
+                                setShowFlightOriginDropdown(false); 
+                                setShowFlightDestinationDropdown(true); 
+                              }}
                             >
                               <View style={{ width: 32, alignItems: 'center' }}>
                                 {loc.type === 'city' ? <MapPin color="#64748B" size={20} /> : <Plane color="#64748B" size={20} />}
@@ -531,8 +540,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   style={{ position: 'absolute', left: '22%', zIndex: 10, padding: 4, backgroundColor: '#1E293B', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
                   onPress={() => {
                     const temp = flightOrigin;
+                    const tempDisp = flightOriginDisplay;
                     setFlightOrigin(flightDestination);
+                    setFlightOriginDisplay(flightDestinationDisplay);
                     setFlightDestination(temp);
+                    setFlightDestinationDisplay(tempDisp);
                   }}
                 >
                   <ArrowLeftRight color="#94A3B8" size={14} />
@@ -543,9 +555,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   <Text style={styles.searchTitle} numberOfLines={1}>To</Text>
                   <TextInput 
                     style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none' }] as any}
-                    value={flightDestination}
+                    value={flightDestinationDisplay}
                     onChangeText={async (val) => { 
-                      setFlightDestination(val); 
+                      setFlightDestinationDisplay(val); 
+                      // Fallback: If they type an IATA code directly
+                      if (val.length === 3) setFlightDestination(val.toUpperCase());
                       setShowFlightDestinationDropdown(true);
                       if (val.length > 1) {
                         try {
@@ -568,7 +582,12 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                             <TouchableOpacity 
                               key={idx} 
                               style={{ paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}
-                              onPress={() => { setFlightDestination(loc.iata); setShowFlightDestinationDropdown(false); setShowDateDropdown(true); }}
+                              onPress={() => { 
+                                setFlightDestination(loc.iata); 
+                                setFlightDestinationDisplay(`${loc.name} (${loc.iata})`);
+                                setShowFlightDestinationDropdown(false); 
+                                setShowDateDropdown(true); 
+                              }}
                             >
                               <View style={{ width: 32, alignItems: 'center' }}>
                                 {loc.type === 'city' ? <MapPin color="#64748B" size={20} /> : <Plane color="#64748B" size={20} />}
