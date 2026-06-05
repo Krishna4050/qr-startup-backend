@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -50,7 +51,6 @@ type FlightOffer struct {
 }
 
 // SearchFlights handles the POST /api/flights/search endpoint
-// It executes a concurrent fan-out request to both Duffel and Amadeus APIs (mocked for Phase 1)
 func SearchFlights(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -63,38 +63,41 @@ func SearchFlights(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[Flight Engine] Starting hybrid arbitrage search for route: %s -> %s", req.Origin, req.Destination)
+	// Industry-standard Input Validation
+	iataRegex := regexp.MustCompile(`^[A-Z]{3}$`)
+	if !iataRegex.MatchString(req.Origin) || !iataRegex.MatchString(req.Destination) {
+		http.Error(w, "Invalid Origin or Destination code", http.StatusBadRequest)
+		return
+	}
 
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var allOffers []FlightOffer
+	if _, err := time.Parse("2006-01-02", req.DepartureDate); err != nil {
+		http.Error(w, "Invalid DepartureDate format", http.StatusBadRequest)
+		return
+	}
 
-	// 1. Fan-out to Duffel API (Mocked for Phase 1)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		duffelOffers := fetchDuffelFlights(req)
-		mu.Lock()
-		allOffers = append(allOffers, duffelOffers...)
-		mu.Unlock()
-	}()
+	if req.ReturnDate != "" {
+		if _, err := time.Parse("2006-01-02", req.ReturnDate); err != nil {
+			http.Error(w, "Invalid ReturnDate format", http.StatusBadRequest)
+			return
+		}
+	}
 
-	// 2. Fan-out to Amadeus API (Mocked for Phase 1)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		amadeusOffers := fetchAmadeusFlights(req)
-		mu.Lock()
-		allOffers = append(allOffers, amadeusOffers...)
-		mu.Unlock()
-	}()
+	if req.Guests < 1 || req.Guests > 9 {
+		http.Error(w, "Guests must be between 1 and 9", http.StatusBadRequest)
+		return
+	}
 
-	// Wait for both APIs to return
-	wg.Wait()
+	validCabins := map[string]bool{"economy": true, "premium_economy": true, "business": true, "first": true}
+	if !validCabins[strings.ToLower(req.CabinClass)] {
+		http.Error(w, "Invalid CabinClass", http.StatusBadRequest)
+		return
+	}
 
-	// 3. Arbitrage Engine: Sort by price and eliminate duplicates
-	// (Placeholder logic: we just return all for now, in Phase 2 we implement strict duplicate elimination based on flight number)
-	
+	log.Printf("[Flight Engine] Starting live search for route: %s -> %s", req.Origin, req.Destination)
+
+	// Exclusively use live Duffel API
+	allOffers := fetchDuffelFlights(req)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "success",
@@ -349,8 +352,9 @@ func SearchFlightDates(w http.ResponseWriter, r *http.Request) {
 	destination := r.URL.Query().Get("destination")
 	dateStr := r.URL.Query().Get("date") // Format: YYYY-MM-DD
 
-	if origin == "" || destination == "" || dateStr == "" {
-		http.Error(w, "Missing params", http.StatusBadRequest)
+	iataRegex := regexp.MustCompile(`^[A-Z]{3}$`)
+	if origin == "" || destination == "" || dateStr == "" || !iataRegex.MatchString(origin) || !iataRegex.MatchString(destination) {
+		http.Error(w, "Missing or invalid params", http.StatusBadRequest)
 		return
 	}
 
@@ -411,54 +415,7 @@ func SearchFlightDates(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Mock Amadeus API call
-func fetchAmadeusFlights(req FlightSearchRequest) []FlightOffer {
-	// Simulate network latency
-	time.Sleep(800 * time.Millisecond)
-	
-	return []FlightOffer{
-		{
-			ID:        "amd_1",
-			Provider:  "amadeus",
-			Airline:   "Finnair",
-			FlightNum: "AY131", // Same flight as Duffel, but Amadeus GDS price is higher!
-			Departure: fmt.Sprintf("%s 08:00", req.DepartureDate),
-			Arrival:   fmt.Sprintf("%s 11:30", req.DepartureDate),
-			Duration:        "3h 30m",
-			Price:           165.00, // 20 EUR more expensive via GDS
-			Currency:        "EUR",
-			IsDirect:        true,
-			Stops:           0,
-			HasCheckedBag:   false,
-			HasCarryOnBag:   true,
-			CheckedBagPrice: 45.0,
-			CarryOnBagPrice: 0.0,
-			LayoverAirports: []string{},
-			LayoverDuration: 0,
-			DepartureTime:   "08:00",
-		},
-		{
-			ID:              "amd_2",
-			Provider:        "amadeus",
-			Airline:         "Lufthansa",
-			FlightNum:       "LH849",
-			Departure:       fmt.Sprintf("%sT10:15:00", req.DepartureDate),
-			Arrival:         fmt.Sprintf("%sT15:20:00", req.DepartureDate),
-			Duration:        "5h 05m",
-			Price:           210.00,
-			Currency:        "EUR",
-			IsDirect:        false,
-			Stops:           1,
-			HasCheckedBag:   true,
-			HasCarryOnBag:   true,
-			CheckedBagPrice: 0.0,
-			CarryOnBagPrice: 0.0,
-			LayoverAirports: []string{"FRA"},
-			LayoverDuration: 90,
-			DepartureTime:   "10:15",
-		},
-	}
-}
+
 
 // --- AIRPORT AUTOCOMPLETE LOGIC ---
 
