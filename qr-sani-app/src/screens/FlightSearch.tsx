@@ -254,23 +254,6 @@ export default function FlightSearch() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#0F2D4D', '#174871']} style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.routeHeader}>
-            <Text style={styles.airportCode}>{routeOrigin}</Text>
-            <View style={styles.flightLine}>
-              <View style={styles.line} />
-              <Plane color="#00E5FF" size={24} style={{ marginHorizontal: 8 }} />
-              <View style={styles.line} />
-            </View>
-            <Text style={styles.airportCode}>{routeDestination}</Text>
-          </View>
-          <Text style={styles.searchDetails}>
-            {currentDate} • {guests} Passenger{guests > 1 ? 's' : ''} • {cabinClass}
-          </Text>
-        </View>
-      </LinearGradient>
-
       <View style={styles.dateNavigatorContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateNavigator}>
           {datesLoading && availableDates.length === 0 ? (
@@ -557,17 +540,12 @@ export default function FlightSearch() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F1F5F9' },
   header: {
-    paddingTop: Platform.OS === 'web' ? 40 : 60,
+    paddingTop: Platform.OS === 'web' ? 20 : 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
-  headerContent: { width: '100%', maxWidth: 1400, alignItems: 'center' },
-  routeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  airportCode: { fontSize: 36, fontWeight: '900', color: '#FFF' },
-  flightLine: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16 },
-  line: { height: 2, width: 40, backgroundColor: 'rgba(255,255,255,0.2)' },
-  searchDetails: { fontSize: 16, color: '#E2E8F0', fontWeight: '500' },
+  headerContent: { width: '100%', alignItems: 'center' },
   
   dateNavigatorContainer: {
     backgroundColor: '#FFF',
@@ -600,14 +578,13 @@ const styles = StyleSheet.create({
   dateNavPrice: { fontSize: 18, color: '#0A192F', fontWeight: 'bold' },
   dateNavPriceActive: { color: '#00E5FF' },
 
-  contentWrapper: {
-    flex: 1,
+  contentWrapper: { 
+    flex: 1, 
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    maxWidth: 1400,
-    alignSelf: 'center',
-    width: '100%',
-    padding: 20,
-    gap: 24
+    width: '100%', 
+    padding: 20, 
+    gap: 24, 
+    alignItems: 'flex-start' 
   },
   sidebar: {
     width: 220,

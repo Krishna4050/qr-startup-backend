@@ -145,6 +145,21 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const [flightDealsCity, setFlightDealsCity] = useState('');
   const [activeTab, setActiveTab] = useState('Explore');
 
+  const [isCollapsed, setIsCollapsed] = useState(Platform.OS === 'web' && window.location.pathname.includes('/flights'));
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && window.location.pathname.includes('/flights')) {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('origin')) setFlightOrigin(searchParams.get('origin') as string);
+      if (searchParams.get('destination')) setFlightDestination(searchParams.get('destination') as string);
+      if (searchParams.get('departureDate')) setSelectedDate(searchParams.get('departureDate'));
+      if (searchParams.get('returnDate')) setReturnDate(searchParams.get('returnDate'));
+      if (searchParams.get('guests')) setAdults(parseInt(searchParams.get('guests') as string));
+      setSelectedService('Flights');
+      setIsCollapsed(true);
+    }
+  }, []);
+
   const { user, logout } = useAuth();
   const isGuest = !user;
   const [profile, setProfile] = useState<any>(null);
@@ -179,6 +194,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     setShowFlightDestinationDropdown(false);
     setShowReturnDateDropdown(false);
     setShowMobileSearchModal(false);
+    setIsCollapsed(true);
 
     if (isFlight) {
       navigation.navigate('FlightSearch' as never, {
@@ -441,7 +457,24 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
       {/* Bottom Row: Search Pill */}
       <View style={styles.searchPillContainer}>
-        <View style={{ position: 'relative', width: '100%', maxWidth: isFlight ? 950 : 700, zIndex: 10 }}>
+        {isCollapsed && isFlight ? (
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E293B', padding: 8, borderRadius: 8, maxWidth: 950, width: '100%', alignSelf: 'center', borderWidth: 1, borderColor: '#334155' }} 
+            onPress={() => setIsCollapsed(false)}
+          >
+            <View style={{ width: 40, height: 40, backgroundColor: '#00E5FF', borderRadius: 4, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+              <Search color="#0A192F" size={20} />
+            </View>
+            <Text style={{ color: '#E2E8F0', fontSize: 16, fontWeight: '500' }}>
+               {flightOriginDisplay.split(' ')[0]} ({flightOrigin}) - {flightDestinationDisplay.split(' ')[0]} ({flightDestination}) • {selectedDate ? (() => {
+                  const [y, m, d] = selectedDate.split('-');
+                  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                  return `${monthNames[parseInt(m) - 1]} ${parseInt(d)}`;
+                })() : ''} • {adults + childrenCount} adult{adults+childrenCount > 1?'s':''}, {cabinClass}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ position: 'relative', width: '100%', maxWidth: isFlight ? 950 : 700, zIndex: 10 }}>
           
           {isFlight ? (
             <View style={{ width: '100%' }}>
@@ -844,6 +877,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             </View>
           )}
         </View>
+        )}
       </View>
     </View>
     </>
