@@ -174,7 +174,7 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(httpReq)
 	if err != nil {
 		log.Printf("Error calling duffel: %v", err)
