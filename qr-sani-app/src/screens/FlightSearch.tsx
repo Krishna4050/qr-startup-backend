@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Image, Modal, useWindowDimensions, SafeAreaView } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Plane, ArrowRight, Clock, Info, CheckCircle2, AlertCircle, Briefcase, Backpack, X, Leaf, ChevronUp, ChevronDown, Bed, Car, Heart } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -90,6 +90,10 @@ export default function FlightSearch() {
 
   // Sort State
   const [sortType, setSortType] = useState<'best' | 'cheapest' | 'fastest'>('best');
+
+  const { width } = useWindowDimensions();
+  const isMobile = width < 1024;
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     fetchDatePrices(currentDate);
@@ -273,9 +277,12 @@ export default function FlightSearch() {
         </ScrollView>
       </View>
 
-      <View style={styles.contentWrapper}>
-        {Platform.OS === 'web' && (
-          <View style={styles.sidebar}>
+      <View style={[styles.contentWrapper, isMobile && { flexDirection: 'column' }]}>
+        
+        {/* Render Sidebar either inline or in Modal */}
+        {(() => {
+          const sidebarContent = (
+            <View style={isMobile ? { flex: 1, padding: 16 } : styles.sidebar}>
             {/* Stops */}
             <Accordion title="Stops">
               <TouchableOpacity style={styles.checkboxRow} onPress={() => toggleStop('direct')}>
@@ -391,10 +398,35 @@ export default function FlightSearch() {
                 <Text style={styles.checkboxLabel}>Only show flights with lower CO2 emissions</Text>
               </TouchableOpacity>
             </Accordion>
-          </View>
-        )}
+            </View>
+          );
 
-        <View style={styles.mainContent}>
+          return (
+            <>
+              {!isMobile && Platform.OS === 'web' && sidebarContent}
+              <Modal visible={showMobileFilters} animationType="slide" onRequestClose={() => setShowMobileFilters(false)}>
+                <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderColor: '#E2E8F0', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0A192F' }}>Filters</Text>
+                    <TouchableOpacity onPress={() => setShowMobileFilters(false)}>
+                      <X color="#0A192F" size={24} />
+                    </TouchableOpacity>
+                  </View>
+                  <ScrollView style={{ flex: 1 }}>
+                    {sidebarContent}
+                  </ScrollView>
+                  <View style={{ padding: 16, borderTopWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFF' }}>
+                    <TouchableOpacity style={{ backgroundColor: '#0A192F', padding: 16, borderRadius: 8, alignItems: 'center' }} onPress={() => setShowMobileFilters(false)}>
+                      <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>Show {sortedFlights.length} flights</Text>
+                    </TouchableOpacity>
+                  </View>
+                </SafeAreaView>
+              </Modal>
+            </>
+          );
+        })()}
+
+        <View style={[styles.mainContent, isMobile && { minWidth: '100%' }]}>
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#00E5FF" />
@@ -431,6 +463,15 @@ export default function FlightSearch() {
                   <Text style={{fontSize: 12, color: '#0A192F', fontWeight: '600'}}>Refresh Live Prices</Text>
                 </TouchableOpacity>
               </View>
+
+              {isMobile && (
+                <TouchableOpacity 
+                  style={{ backgroundColor: '#E2E8F0', padding: 16, borderRadius: 12, alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center' }} 
+                  onPress={() => setShowMobileFilters(true)}
+                >
+                  <Text style={{ color: '#0A192F', fontWeight: 'bold', fontSize: 16 }}>Filter & Sort</Text>
+                </TouchableOpacity>
+              )}
 
               <View style={{ paddingBottom: 100 }}>
                 {sortedFlights.map((flight, idx) => (
@@ -503,7 +544,7 @@ export default function FlightSearch() {
           )}
         </View>
 
-        {Platform.OS === 'web' && (
+        {!isMobile && Platform.OS === 'web' && (
           <View style={styles.rightSidebar}>
             <View style={styles.crossSellCard}>
               <View style={styles.crossSellHeader}>
