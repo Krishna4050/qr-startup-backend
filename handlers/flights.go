@@ -471,61 +471,6 @@ type Airport struct {
 	Country string `json:"country,omitempty"` // we map ISO to a generic name or just use iso
 }
 
-var (
-	airportsCache []Airport
-	airportsMutex sync.RWMutex
-	airportsLoaded bool
-)
-
-var isoToCountry = map[string]string{
-	"US": "United States", "GB": "United Kingdom", "IT": "Italy", "ES": "Spain",
-	"FR": "France", "DE": "Germany", "JP": "Japan", "CN": "China",
-	"IN": "India", "BR": "Brazil", "CA": "Canada", "AU": "Australia",
-	"RU": "Russia", "MX": "Mexico", "ZA": "South Africa", "TR": "Turkey",
-	"AE": "United Arab Emirates", "SA": "Saudi Arabia", "EG": "Egypt", "FI": "Finland",
-	"SE": "Sweden", "NO": "Norway", "DK": "Denmark", "NL": "Netherlands",
-	"CH": "Switzerland", "AT": "Austria", "BE": "Belgium", "GR": "Greece",
-	"PT": "Portugal", "IE": "Ireland", "NZ": "New Zealand", "SG": "Singapore",
-	"MY": "Malaysia", "TH": "Thailand", "VN": "Vietnam", "ID": "Indonesia",
-	"PH": "Philippines", "KR": "South Korea", "TW": "Taiwan", "HK": "Hong Kong",
-}
-
-func loadAirports() {
-	airportsMutex.Lock()
-	defer airportsMutex.Unlock()
-
-	if airportsLoaded {
-		return
-	}
-
-	data, err := os.ReadFile("data/airports.json")
-	if err != nil {
-		log.Printf("Failed to read airports.json: %v", err)
-		return
-	}
-
-	var allAirports []Airport
-	if err := json.Unmarshal(data, &allAirports); err != nil {
-		log.Printf("Failed to unmarshal airports.json: %v", err)
-		return
-	}
-
-	// Filter out empty iata codes
-	for _, a := range allAirports {
-		if a.Iata != "" {
-			if countryName, exists := isoToCountry[a.Iso]; exists {
-				a.Country = countryName
-			} else {
-				a.Country = a.Iso
-			}
-			airportsCache = append(airportsCache, a)
-		}
-	}
-
-	airportsLoaded = true
-	log.Printf("Loaded %d airports into memory", len(airportsCache))
-}
-
 // SearchAirports handles GET /api/flights/airports?q=...
 // It now hits the live Duffel Places API for real-time global autocomplete!
 func SearchAirports(w http.ResponseWriter, r *http.Request) {
