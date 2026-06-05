@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Image } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { Plane, ArrowRight, Clock, Info, CheckCircle2, AlertCircle, Briefcase, Backpack, X, Leaf, ChevronUp, ChevronDown } from 'lucide-react-native';
+import { Plane, ArrowRight, Clock, Info, CheckCircle2, AlertCircle, Briefcase, Backpack, X, Leaf, ChevronUp, ChevronDown, Bed, Car } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import apiClient from '../utils/apiClient';
 
@@ -510,6 +510,36 @@ export default function FlightSearch() {
             </>
           )}
         </View>
+
+        {Platform.OS === 'web' && (
+          <View style={styles.rightSidebar}>
+            <View style={styles.crossSellCard}>
+              <View style={styles.crossSellHeader}>
+                <Bed color="#FFF" size={20} />
+                <Text style={styles.crossSellTitle}>Need a Hotel?</Text>
+              </View>
+              <View style={styles.crossSellBody}>
+                <Text style={styles.crossSellDesc}>Find great deals on stays in {routeDestination}.</Text>
+                <TouchableOpacity style={styles.crossSellBtn} onPress={() => alert(`Redirecting to hotel search for ${routeDestination}...`)}>
+                  <Text style={styles.crossSellBtnText}>Search Hotels</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.crossSellCard}>
+              <View style={styles.crossSellHeader}>
+                <Car color="#FFF" size={20} />
+                <Text style={styles.crossSellTitle}>Car Rental</Text>
+              </View>
+              <View style={styles.crossSellBody}>
+                <Text style={styles.crossSellDesc}>Explore {routeDestination} at your own pace.</Text>
+                <TouchableOpacity style={styles.crossSellBtn} onPress={() => alert(`Redirecting to car rentals in ${routeDestination}...`)}>
+                  <Text style={styles.crossSellBtnText}>Find Cars</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -523,7 +553,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
   },
-  headerContent: { width: '100%', maxWidth: 1000, alignItems: 'center' },
+  headerContent: { width: '100%', maxWidth: 1400, alignItems: 'center' },
   routeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   airportCode: { fontSize: 36, fontWeight: '900', color: '#FFF' },
   flightLine: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16 },
@@ -564,7 +594,7 @@ const styles = StyleSheet.create({
   contentWrapper: {
     flex: 1,
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    maxWidth: 1000,
+    maxWidth: 1400,
     alignSelf: 'center',
     width: '100%',
     padding: 20,
@@ -586,7 +616,31 @@ const styles = StyleSheet.create({
 
   mainContent: {
     flex: 1,
+    minWidth: 500,
   },
+  rightSidebar: {
+    width: 280,
+    gap: 16
+  },
+  crossSellCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 2
+  },
+  crossSellHeader: {
+    backgroundColor: '#0A192F',
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  crossSellTitle: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
+  crossSellBody: { padding: 16 },
+  crossSellDesc: { fontSize: 14, color: '#64748B', marginBottom: 16, lineHeight: 20 },
+  crossSellBtn: { backgroundColor: '#00E5FF', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  crossSellBtnText: { color: '#0A192F', fontWeight: 'bold', fontSize: 14 },
+  
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: '#FFF',
