@@ -41,9 +41,12 @@ type FlightOffer struct {
 	IsDirect        bool    `json:"isDirect"`
 	Stops           int     `json:"stops"`
 	HasCheckedBag   bool    `json:"hasCheckedBag"`
-	HasCarryOnBag   bool    `json:"hasCarryOnBag"`
-	CheckedBagPrice float64 `json:"checkedBagPrice"`
-	CarryOnBagPrice float64 `json:"carryOnBagPrice"`
+	HasCarryOnBag   bool     `json:"hasCarryOnBag"`
+	CheckedBagPrice float64  `json:"checkedBagPrice"`
+	CarryOnBagPrice float64  `json:"carryOnBagPrice"`
+	LayoverAirports []string `json:"layoverAirports"`
+	LayoverDuration int      `json:"layoverDuration"` // Total layover in minutes
+	DepartureTime   string   `json:"departureTime"`   // Format: HH:mm
 }
 
 // SearchFlights handles the POST /api/flights/search endpoint
@@ -262,20 +265,68 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 			}
 		}
 
+		var layoverAirports []string
+		var layoverDurationMinutes int
+
+		// Parse Layovers
+		if stops > 0 {
+			for i := 0; i < len(offer.Slices[0].Segments)-1; i++ {
+				seg1 := offer.Slices[0].Segments[i]
+				seg2 := offer.Slices[0].Segments[i+1]
+				
+				layoverAirports = append(layoverAirports, seg1.Destination.IATA)
+				
+				// Parse times
+				arrTime, err1 := time.Parse(time.RFC3339, seg1.ArrivingAt)
+				depTime, err2 := time.Parse(time.RFC3339, seg2.DepartingAt)
+				if err1 == nil && err2 == nil {
+					layoverDurationMinutes += int(depTime.Sub(arrTime).Minutes())
+				}
+			}
+		}
+
+		// Extract HH:mm from Departure
+		depTimeStr := ""
+		depParsed, err := time.Parse(time.RFC3339, firstSegment.DepartingAt)
+		if err == nil {
+			depTimeStr = depParsed.Format("15:04")
+		} else {
+			// Fallback string split
+			parts := strings.Split(firstSegment.DepartingAt, "T")
+			if len(parts) > 1 {
+				depTimeStr = parts[1][:5]
+			}
+		}
+
+		// Apply standard estimated baggage fees if missing
+		checkedBagPrice := 0.0
+		carryOnBagPrice := 0.0
+		if !hasChecked {
+			checkedBagPrice = 45.0
+		}
+		if !hasCarryOn {
+			carryOnBagPrice = 15.0
+		}
+
 		offers = append(offers, FlightOffer{
-			ID:            offer.ID,
-			Provider:      "duffel",
-			Airline:       firstSegment.OperatingCarrier.Name,
-			FlightNum:     firstSegment.OperatingCarrierFlightNumber,
-			Departure:     firstSegment.DepartingAt,
-			Arrival:       offer.Slices[0].Segments[len(offer.Slices[0].Segments)-1].ArrivingAt,
-			Duration:      offer.Slices[0].Duration,
-			Price:         price,
-			Currency:      offer.TotalCurrency,
-			IsDirect:      isDirect,
-			Stops:         stops,
-			HasCheckedBag: hasChecked,
-			HasCarryOnBag: hasCarryOn,
+			ID:              offer.ID,
+			Provider:        "duffel",
+			Airline:         firstSegment.OperatingCarrier.Name,
+			FlightNum:       firstSegment.OperatingCarrierFlightNumber,
+			Departure:       firstSegment.DepartingAt,
+			Arrival:         offer.Slices[0].Segments[len(offer.Slices[0].Segments)-1].ArrivingAt,
+			Duration:        offer.Slices[0].Duration,
+			Price:           price,
+			Currency:        offer.TotalCurrency,
+			IsDirect:        isDirect,
+			Stops:           stops,
+			HasCheckedBag:   hasChecked,
+			HasCarryOnBag:   hasCarryOn,
+			CheckedBagPrice: checkedBagPrice,
+			CarryOnBagPrice: carryOnBagPrice,
+			LayoverAirports: layoverAirports,
+			LayoverDuration: layoverDurationMinutes,
+			DepartureTime:   depTimeStr,
 		})
 	}
 
@@ -284,69 +335,9 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 		return offers[i].Price < offers[j].Price
 	})
 
-	// Take Top 20 offers to avoid massive parallel requests
-	limit := 20
-	if len(offers) < limit {
-		limit = len(offers)
-	}
-	offers = offers[:limit]
-
-	// Concurrently fetch available_services for these 20 offers
-	var wg sync.WaitGroup
-	for i := range offers {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			
-			// Default estimated prices if Duffel doesn't return any
-			offers[idx].CheckedBagPrice = 40.0
-			offers[idx].CarryOnBagPrice = 15.0
-
-			reqURL := fmt.Sprintf("https://api.duffel.com/air/offers/%s?return_available_services=true", offers[idx].ID)
-			svcReq, err := http.NewRequest("GET", reqURL, nil)
-			if err != nil { return }
-			svcReq.Header.Set("Authorization", "Bearer "+apiKey)
-			svcReq.Header.Set("Duffel-Version", "v2")
-			svcReq.Header.Set("Accept", "application/json")
-
-			client := &http.Client{Timeout: 5 * time.Second}
-			res, err := client.Do(svcReq)
-			if err != nil || res.StatusCode != 200 { return }
-			defer res.Body.Close()
-
-			body, _ := io.ReadAll(res.Body)
-			
-			var singleOffer struct {
-				Data struct {
-					AvailableServices []struct {
-						Type        string `json:"type"`
-						TotalAmount string `json:"total_amount"`
-						Metadata    struct {
-							Type string `json:"type"`
-						} `json:"metadata"`
-					} `json:"available_services"`
-				} `json:"data"`
-			}
-			
-			if err := json.Unmarshal(body, &singleOffer); err == nil {
-				foundChecked := false
-				foundCarry := false
-				for _, svc := range singleOffer.Data.AvailableServices {
-					if svc.Type == "baggage" {
-						amt, _ := strconv.ParseFloat(svc.TotalAmount, 64)
-						if svc.Metadata.Type == "checked" && !foundChecked {
-							offers[idx].CheckedBagPrice = amt
-							foundChecked = true
-						} else if svc.Metadata.Type == "carry_on" && !foundCarry {
-							offers[idx].CarryOnBagPrice = amt
-							foundCarry = true
-						}
-					}
-				}
-			}
-		}(i)
-	}
-	wg.Wait()
+	// Removed limit of 20 - returning all flights!
+	
+	// Estimated prices are now applied directly in the mapping loop.
 
 	return offers
 }
@@ -433,22 +424,38 @@ func fetchAmadeusFlights(req FlightSearchRequest) []FlightOffer {
 			FlightNum: "AY131", // Same flight as Duffel, but Amadeus GDS price is higher!
 			Departure: fmt.Sprintf("%s 08:00", req.DepartureDate),
 			Arrival:   fmt.Sprintf("%s 11:30", req.DepartureDate),
-			Duration:  "3h 30m",
-			Price:     165.00, // 20 EUR more expensive via GDS
-			Currency:  "EUR",
-			IsDirect:  true,
+			Duration:        "3h 30m",
+			Price:           165.00, // 20 EUR more expensive via GDS
+			Currency:        "EUR",
+			IsDirect:        true,
+			Stops:           0,
+			HasCheckedBag:   false,
+			HasCarryOnBag:   true,
+			CheckedBagPrice: 45.0,
+			CarryOnBagPrice: 0.0,
+			LayoverAirports: []string{},
+			LayoverDuration: 0,
+			DepartureTime:   "08:00",
 		},
 		{
-			ID:        "amd_2",
-			Provider:  "amadeus",
-			Airline:   "Lufthansa",
-			FlightNum: "LH849",
-			Departure: fmt.Sprintf("%s 10:15", req.DepartureDate),
-			Arrival:   fmt.Sprintf("%s 15:20", req.DepartureDate),
-			Duration:  "5h 05m",
-			Price:     210.00,
-			Currency:  "EUR",
-			IsDirect:  false,
+			ID:              "amd_2",
+			Provider:        "amadeus",
+			Airline:         "Lufthansa",
+			FlightNum:       "LH849",
+			Departure:       fmt.Sprintf("%sT10:15:00", req.DepartureDate),
+			Arrival:         fmt.Sprintf("%sT15:20:00", req.DepartureDate),
+			Duration:        "5h 05m",
+			Price:           210.00,
+			Currency:        "EUR",
+			IsDirect:        false,
+			Stops:           1,
+			HasCheckedBag:   true,
+			HasCarryOnBag:   true,
+			CheckedBagPrice: 0.0,
+			CarryOnBagPrice: 0.0,
+			LayoverAirports: []string{"FRA"},
+			LayoverDuration: 90,
+			DepartureTime:   "10:15",
 		},
 	}
 }

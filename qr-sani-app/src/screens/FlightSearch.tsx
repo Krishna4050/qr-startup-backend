@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Image } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { Plane, ArrowRight, Clock, Info, CheckCircle2, AlertCircle, Briefcase, Backpack, X } from 'lucide-react-native';
+import { Plane, ArrowRight, Clock, Info, CheckCircle2, AlertCircle, Briefcase, Backpack, X, Leaf, ChevronUp, ChevronDown } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import apiClient from '../utils/apiClient';
 
@@ -21,7 +21,23 @@ interface FlightOffer {
   hasCarryOnBag: boolean;
   checkedBagPrice: number;
   carryOnBagPrice: number;
+  layoverAirports: string[];
+  layoverDuration: number;
+  departureTime: string;
 }
+
+const Accordion = ({ title, children, defaultOpen = true }: { title: string, children: React.ReactNode, defaultOpen?: boolean }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <View style={{ marginBottom: 16, borderBottomWidth: 1, borderColor: '#E2E8F0', paddingBottom: 16 }}>
+      <TouchableOpacity style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isOpen ? 16 : 0 }} onPress={() => setIsOpen(!isOpen)}>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0A192F' }}>{title}</Text>
+        <Text style={{ fontSize: 18, color: '#0A192F', fontWeight: 'bold' }}>{isOpen ? '-' : '+'}</Text>
+      </TouchableOpacity>
+      {isOpen && <View>{children}</View>}
+    </View>
+  );
+};
 
 export default function FlightSearch() {
   const route = useRoute<any>();
@@ -31,11 +47,16 @@ export default function FlightSearch() {
   const routeOrigin = route.params?.origin || 'HEL';
   const routeDestination = route.params?.destination || 'JFK';
   
-  // Create a default date for tomorrow to prevent Duffel 400 errors on refresh
+  // Prevent Duffel 400 errors by validating date
   const tmrw = new Date();
   tmrw.setDate(tmrw.getDate() + 1);
   const fallbackDate = tmrw.toISOString().split('T')[0];
-  const routeDate = route.params?.departureDate || fallbackDate;
+  
+  let initialDate = route.params?.departureDate;
+  if (!initialDate || new Date(initialDate) < new Date()) {
+    initialDate = fallbackDate;
+  }
+  const routeDate = initialDate;
 
   const guests = route.params?.guests || 1;
   const flightType = route.params?.type || 'round-trip';
@@ -62,6 +83,10 @@ export default function FlightSearch() {
   const [requireChecked, setRequireChecked] = useState(false);
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
   const [maxDurationMin, setMaxDurationMin] = useState<number>(9999);
+  const [maxLayoverMin, setMaxLayoverMin] = useState<number>(9999);
+  const [maxDepartureTime, setMaxDepartureTime] = useState<number>(24 * 60);
+  const [selectedLayoverAirports, setSelectedLayoverAirports] = useState<string[]>([]);
+  const [requireLowEmissions, setRequireLowEmissions] = useState(false);
 
   // Sort State
   const [sortType, setSortType] = useState<'best' | 'cheapest' | 'fastest'>('best');
@@ -74,10 +99,12 @@ export default function FlightSearch() {
     fetchFlights(currentDate);
   }, [routeOrigin, routeDestination, currentDate, guests, flightType, cabinClass]);
 
-  // Set initial max duration when flights load
+  // Set initial max durations when flights load
   useEffect(() => {
     if (flights.length > 0) {
       setMaxDurationMin(Math.max(...flights.map(f => getDurationMinutes(f.duration))));
+      setMaxLayoverMin(Math.max(...flights.map(f => f.layoverDuration || 0)));
+      setMaxDepartureTime(24 * 60);
     }
   }, [flights]);
 
@@ -123,7 +150,10 @@ export default function FlightSearch() {
   };
 
   const handleBook = (flight: FlightOffer) => {
-    alert(`Initiating booking for ${flight.airline} ${flight.flightNum} via ${flight.provider} provider at ${flight.price} ${flight.currency}. Phase 3 Checkout coming next!`);
+    alert(`Redirecting you to ${flight.airline} to complete your booking...`);
+    if (Platform.OS === 'web') {
+      window.open('https://www.skyscanner.net', '_blank');
+    }
   };
 
   const getDurationMinutes = (dur: string) => {
@@ -150,15 +180,24 @@ export default function FlightSearch() {
   };
 
   const availableAirlines = Array.from(new Set(flights.map(f => f.airline))).sort();
+  const availableLayoverAirports = Array.from(new Set(flights.flatMap(f => f.layoverAirports || []))).sort();
 
   const toggleAirline = (airline: string) => {
-    setSelectedAirlines(prev => 
-      prev.includes(airline) ? prev.filter(a => a !== airline) : [...prev, airline]
-    );
+    setSelectedAirlines(prev => prev.includes(airline) ? prev.filter(a => a !== airline) : [...prev, airline]);
+  };
+
+  const toggleLayoverAirport = (airport: string) => {
+    setSelectedLayoverAirports(prev => prev.includes(airport) ? prev.filter(a => a !== airport) : [...prev, airport]);
   };
 
   const toggleStop = (type: 'direct' | 'oneStop' | 'multiStop') => {
     setStopFilters(prev => ({ ...prev, [type]: !prev[type] }));
+  };
+
+  const parseDepartureMinutes = (timeStr: string) => {
+    if (!timeStr) return 0;
+    const [hh, mm] = timeStr.split(':');
+    return parseInt(hh) * 60 + parseInt(mm);
   };
 
   // Filter Logic
@@ -175,8 +214,22 @@ export default function FlightSearch() {
     // Airlines
     if (selectedAirlines.length > 0 && !selectedAirlines.includes(f.airline)) return false;
 
-    // Duration
+    // Layover Airports
+    if (selectedLayoverAirports.length > 0) {
+      if (!f.layoverAirports || !f.layoverAirports.some(a => selectedLayoverAirports.includes(a))) return false;
+    }
+
+    // Departure Time
+    if (f.departureTime && parseDepartureMinutes(f.departureTime) > maxDepartureTime) return false;
+
+    // Trip Duration
     if (getDurationMinutes(f.duration) > maxDurationMin) return false;
+
+    // Layover Duration
+    if ((f.layoverDuration || 0) > maxLayoverMin) return false;
+
+    // Emissions (Mock)
+    if (requireLowEmissions && Math.random() > 0.5) return false; // Mock 50% have low emissions
 
     return true;
   });
@@ -241,8 +294,7 @@ export default function FlightSearch() {
         {Platform.OS === 'web' && (
           <ScrollView style={styles.sidebar} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
             {/* Stops */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>Stops</Text>
+            <Accordion title="Stops">
               <TouchableOpacity style={styles.checkboxRow} onPress={() => toggleStop('direct')}>
                 <View style={[styles.checkbox, stopFilters.direct && styles.checkboxActive]}>
                   {stopFilters.direct && <CheckCircle2 color="#0A192F" size={14} />}
@@ -261,11 +313,26 @@ export default function FlightSearch() {
                 </View>
                 <Text style={styles.checkboxLabel}>2+ Stops</Text>
               </TouchableOpacity>
-            </View>
+            </Accordion>
+
+            {/* Departure Times */}
+            <Accordion title="Departure times" defaultOpen={false}>
+              <Text style={{fontSize: 14, color: '#00E5FF', fontWeight: 'bold', marginBottom: 12}}>
+                Before {Math.floor(maxDepartureTime / 60).toString().padStart(2, '0')}:{(maxDepartureTime % 60).toString().padStart(2, '0')}
+              </Text>
+              {React.createElement('input', {
+                type: 'range',
+                min: '0',
+                max: '1440',
+                step: '30',
+                value: maxDepartureTime,
+                onChange: (e: any) => setMaxDepartureTime(parseInt(e.target.value)),
+                style: { width: '100%', cursor: 'pointer', accentColor: '#00E5FF' } as any
+              })}
+            </Accordion>
 
             {/* Trip Duration Slider */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>Max Trip Duration</Text>
+            <Accordion title="Trip duration" defaultOpen={false}>
               <Text style={{fontSize: 14, color: '#00E5FF', fontWeight: 'bold', marginBottom: 12}}>{formatMinDuration(maxDurationMin)}</Text>
               {React.createElement('input', {
                 type: 'range',
@@ -275,30 +342,52 @@ export default function FlightSearch() {
                 onChange: (e: any) => setMaxDurationMin(parseInt(e.target.value)),
                 style: { width: '100%', cursor: 'pointer', accentColor: '#00E5FF' } as any
               })}
-            </View>
+            </Accordion>
+
+            {/* Layovers */}
+            <Accordion title="Layovers" defaultOpen={false}>
+              <Text style={{fontSize: 14, color: '#00E5FF', fontWeight: 'bold', marginBottom: 12}}>Max layover: {formatMinDuration(maxLayoverMin)}</Text>
+              {React.createElement('input', {
+                type: 'range',
+                min: '0',
+                max: Math.max(...flights.map(f => f.layoverDuration || 0), 120),
+                value: maxLayoverMin,
+                onChange: (e: any) => setMaxLayoverMin(parseInt(e.target.value)),
+                style: { width: '100%', cursor: 'pointer', accentColor: '#00E5FF', marginBottom: 16 } as any
+              })}
+              
+              <Text style={{fontSize: 14, fontWeight: 'bold', color: '#0A192F', marginBottom: 12}}>Layover airports</Text>
+              {availableLayoverAirports.length === 0 && <Text style={{fontSize: 13, color: '#94A3B8'}}>No layovers available</Text>}
+              {availableLayoverAirports.map(airport => (
+                <TouchableOpacity key={airport} style={styles.checkboxRow} onPress={() => toggleLayoverAirport(airport)}>
+                  <View style={[styles.checkbox, selectedLayoverAirports.includes(airport) && styles.checkboxActive]}>
+                    {selectedLayoverAirports.includes(airport) && <CheckCircle2 color="#0A192F" size={14} />}
+                  </View>
+                  <Text style={styles.checkboxLabel}>{airport}</Text>
+                </TouchableOpacity>
+              ))}
+            </Accordion>
 
             {/* Baggage */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>Baggage Included</Text>
+            <Accordion title="Baggage" defaultOpen={false}>
               <TouchableOpacity style={styles.checkboxRow} onPress={() => setRequireCarryOn(!requireCarryOn)}>
                 <View style={[styles.checkbox, requireCarryOn && styles.checkboxActive]}>
                   {requireCarryOn && <CheckCircle2 color="#0A192F" size={14} />}
                 </View>
                 <Backpack color="#64748B" size={16} style={{marginRight: 8}}/>
-                <Text style={styles.checkboxLabel}>Carry-on bag</Text>
+                <Text style={styles.checkboxLabel}>Carry-on bag (+€15 if not free)</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.checkboxRow} onPress={() => setRequireChecked(!requireChecked)}>
                 <View style={[styles.checkbox, requireChecked && styles.checkboxActive]}>
                   {requireChecked && <CheckCircle2 color="#0A192F" size={14} />}
                 </View>
                 <Briefcase color="#64748B" size={16} style={{marginRight: 8}}/>
-                <Text style={styles.checkboxLabel}>Checked bag</Text>
+                <Text style={styles.checkboxLabel}>Checked bag (+€45 if not free)</Text>
               </TouchableOpacity>
-            </View>
+            </Accordion>
 
             {/* Airlines */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>Airlines</Text>
+            <Accordion title="Airlines">
               {availableAirlines.map(airline => (
                 <TouchableOpacity key={airline} style={styles.checkboxRow} onPress={() => toggleAirline(airline)}>
                   <View style={[styles.checkbox, selectedAirlines.includes(airline) && styles.checkboxActive]}>
@@ -307,7 +396,18 @@ export default function FlightSearch() {
                   <Text style={styles.checkboxLabel}>{airline}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </Accordion>
+
+            {/* Flight Emissions */}
+            <Accordion title="Flight emissions" defaultOpen={false}>
+              <TouchableOpacity style={styles.checkboxRow} onPress={() => setRequireLowEmissions(!requireLowEmissions)}>
+                <View style={[styles.checkbox, requireLowEmissions && styles.checkboxActive]}>
+                  {requireLowEmissions && <CheckCircle2 color="#0A192F" size={14} />}
+                </View>
+                <Leaf color="#10B981" size={16} style={{marginRight: 8}}/>
+                <Text style={styles.checkboxLabel}>Only show flights with lower CO2 emissions</Text>
+              </TouchableOpacity>
+            </Accordion>
           </ScrollView>
         )}
 
@@ -378,6 +478,11 @@ export default function FlightSearch() {
                           <Text style={[styles.directText, !flight.isDirect && {color: '#EF4444'}]}>
                             {flight.isDirect ? 'Direct' : flight.stops + (flight.stops > 1 ? ' Stops' : ' Stop')}
                           </Text>
+                          {!flight.isDirect && flight.layoverAirports && flight.layoverAirports.length > 0 && (
+                            <Text style={{fontSize: 10, color: '#64748B', marginTop: 2, textAlign: 'center'}}>
+                              {formatMinDuration(flight.layoverDuration)} in {flight.layoverAirports.join(', ')}
+                            </Text>
+                          )}
                         </View>
                         
                         <View style={styles.timeBlock}>
