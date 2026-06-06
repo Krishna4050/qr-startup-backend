@@ -42,6 +42,7 @@ import TransitPass from './src/screens/TransitPass';
 import TrainSearch from './src/screens/TrainSearch';
 import FlightCheckoutScreen from './src/screens/FlightCheckout';
 import FlightDetailsScreen from './src/screens/FlightDetailsScreen';
+import ServicesScreen from './src/screens/ServicesScreen';
 import ShopDetailsScreen from './src/screens/ShopDetailsScreen';
 import PartnerOnboardingIntroScreen from './src/screens/PartnerOnboardingIntroScreen';
 import PartnerOnboardingStep1Screen from './src/screens/PartnerOnboardingStep1Screen';
@@ -111,6 +112,7 @@ const GuestStack = () => (
     <Stack.Screen name="TrainSearch" component={TrainSearch} options={{ headerShown: false }} />
     <Stack.Screen name="FlightCheckout" component={FlightCheckoutScreen} options={{ headerShown: false }} />
     <Stack.Screen name="FlightDetails" component={FlightDetailsScreen} options={{ headerShown: false }} />
+    <Stack.Screen name="Services" component={ServicesScreen} options={{ headerShown: false }} />
 
     <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
@@ -142,6 +144,7 @@ const AuthStack = () => (
     <Stack.Screen name="TrainSearch" component={TrainSearch} options={{ headerShown: false }} />
     <Stack.Screen name="FlightCheckout" component={FlightCheckoutScreen} options={{ headerShown: false }} />
     <Stack.Screen name="FlightDetails" component={FlightDetailsScreen} options={{ headerShown: false }} />
+    <Stack.Screen name="Services" component={ServicesScreen} options={{ headerShown: false }} />
 
     <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
