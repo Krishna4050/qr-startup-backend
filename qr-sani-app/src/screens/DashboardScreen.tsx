@@ -29,6 +29,7 @@ export default function DashboardScreen() {
   const [tags, setTags] = useState<any[]>([]); // Combined array of My Tags + Shared Tags
   const [pausedTagsCount, setPausedTagsCount] = useState(0);
   const [alerts, setAlerts] = useState<any[]>([]);
+  const [flightOrders, setFlightOrders] = useState<any[]>([]);
   
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [networkMembers, setNetworkMembers] = useState(0);
@@ -187,6 +188,13 @@ export default function DashboardScreen() {
       setAlerts(data.alerts || []);
       setUnreadNotifications(data.unread_notifications || 0);
       setNetworkMembers(data.network_members || 0);
+
+      try {
+        const flightRes = await apiClient.get(`/api/flights/orders?user_id=${user.id}`);
+        setFlightOrders(flightRes.data || []);
+      } catch (e) {
+        console.error("Failed to fetch flight orders", e);
+      }
 
       console.log("[DEBUG] Dashboard fetch complete.");
     };
@@ -562,11 +570,22 @@ export default function DashboardScreen() {
         </View>
 
         <GridOrScroll>
-          {alerts.length === 0 ? (
+          {alerts.length === 0 && flightOrders.length === 0 ? (
              <View style={[styles.emptyCard, isMobileWeb && { width: '100%' }]}><Text style={styles.emptyCardText}>No new alerts.</Text></View>
           ) : (
-            alerts.map((alert) => (
-              <View key={alert.id} style={[styles.alertCard, { borderLeftColor: alert.alert_type === 'low_battery' ? '#EF4444' : '#F59E0B' }, isMobileWeb && { width: '100%' }]}>
+            <>
+            {flightOrders.map((flight) => (
+              <TouchableOpacity key={`flight-${flight.id}`} style={[styles.alertCard, { borderLeftColor: '#3B82F6', backgroundColor: '#EFF6FF' }, isMobileWeb && { width: '100%' }]} onPress={() => navigation.navigate('FlightDetails', { flight })}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={[styles.alertCategory, { color: '#2563EB' }]}>FLIGHT BOOKING - {flight.status.toUpperCase()}</Text>
+                  <Plane color="#3B82F6" size={16} />
+                </View>
+                <Text style={styles.alertTitle}>Ref: {flight.pnr}</Text>
+                <Text style={styles.alertDetail}>{flight.total_amount} {flight.currency} • Tap to view ticket</Text>
+              </TouchableOpacity>
+            ))}
+            {alerts.map((alert) => (
+              <View key={`alert-${alert.id}`} style={[styles.alertCard, { borderLeftColor: alert.alert_type === 'low_battery' ? '#EF4444' : '#F59E0B' }, isMobileWeb && { width: '100%' }]}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={styles.alertCategory}>{alert.alert_type.replace('_', ' ').toUpperCase()}</Text>
                   {alert.alert_type === 'low_battery' ? <BatteryMedium color="#EF4444" size={16} /> : <AlertTriangle color="#F59E0B" size={16} />}
@@ -574,7 +593,8 @@ export default function DashboardScreen() {
                 <Text style={styles.alertTitle}>{alert.title}</Text>
                 <Text style={[styles.alertDetail, alert.alert_type === 'low_battery' && { color: '#EF4444', fontWeight: 'bold' }]}>{alert.description}</Text>
               </View>
-            ))
+            ))}
+            </>
           )}
         </GridOrScroll>
 
