@@ -21,20 +21,16 @@ export const AuthProvider = ({ children }: any) => {
   useEffect(() => {
     let isMounted = true;
 
-    // Bulletproof initialization: try to get the session, but strictly cap it at 2.5 seconds.
-    // If Supabase hangs (which happens in some browser contexts), we just unlock the app.
-    // We never forcefully wipe localStorage anymore to prevent accidental logouts.
     const initSession = async () => {
       try {
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500));
-        const sessionPromise = supabase_lucifer_core.auth.getSession();
+        const { data, error } = await supabase_lucifer_core.auth.getSession();
+        if (error) throw error;
         
-        const result = await Promise.race([sessionPromise, timeoutPromise]) as any;
-        if (isMounted && result?.data?.session) {
-          set_mayalu_session(result.data.session);
+        if (isMounted && data?.session) {
+          set_mayalu_session(data.session);
         }
       } catch (e) {
-        console.warn("Supabase getSession timed out or failed. Falling back to onAuthStateChange.");
+        console.warn("Supabase getSession failed:", e);
       } finally {
         if (isMounted) set_is_sani_loading(false);
       }
