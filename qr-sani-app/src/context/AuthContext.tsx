@@ -21,27 +21,17 @@ export const AuthProvider = ({ children }: any) => {
   useEffect(() => {
     let isMounted = true;
 
-    const initSession = async () => {
-      try {
-        // Critical workaround: Supabase getSession() can hang indefinitely on Expo Web in certain environments.
-        // We use Promise.race to guarantee the app unlocks after 5 seconds.
-        const sessionPromise = supabase_lucifer_core.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
-        
-        const result: any = await Promise.race([sessionPromise, timeoutPromise]);
-        
-        if (result?.error) throw result.error;
-        
-        if (isMounted && result?.data?.session) {
-          set_mayalu_session(result.data.session);
-        }
-      } catch (e) {
-        console.warn("Supabase getSession failed or timed out:", e);
-      } finally {
-        if (isMounted) set_is_sani_loading(false);
+    // In Expo Web, calling getSession() simultaneously with onAuthStateChange()
+    // causes a fatal lock contention deadlock in gotrue-js.
+    // We rely exclusively on onAuthStateChange, which automatically fires an INITIAL_SESSION event.
+    
+    // Safety fallback: if onAuthStateChange doesn't fire within 2 seconds (e.g. broken network), unlock the app.
+    const safetyTimeout = setTimeout(() => {
+      if (isMounted && is_sani_loading) {
+        console.warn("Auth check timed out. Unlocking app.");
+        set_is_sani_loading(false);
       }
-    };
-    initSession();
+    }, 2000);
 
     const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
@@ -61,7 +51,10 @@ export const AuthProvider = ({ children }: any) => {
       } else {
         if (isMounted) set_mayalu_session(null);
       }
-      if (isMounted) set_is_sani_loading(false); // ALWAYS UNLOCK APP!
+      if (isMounted) {
+        set_is_sani_loading(false); // ALWAYS UNLOCK APP!
+        clearTimeout(safetyTimeout);
+      }
     });
     // --- MNSKB Deep Link Interceptor ---
     const handleDeepLink = async ({ url }: { url: string }) => {
