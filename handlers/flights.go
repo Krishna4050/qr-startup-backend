@@ -522,3 +522,94 @@ func SearchAirports(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
 }
+
+// CreateDuffelLink handles POST /api/flights/links
+// It securely creates a Duffel Links session for flight booking.
+func CreateDuffelLink(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	apiKey := os.Getenv("DUFFEL_API_KEY")
+	if apiKey == "" {
+		http.Error(w, "Server configuration error", http.StatusInternalServerError)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"data": map[string]interface{}{
+			"reference":          fmt.Sprintf("USER_%d", time.Now().Unix()),
+			"success_url":        "https://app.krishnaadhikari.com/services",
+			"failure_url":        "https://app.krishnaadhikari.com/services",
+			"abandonment_url":    "https://app.krishnaadhikari.com/services",
+			"primary_color":      "#0A192F",
+			"markup_amount":      "0.00",
+			"markup_currency":    "EUR",
+			"markup_rate":        "0.10", 
+			"flights": map[string]interface{}{
+				"enabled": true,
+			},
+			"stays": map[string]interface{}{
+				"enabled": false,
+			},
+		},
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		http.Error(w, "Error creating payload", http.StatusInternalServerError)
+		return
+	}
+
+	url := "https://api.duffel.com/links/sessions"
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		http.Error(w, "Error creating request", http.StatusInternalServerError)
+		return
+	}
+
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	httpReq.Header.Set("Duffel-Version", "v2")
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		log.Printf("Error calling duffel links: %v", err)
+		http.Error(w, "Error calling Duffel API", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Error reading Duffel response", http.StatusInternalServerError)
+		return
+	}
+
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		log.Printf("Duffel Links API error %d: %s", resp.StatusCode, string(body))
+		http.Error(w, "Duffel Links API returned an error", http.StatusInternalServerError)
+		return
+	}
+
+	var duffelRes struct {
+		Data struct {
+			URL string `json:"url"`
+		} `json:"data"`
+	}
+
+	if err := json.Unmarshal(body, &duffelRes); err != nil {
+		log.Printf("Error unmarshaling duffel links response: %v", err)
+		http.Error(w, "Error parsing Duffel response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"url":    duffelRes.Data.URL,
+	})
+}
