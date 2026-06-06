@@ -154,7 +154,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     try {
       const res = await apiClient.post('/api/flights/links');
       if (res.data && res.data.status === 'success' && res.data.url) {
-        navigation.navigate('FlightCheckout' as never, { url: res.data.url } as never);
+        Linking.openURL(res.data.url);
       } else {
         alert('Failed to generate secure checkout link.');
       }
