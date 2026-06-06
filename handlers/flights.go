@@ -537,12 +537,33 @@ func CreateDuffelLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var reqBody struct {
+		UserID string `json:"user_id"`
+		Origin string `json:"origin"`
+	}
+	
+	// Default values
+	reference := fmt.Sprintf("GUEST_%d", time.Now().Unix())
+	successUrl := "https://app.krishnaadhikari.com/services"
+	
+	// Decode request body if provided
+	if r.Body != nil {
+		if err := json.NewDecoder(r.Body).Decode(&reqBody); err == nil {
+			if reqBody.UserID != "" {
+				reference = "USER_" + reqBody.UserID
+			}
+			if reqBody.Origin != "" {
+				successUrl = reqBody.Origin + "/services?booking=success"
+			}
+		}
+	}
+
 	payload := map[string]interface{}{
 		"data": map[string]interface{}{
-			"reference":          fmt.Sprintf("USER_%d", time.Now().Unix()),
-			"success_url":        "https://app.krishnaadhikari.com/services",
-			"failure_url":        "https://app.krishnaadhikari.com/services",
-			"abandonment_url":    "https://app.krishnaadhikari.com/services",
+			"reference":          reference,
+			"success_url":        successUrl,
+			"failure_url":        successUrl,
+			"abandonment_url":    successUrl,
 			"primary_color":      "#0A192F",
 			"logo_url":           "https://raw.githubusercontent.com/Krishna4050/qr-startup-backend/main/qr-sani-app/assets/icon.png",
 			"name":               "At Your Service", // Setting name to company name

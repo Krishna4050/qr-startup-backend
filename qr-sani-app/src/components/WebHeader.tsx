@@ -152,7 +152,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const handleFlightLink = async () => {
     setLoadingFlight(true);
     try {
-      const res = await apiClient.post('/api/flights/links');
+      const origin = Platform.OS === 'web' ? window.location.origin : 'https://app.krishnaadhikari.com';
+      const res = await apiClient.post('/api/flights/links', {
+        user_id: user?.id || '',
+        origin: origin
+      });
       if (res.data && res.data.status === 'success' && res.data.url) {
         Linking.openURL(res.data.url);
       } else {
