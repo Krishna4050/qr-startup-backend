@@ -37,9 +37,9 @@ const customStorageAdapter = {
 // --- Lucifer Core DB Connection ---
 export const supabase_lucifer_core = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: Platform.OS === 'web' ? undefined : customStorageAdapter, // Use native localStorage directly on web
+    storage: customStorageAdapter, // MUST use the custom Promise-wrapped adapter on both mobile and web to prevent hangs
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false, // Prevents hanging on web
+    detectSessionInUrl: false, // Prevents URL parser hang on web
   },
 });

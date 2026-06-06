@@ -23,14 +23,20 @@ export const AuthProvider = ({ children }: any) => {
 
     const initSession = async () => {
       try {
-        const { data, error } = await supabase_lucifer_core.auth.getSession();
-        if (error) throw error;
+        // Critical workaround: Supabase getSession() can hang indefinitely on Expo Web in certain environments.
+        // We use Promise.race to guarantee the app unlocks after 5 seconds.
+        const sessionPromise = supabase_lucifer_core.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
         
-        if (isMounted && data?.session) {
-          set_mayalu_session(data.session);
+        const result: any = await Promise.race([sessionPromise, timeoutPromise]);
+        
+        if (result?.error) throw result.error;
+        
+        if (isMounted && result?.data?.session) {
+          set_mayalu_session(result.data.session);
         }
       } catch (e) {
-        console.warn("Supabase getSession failed:", e);
+        console.warn("Supabase getSession failed or timed out:", e);
       } finally {
         if (isMounted) set_is_sani_loading(false);
       }
