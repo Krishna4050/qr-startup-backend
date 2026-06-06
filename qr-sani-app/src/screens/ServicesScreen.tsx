@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert, Linking, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { 
   Wrench, 
@@ -20,6 +20,7 @@ import WebLayout from '../components/WebLayout';
 import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
 import { useAuth } from '../context/AuthContext';
+import apiClient from '../utils/apiClient';
 
 import { useResponsive } from '../hooks/useResponsive';
 
@@ -28,7 +29,25 @@ export default function ServicesScreen() {
   const { width, isWeb, isMobile } = useResponsive();
   const { user } = useAuth();
   
+  const [loadingFlight, setLoadingFlight] = React.useState(false);
   const isDesktopWeb = isWeb && !isMobile;
+
+  const handleFlightLink = async () => {
+    setLoadingFlight(true);
+    try {
+      const res = await apiClient.post('/api/flights/links');
+      if (res.data && res.data.status === 'success' && res.data.url) {
+        Linking.openURL(res.data.url);
+      } else {
+        alert('Failed to generate secure checkout link.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('An error occurred connecting to the secure server.');
+    } finally {
+      setLoadingFlight(false);
+    }
+  };
 
   const handleRefresh = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve, 800));
@@ -111,10 +130,8 @@ export default function ServicesScreen() {
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    onPress={() => {
-                      DeviceEventEmitter.emit('openFlightSearch');
-                      navigation.navigate('Dashboard');
-                    }}
+                    onPress={handleFlightLink}
+                    disabled={loadingFlight}
                     style={[
                       styles.serviceBox, 
                       isDesktopWeb ? { width: '23%', minWidth: 220, padding: 24 } : { width: isWeb ? '47%' : mobileCardWidth }
@@ -122,7 +139,7 @@ export default function ServicesScreen() {
                   >
                     <View style={styles.serviceBoxTop}>
                       <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
-                        {item.icon}
+                        {loadingFlight ? <ActivityIndicator color={item.color} /> : item.icon}
                       </View>
                       {isDesktopWeb && <ChevronRight color="#CBD5E1" size={24} />}
                     </View>

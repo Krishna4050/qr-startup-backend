@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView, TextInput, DeviceEventEmitter } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView, TextInput, DeviceEventEmitter, ActivityIndicator, Linking } from 'react-native';
 import { Search, Globe, Menu, User, Building2, ChevronDown, Plus, Minus, X, ArrowLeft, ArrowLeftRight, MapPin, Plane } from 'lucide-react-native';
 import { useNavigation, useLinkTo } from '@react-navigation/native';
 import WebLink from './WebLink';
@@ -147,6 +147,25 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
   const [isCollapsed, setIsCollapsed] = useState(Platform.OS === 'web' && window.location.pathname.includes('/flights'));
 
+  const [loadingFlight, setLoadingFlight] = useState(false);
+
+  const handleFlightLink = async () => {
+    setLoadingFlight(true);
+    try {
+      const res = await apiClient.post('/api/flights/links');
+      if (res.data && res.data.status === 'success' && res.data.url) {
+        Linking.openURL(res.data.url);
+      } else {
+        alert('Failed to generate secure checkout link.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('An error occurred connecting to the secure server.');
+    } finally {
+      setLoadingFlight(false);
+    }
+  };
+
   useEffect(() => {
     if (Platform.OS === 'web' && window.location.pathname.includes('/flights')) {
       const searchParams = new URLSearchParams(window.location.search);
@@ -167,7 +186,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
-  const servicesList = ['Vehicle Repair', 'Bike Repair', 'Pay Parking', 'Hotels & Stays', 'City Transit', 'Train Tickets', 'Flights'];
+  const servicesList = ['Vehicle Repair', 'Bike Repair', 'Pay Parking', 'Hotels & Stays', 'City Transit', 'Train Tickets'];
 
   useEffect(() => {
     if (user) {
@@ -272,6 +291,10 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
           {/* Airbnb-style Mobile Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 16, marginHorizontal: -20, paddingBottom: 8 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 32 }}>
+            <TouchableOpacity onPress={handleFlightLink} style={styles.mobileTab}>
+                {loadingFlight ? <ActivityIndicator color="#00E5FF" size={24} style={{ marginBottom: 6, alignSelf: 'center' }} /> : <Plane color="#94A3B8" size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />}
+                <Text style={styles.mobileTabText}>Flights</Text>
+            </TouchableOpacity>
             <WebLink screen="Services" onPress={() => setActiveTab('Services')} style={[styles.mobileTab, activeTab === 'Services' && styles.mobileTabActive]}>
                 <Menu color={activeTab === 'Services' ? '#00E5FF' : '#94A3B8'} size={24} style={{ marginBottom: 6, alignSelf: 'center' }} />
                 <Text style={[styles.mobileTabText, activeTab === 'Services' && styles.mobileTabTextActive]}>Services</Text>
@@ -391,6 +414,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
         {/* Center: Top Tabs */}
         <View style={styles.topTabsContainer}>
+          <TouchableOpacity onPress={handleFlightLink} style={styles.topTab} disabled={loadingFlight}>
+            {loadingFlight ? <ActivityIndicator color="#00E5FF" size="small" /> : <Text style={styles.topTabText}>Flights</Text>}
+          </TouchableOpacity>
           <WebLink screen="Services" onPress={() => setActiveTab('Services')} style={[styles.topTab, activeTab === 'Services' && styles.topTabActive]}>
             <Text style={[styles.topTabText, activeTab === 'Services' && styles.topTabTextActive]}>Services</Text>
           </WebLink>

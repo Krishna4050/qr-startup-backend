@@ -40,7 +40,6 @@ import ParkingMap from './src/screens/ParkingMap';
 import HotelSearch from './src/screens/HotelSearch';
 import TransitPass from './src/screens/TransitPass';
 import TrainSearch from './src/screens/TrainSearch';
-import FlightSearch from './src/screens/FlightSearch';
 import ShopDetailsScreen from './src/screens/ShopDetailsScreen';
 import PartnerOnboardingIntroScreen from './src/screens/PartnerOnboardingIntroScreen';
 import PartnerOnboardingStep1Screen from './src/screens/PartnerOnboardingStep1Screen';
@@ -80,7 +79,6 @@ const linking = {
       HotelSearch: 'hotels',
       TransitPass: 'transit',
       TrainSearch: 'trains',
-      FlightSearch: 'flights',
       ShopDetails: 'shop/:id',
       ChatScreen: 'chat/:shopId/:otherUserId',
       HostDashboard: 'host',
@@ -107,7 +105,7 @@ const GuestStack = () => (
     <Stack.Screen name="HotelSearch" component={HotelSearch} options={{ headerShown: false }} />
     <Stack.Screen name="TransitPass" component={TransitPass} options={{ headerShown: false }} />
     <Stack.Screen name="TrainSearch" component={TrainSearch} options={{ headerShown: false }} />
-    <Stack.Screen name="FlightSearch" component={FlightSearch} options={{ headerShown: false }} />
+
     <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
     <Stack.Screen name="Pricing" component={PricingScreen} options={{ headerShown: false }} />
@@ -136,7 +134,7 @@ const AuthStack = () => (
     <Stack.Screen name="HotelSearch" component={HotelSearch} options={{ headerShown: false }} />
     <Stack.Screen name="TransitPass" component={TransitPass} options={{ headerShown: false }} />
     <Stack.Screen name="TrainSearch" component={TrainSearch} options={{ headerShown: false }} />
-    <Stack.Screen name="FlightSearch" component={FlightSearch} options={{ headerShown: false }} />
+
     <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingStep1" component={PartnerOnboardingStep1Screen} options={{ headerShown: false }} />
