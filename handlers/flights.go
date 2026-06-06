@@ -2,8 +2,12 @@ package handlers
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/Krishna4050/qr-startup-backend/database"
 	"io"
 	"log"
 	"net/http"
@@ -635,4 +639,127 @@ func CreateDuffelLink(w http.ResponseWriter, r *http.Request) {
 		"status": "success",
 		"url":    duffelRes.Data.URL,
 	})
+}
+
+// HandleDuffelWebhook handles POST /api/webhooks/duffel
+// Listens for order.created and saves to the database securely.
+func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	secret := os.Getenv("DUFFEL_WEBHOOK_SECRET")
+	if secret == "" {
+		log.Println("WARNING: DUFFEL_WEBHOOK_SECRET not set, cannot verify webhook!")
+		http.Error(w, "Webhook misconfigured", http.StatusInternalServerError)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read body", http.StatusBadRequest)
+		return
+	}
+
+	sigHeader := r.Header.Get("X-Duffel-Signature")
+	if sigHeader == "" {
+		http.Error(w, "Missing signature", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse signature header: t=123,v1=abc
+	var timestamp, signature string
+	parts := strings.Split(sigHeader, ",")
+	for _, part := range parts {
+		if strings.HasPrefix(part, "t=") {
+			timestamp = strings.TrimPrefix(part, "t=")
+		} else if strings.HasPrefix(part, "v1=") {
+			signature = strings.TrimPrefix(part, "v1=")
+		}
+	}
+
+	if timestamp == "" || signature == "" {
+		http.Error(w, "Invalid signature format", http.StatusUnauthorized)
+		return
+	}
+
+	// Verify HMAC-SHA256
+	signedPayload := timestamp + "." + string(body)
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(signedPayload))
+	expectedSignature := hex.EncodeToString(mac.Sum(nil))
+
+	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+		http.Error(w, "Invalid signature", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse Payload
+	var payload struct {
+		Type string `json:"type"`
+		Data struct {
+			ID          string `json:"id"`
+			BookingRef  string `json:"booking_reference"`
+			TotalAmount string `json:"total_amount"`
+			Currency    string `json:"tax_currency"` // Or total_currency depending on duffel
+			TotalCurrency string `json:"total_currency"`
+			Passengers  []struct {
+				Email string `json:"email"`
+				Title string `json:"title"`
+				FirstName string `json:"given_name"`
+				LastName string `json:"family_name"`
+			} `json:"passengers"`
+			Metadata struct {
+				Reference string `json:"reference"`
+			} `json:"metadata"`
+		} `json:"data"`
+	}
+
+	if err := json.Unmarshal(body, &payload); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Type != "order.created" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Process Booking
+	var userID *string
+	ref := payload.Data.Metadata.Reference
+	if strings.HasPrefix(ref, "USER_") {
+		id := strings.TrimPrefix(ref, "USER_")
+		userID = &id
+	}
+
+	email := ""
+	name := ""
+	if len(payload.Data.Passengers) > 0 {
+		email = payload.Data.Passengers[0].Email
+		name = payload.Data.Passengers[0].FirstName + " " + payload.Data.Passengers[0].LastName
+	}
+
+	currency := payload.Data.TotalCurrency
+	if currency == "" {
+		currency = payload.Data.Currency
+	}
+
+	// Save to Database
+	query := `
+		INSERT INTO flight_bookings (
+			user_id, duffel_order_id, booking_reference, total_amount, currency,
+			status, passenger_email, passenger_name
+		) VALUES ($1, $2, $3, $4, $5, 'created', $6, $7)
+		ON CONFLICT (duffel_order_id) DO NOTHING
+	`
+	_, err = database.DB.Exec(query, userID, payload.Data.ID, payload.Data.BookingRef, payload.Data.TotalAmount, currency, email, name)
+	if err != nil {
+		log.Printf("Failed to insert flight booking: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
