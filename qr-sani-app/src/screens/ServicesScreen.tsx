@@ -37,7 +37,7 @@ export default function ServicesScreen() {
     try {
       const res = await apiClient.post('/api/flights/links');
       if (res.data && res.data.status === 'success' && res.data.url) {
-        Linking.openURL(res.data.url);
+        navigation.navigate('FlightCheckout', { url: res.data.url });
       } else {
         alert('Failed to generate secure checkout link.');
       }
