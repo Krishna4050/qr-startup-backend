@@ -416,7 +416,7 @@ export default function DashboardScreen() {
                 { title: "Hotels & Stays", desc: "Find a place to stay", bg: '#F5F3FF', color: '#6D28D9', icon: <Bed color="#6D28D9" size={24} />, route: 'HotelSearch' },
                 { title: "City Transit", desc: "Get around the city", bg: '#FDF2F8', color: '#BE185D', icon: <BusFront color="#BE185D" size={24} />, route: 'TransitPass' },
                 { title: "Train Tickets", desc: "Travel across cities", bg: '#ECFEFF', color: '#0369A1', icon: <Train color="#0369A1" size={24} />, route: 'TrainSearch' },
-                { title: "Flights", desc: "Book your next flight", bg: '#EEF2FF', color: '#4338CA', icon: <Plane color="#4338CA" size={24} />, route: 'FlightSearch' },
+                { title: "Flights", desc: "Book your next flight", bg: '#EEF2FF', color: '#4338CA', icon: <Plane color="#4338CA" size={24} />, route: 'FlightCheckout' },
               ].map((item, idx) => (
                 <WebLink 
                   key={idx} 
