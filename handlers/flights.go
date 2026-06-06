@@ -763,3 +763,128 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 }
+
+// GetUserFlightOrders handles GET /api/flights/orders
+func GetUserFlightOrders(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		http.Error(w, "user_id is required", http.StatusBadRequest)
+		return
+	}
+
+	rows, err := database.DB.Query(`
+		SELECT id, duffel_order_id, booking_reference, total_amount, currency, status, passenger_name, created_at 
+		FROM flight_bookings WHERE user_id = $1 ORDER BY created_at DESC
+	`, userID)
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var orders []map[string]interface{}
+	for rows.Next() {
+		var id int
+		var duffelID, pnr, amount, currency, status, name string
+		var createdAt time.Time
+		if err := rows.Scan(&id, &duffelID, &pnr, &amount, &currency, &status, &name, &createdAt); err == nil {
+			orders = append(orders, map[string]interface{}{
+				"id": id,
+				"duffel_order_id": duffelID,
+				"pnr": pnr,
+				"total_amount": amount,
+				"currency": currency,
+				"status": status,
+				"passenger_name": name,
+				"created_at": createdAt,
+			})
+		}
+	}
+
+	if orders == nil {
+		orders = []map[string]interface{}{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(orders)
+}
+
+// CancelFlightOrder handles POST /api/flights/cancel
+func CancelFlightOrder(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		DuffelOrderID string `json:"order_id"`
+		Confirm       bool   `json:"confirm"` // If false, just calculate refund. If true, process it.
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	apiKey := os.Getenv("DUFFEL_API_KEY")
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	// Step 1: Create a pending Order Cancellation
+	url := "https://api.duffel.com/air/order_cancellations"
+	payload := map[string]interface{}{
+		"data": map[string]string{
+			"order_id": req.DuffelOrderID,
+		},
+	}
+	jsonData, _ := json.Marshal(payload)
+	httpReq, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	httpReq.Header.Set("Duffel-Version", "v2")
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		http.Error(w, "Error calling Duffel", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != 201 {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("Duffel cancel error: %s", string(body))
+		http.Error(w, "Failed to create cancellation", http.StatusInternalServerError)
+		return
+	}
+
+	var cancelRes struct {
+		Data struct {
+			ID           string `json:"id"`
+			RefundAmount string `json:"refund_amount"`
+			Currency     string `json:"refund_currency"`
+		} `json:"data"`
+	}
+	json.NewDecoder(resp.Body).Decode(&cancelRes)
+
+	// If not confirming, just return the calculated refund amount
+	if !req.Confirm {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"cancellation_id": cancelRes.Data.ID,
+			"refund_amount":   cancelRes.Data.RefundAmount,
+			"currency":        cancelRes.Data.Currency,
+		})
+		return
+	}
+
+	// Step 2: Confirm the cancellation
+	confirmURL := fmt.Sprintf("https://api.duffel.com/air/order_cancellations/%s/actions/confirm", cancelRes.Data.ID)
+	confirmReq, _ := http.NewRequest("POST", confirmURL, nil)
+	confirmReq.Header.Set("Authorization", "Bearer "+apiKey)
+	confirmReq.Header.Set("Duffel-Version", "v2")
+	
+	confirmResp, err := client.Do(confirmReq)
+	if err != nil || (confirmResp.StatusCode != 200 && confirmResp.StatusCode != 201) {
+		http.Error(w, "Failed to confirm cancellation", http.StatusInternalServerError)
+		return
+	}
+
+	// Step 3: Update database status
+	database.DB.Exec("UPDATE flight_bookings SET status = 'cancelled' WHERE duffel_order_id = $1", req.DuffelOrderID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "cancelled", "message": "Refund processed successfully"})
+}
