@@ -544,6 +544,8 @@ func CreateDuffelLink(w http.ResponseWriter, r *http.Request) {
 			"failure_url":        "https://app.krishnaadhikari.com/services",
 			"abandonment_url":    "https://app.krishnaadhikari.com/services",
 			"primary_color":      "#0A192F",
+			"logo_url":           "https://raw.githubusercontent.com/Krishna4050/qr-startup-backend/main/qr-sani-app/assets/icon.png",
+			"name":               "At Your Service", // Setting name to company name
 			"markup_amount":      "0.00",
 			"markup_currency":    "EUR",
 			"markup_rate":        "0.10", 
