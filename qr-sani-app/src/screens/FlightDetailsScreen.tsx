@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, TextInput, useWindowDimensions } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import WebLayout from '../components/WebLayout';
 import { useAuth } from '../context/AuthContext';
@@ -12,10 +12,14 @@ export default function FlightDetailsScreen() {
   const { flight } = route.params || {};
 
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const [cancelling, setCancelling] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
-  const [emailTo, setEmailTo] = useState(flight.passenger_email || '');
+  
+  const [emailSelection, setEmailSelection] = useState<'myself'|'manual'>(user?.email ? 'myself' : 'manual');
+  const [manualEmail, setManualEmail] = useState(flight.passenger_email || '');
   
   const printProps: any = Platform.OS === 'web' ? { className: 'no-print' } : {};
   
@@ -32,7 +36,8 @@ export default function FlightDetailsScreen() {
   };
 
   const handleEmailTicket = async () => {
-    if (!emailTo) {
+    const finalEmail = emailSelection === 'myself' && user?.email ? user.email : manualEmail;
+    if (!finalEmail) {
       alert("Please enter an email address.");
       return;
     }
@@ -40,7 +45,7 @@ export default function FlightDetailsScreen() {
     try {
       const pName = flight.passenger_name || 'Passenger';
       await apiClient.post('/api/flights/email-ticket', {
-        email: emailTo,
+        email: finalEmail,
         passenger_name: pName,
         booking_reference: flight.booking_reference,
         total_amount: flight.total_amount,
@@ -263,12 +268,12 @@ export default function FlightDetailsScreen() {
             </View>
           </View>
 
-          <View style={{flexDirection: 'row', gap: 12, marginBottom: 16}} {...printProps}>
-            <TouchableOpacity style={[styles.cancelBtn, {flex: 1, backgroundColor: '#0F2D4D'}]} onPress={handlePrint}>
+          <View style={[{flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 16}]} {...printProps}>
+            <TouchableOpacity style={[styles.cancelBtn, {flex: 1, backgroundColor: '#0F2D4D', height: 48, minHeight: 48}]} onPress={handlePrint}>
               <Printer color="#FFF" size={20} />
               <Text style={styles.cancelText}>Print Ticket</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.cancelBtn, {flex: 1, backgroundColor: '#0F2D4D'}]} onPress={() => setShowEmailInput(!showEmailInput)}>
+            <TouchableOpacity style={[styles.cancelBtn, {flex: 1, backgroundColor: '#0F2D4D', height: 48, minHeight: 48}]} onPress={() => setShowEmailInput(!showEmailInput)}>
               <Mail color="#FFF" size={20} />
               <Text style={styles.cancelText}>Send to Email</Text>
             </TouchableOpacity>
@@ -280,32 +285,38 @@ export default function FlightDetailsScreen() {
               
               {user?.email && (
                 <TouchableOpacity 
-                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' }}
-                  onPress={() => setEmailTo(user.email)}
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 14, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: emailSelection === 'myself' ? '#0F2D4D' : '#E2E8F0' }}
+                  onPress={() => setEmailSelection('myself')}
                 >
-                  <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: emailTo === user.email ? '#0F2D4D' : '#CBD5E1', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                    {emailTo === user.email && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0F2D4D' }} />}
+                  <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: emailSelection === 'myself' ? '#0F2D4D' : '#CBD5E1', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    {emailSelection === 'myself' && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#0F2D4D' }} />}
                   </View>
-                  <Text style={{ fontSize: 14, color: '#334155', flex: 1 }}>Send to myself ({user.email})</Text>
+                  <Text style={{ fontSize: 15, color: '#334155', flex: 1, fontWeight: emailSelection === 'myself' ? '600' : '400' }}>Send to myself ({user.email})</Text>
                 </TouchableOpacity>
               )}
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: emailTo !== user?.email ? '#0F2D4D' : '#CBD5E1', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                  {emailTo !== user?.email && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0F2D4D' }} />}
+              <TouchableOpacity 
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 14, borderRadius: 10, marginBottom: 20, borderWidth: 1, borderColor: emailSelection === 'manual' ? '#0F2D4D' : '#E2E8F0' }}
+                onPress={() => setEmailSelection('manual')}
+                activeOpacity={0.8}
+              >
+                <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: emailSelection === 'manual' ? '#0F2D4D' : '#CBD5E1', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                  {emailSelection === 'manual' && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#0F2D4D' }} />}
                 </View>
                 <TextInput
-                  style={{ flex: 1, fontSize: 14, color: '#333', padding: 0 }}
-                  value={emailTo}
-                  onChangeText={setEmailTo}
+                  style={{ flex: 1, fontSize: 15, color: '#333', paddingVertical: 8, height: 40 }}
+                  value={manualEmail}
+                  onChangeText={setManualEmail}
+                  onFocus={() => setEmailSelection('manual')}
                   placeholder="Enter another email address..."
+                  placeholderTextColor="#94A3B8"
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-              </View>
+              </TouchableOpacity>
 
               <TouchableOpacity 
-                style={{ backgroundColor: '#0F2D4D', paddingVertical: 14, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}
+                style={{ backgroundColor: '#0F2D4D', paddingVertical: 14, borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}
                 onPress={handleEmailTicket}
                 disabled={sendingEmail}
               >
