@@ -572,8 +572,7 @@ func CreateDuffelLink(w http.ResponseWriter, r *http.Request) {
 			"logo_url":           "https://raw.githubusercontent.com/Krishna4050/qr-startup-backend/main/qr-sani-app/assets/icon.png",
 			"name":               "At Your Service", // Setting name to company name
 			"markup_amount":      "0.00",
-			"markup_currency":    "EUR",
-			"markup_rate":        "0.10", 
+			"markup_currency":    "EUR", 
 			"flights": map[string]interface{}{
 				"enabled": true,
 			},
