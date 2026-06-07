@@ -769,9 +769,53 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch full order details from Duffel API because the webhook only sends the ID!
+	duffelAPIKey := os.Getenv("DUFFEL_API_KEY")
+	if duffelAPIKey == "" {
+		log.Println("WARNING: DUFFEL_API_KEY missing")
+		http.Error(w, "Server config error", http.StatusInternalServerError)
+		return
+	}
+
+	req, err := http.NewRequest("GET", "https://api.duffel.com/air/orders/"+order.ID, nil)
+	if err != nil {
+		http.Error(w, "Request error", http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+duffelAPIKey)
+	req.Header.Set("Duffel-Version", "v2")
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Failed to fetch full order from Duffel: %v", err)
+		http.Error(w, "Failed to fetch order", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	fullOrderBody, err := io.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode != 200 {
+		log.Printf("Failed to read Duffel order, status %d: %s", resp.StatusCode, string(fullOrderBody))
+		http.Error(w, "Failed to fetch order", http.StatusInternalServerError)
+		return
+	}
+
+	var fullOrderRes struct {
+		Data OrderObj `json:"data"`
+	}
+	if err := json.Unmarshal(fullOrderBody, &fullOrderRes); err != nil {
+		log.Printf("Failed to unmarshal Duffel order: %v", err)
+		http.Error(w, "Invalid order format", http.StatusInternalServerError)
+		return
+	}
+
+	fullOrder := fullOrderRes.Data
+
 	// Process Booking
 	var userID *string
-	ref := order.Metadata.Reference
+	ref := fullOrder.Metadata.Reference
 	if strings.HasPrefix(ref, "USER_") {
 		id := strings.TrimPrefix(ref, "USER_")
 		userID = &id
@@ -779,14 +823,14 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 
 	email := ""
 	name := ""
-	if len(order.Passengers) > 0 {
-		email = order.Passengers[0].Email
-		name = order.Passengers[0].FirstName + " " + order.Passengers[0].LastName
+	if len(fullOrder.Passengers) > 0 {
+		email = fullOrder.Passengers[0].Email
+		name = fullOrder.Passengers[0].FirstName + " " + fullOrder.Passengers[0].LastName
 	}
 
-	currency := order.TotalCurrency
+	currency := fullOrder.TotalCurrency
 	if currency == "" {
-		currency = order.Currency
+		currency = fullOrder.Currency
 	}
 
 	// Save to Database
@@ -797,7 +841,7 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 		) VALUES ($1, $2, $3, $4, $5, 'created', $6, $7)
 		ON CONFLICT (duffel_order_id) DO NOTHING
 	`
-	_, err = database.DB.Exec(query, userID, payload.Data.ID, payload.Data.BookingRef, payload.Data.TotalAmount, currency, email, name)
+	_, err = database.DB.Exec(query, userID, fullOrder.ID, fullOrder.BookingRef, fullOrder.TotalAmount, currency, email, name)
 	if err != nil {
 		log.Printf("Failed to insert flight booking: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
