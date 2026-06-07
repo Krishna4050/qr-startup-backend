@@ -66,8 +66,10 @@ export default function FlightDetailsScreen() {
     }
   };
   const renderSegments = () => {
-    if (!flight.details?.slices?.[0]?.segments) return null;
-    return flight.details.slices.map((slice: any, sIdx: number) => (
+    const slices = flight.details?.data?.slices || flight.details?.slices;
+    if (!slices?.[0]?.segments) return null;
+
+    return slices.map((slice: any, sIdx: number) => (
       <View key={sIdx} style={styles.sliceContainer}>
         {slice.segments.map((seg: any, idx: number) => (
           <View key={idx} style={styles.segmentCard}>
@@ -102,13 +104,15 @@ export default function FlightDetailsScreen() {
   };
 
   const renderPassengers = () => {
-    if (!flight.details?.passengers) return null;
+    const passengers = flight.details?.data?.passengers || flight.details?.passengers;
+    if (!passengers) return null;
+
     return (
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Passenger Information</Text>
-        {flight.details.passengers.map((p: any, idx: number) => {
-          // Check bags from segments
-          const baggages = flight.details?.slices?.[0]?.segments?.[0]?.passengers?.find((sp: any) => sp.passenger_id === p.id)?.baggages || [];
+        {passengers.map((p: any, idx: number) => {
+          const slices = flight.details?.data?.slices || flight.details?.slices;
+          const baggages = slices?.[0]?.segments?.[0]?.passengers?.find((sp: any) => sp.passenger_id === p.id)?.baggages || [];
           const checkedBags = baggages.filter((b: any) => b.type === 'checked').reduce((sum: number, b: any) => sum + b.quantity, 0);
 
           return (
