@@ -304,7 +304,7 @@ export default function FlightDetailsScreen() {
                   {emailSelection === 'manual' && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#0F2D4D' }} />}
                 </View>
                 <TextInput
-                  style={{ flex: 1, fontSize: 15, color: '#333', paddingVertical: 8, height: 40 }}
+                  style={[{ flex: 1, fontSize: 15, color: '#333', padding: 0 }, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}]}
                   value={manualEmail}
                   onChangeText={setManualEmail}
                   onFocus={() => setEmailSelection('manual')}
