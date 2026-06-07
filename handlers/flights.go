@@ -902,7 +902,7 @@ func sendTicketEmail(toEmail, passengerName, bookingRef, amount, currency string
 		</div>
 		<p style="font-size: 16px; color: #333;">You can view your ultimate flight itinerary and cancellation policies directly in your dashboard.</p>
 		<div style="text-align: center; margin: 30px 0;">
-			<a href="https://app.krishnaadhikari.com/dashboard" style="background-color: #0F2D4D; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Full Itinerary</a>
+			<a href="https://app.krishnaadhikari.com" style="background-color: #0F2D4D; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Full Itinerary</a>
 		</div>
 		<p style="font-size: 14px; color: #777; margin-top: 40px; border-top: 1px solid #eaeaeb; padding-top: 20px;">
 			Safe travels!<br>

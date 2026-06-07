@@ -51,9 +51,40 @@ export default function FlightDetailsScreen() {
 
   useEffect(() => {
     if (!flight) {
-      navigation.replace('Dashboard');
+      Alert.alert('Error', 'Flight details not found.', [
+        { text: 'Go Back', onPress: () => navigation.goBack() }
+      ]);
     }
   }, [flight]);
+
+  const renderPrintStyles = () => {
+    if (Platform.OS !== 'web') return null;
+    return (
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-ticket, #printable-ticket * {
+            visibility: visible;
+          }
+          #printable-ticket {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            border: 2px solid #000 !important;
+            padding: 20px !important;
+            border-radius: 10px !important;
+            box-shadow: none !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+    );
+  };
 
   if (!flight) return null;
 
@@ -169,19 +200,20 @@ export default function FlightDetailsScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+      {renderPrintStyles()}
       <ScrollView style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, (Platform.OS === 'web') ? { className: 'no-print' } as any : {}]}>
             <TouchableOpacity onPress={() => navigation.navigate('Dashboard')} style={styles.backBtn}>
                 <ArrowLeft color="#0A192F" size={24} />
                 <Text style={styles.backText}>Back to Dashboard</Text>
             </TouchableOpacity>
         </View>
         
-        <View style={styles.content}>
+        <View style={styles.content} nativeID="printable-ticket">
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.headerText}>
-                <Text style={styles.title}>Booking Reference: {flight.pnr}</Text>
+                <Text style={styles.title}>Booking Reference: {flight.booking_reference}</Text>
                 <Text style={styles.subtitle}>Booked on {new Date(flight.created_at).toLocaleDateString()}</Text>
               </View>
               <View style={[styles.statusBadge, { backgroundColor: flight.status === 'cancelled' ? '#FEE2E2' : '#DCFCE7' }]}>
@@ -225,7 +257,7 @@ export default function FlightDetailsScreen() {
             </View>
           </View>
 
-          <View style={{flexDirection: 'row', gap: 12, marginBottom: 16}}>
+          <View style={[{flexDirection: 'row', gap: 12, marginBottom: 16}, (Platform.OS === 'web') ? { className: 'no-print' } as any : {}]}>
             <TouchableOpacity style={[styles.cancelBtn, {flex: 1, backgroundColor: '#0F2D4D'}]} onPress={handlePrint}>
               <Printer color="#FFF" size={20} />
               <Text style={styles.cancelText}>Print Ticket</Text>
@@ -237,7 +269,7 @@ export default function FlightDetailsScreen() {
           </View>
 
           {showEmailInput && (
-            <View style={{ backgroundColor: '#F8FAFC', padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
+            <View style={[{ backgroundColor: '#F8FAFC', padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }, (Platform.OS === 'web') ? { className: 'no-print' } as any : {}]}>
               <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#0F2D4D', marginBottom: 8 }}>Enter email address to send ticket:</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TextInput
@@ -260,7 +292,7 @@ export default function FlightDetailsScreen() {
           )}
 
           {flight.status !== 'cancelled' && (
-            <View style={styles.actions}>
+            <View style={[styles.actions, (Platform.OS === 'web') ? { className: 'no-print' } as any : {}]}>
               <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} disabled={cancelling}>
                 {cancelling ? <ActivityIndicator color="#FFF" /> : <XCircle color="#FFF" size={20} />}
                 <Text style={styles.cancelText}>{cancelling ? 'Processing Quote...' : 'Cancel Flight & Get Refund'}</Text>
