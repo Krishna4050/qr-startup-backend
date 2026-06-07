@@ -856,39 +856,7 @@ func GetUserFlightOrders(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("user_id")
 	email := r.URL.Query().Get("email")
 
-	if userID == "debug123" {
-		rows, err := database.DB.Query(`
-			SELECT id, duffel_order_id, user_id, passenger_email, booking_reference, total_amount 
-			FROM flight_bookings 
-			ORDER BY created_at DESC LIMIT 5
-		`)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		var res []map[string]interface{}
-		for rows.Next() {
-			var id int
-			var duffel_order_id, passenger_email, booking_reference, total_amount string
-			var uid *string
-			rows.Scan(&id, &duffel_order_id, &uid, &passenger_email, &booking_reference, &total_amount)
-			u := "NULL"
-			if uid != nil {
-				u = *uid
-			}
-			res = append(res, map[string]interface{}{
-				"id": id,
-				"duffel_order_id": duffel_order_id,
-				"user_id": u,
-				"passenger_email": passenger_email,
-				"booking_reference": booking_reference,
-				"total_amount": total_amount,
-			})
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(res)
-		return
-	}
+
 	
 	if userID == "" {
 		http.Error(w, "user_id is required", http.StatusBadRequest)
@@ -900,7 +868,7 @@ func GetUserFlightOrders(w http.ResponseWriter, r *http.Request) {
 		_, err := database.DB.Exec(`
 			UPDATE flight_bookings 
 			SET user_id = $1 
-			WHERE passenger_email = $2 AND user_id IS NULL
+			WHERE LOWER(passenger_email) = LOWER($2) AND user_id IS NULL
 		`, userID, email)
 		if err != nil {
 			log.Printf("Failed to sync guest bookings: %v", err)
