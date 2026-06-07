@@ -15,7 +15,7 @@ export default function FlightDetailsScreen() {
 
   useEffect(() => {
     if (!flight) {
-      navigation.goBack();
+      navigation.replace('Dashboard');
     }
   }, [flight]);
 
@@ -65,12 +65,11 @@ export default function FlightDetailsScreen() {
       setCancelling(false);
     }
   };
-
   return (
-    <WebLayout>
+    <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
         <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => navigation.navigate('Dashboard')} style={styles.backBtn}>
                 <ArrowLeft color="#0A192F" size={24} />
                 <Text style={styles.backText}>Back to Dashboard</Text>
             </TouchableOpacity>
@@ -120,7 +119,7 @@ export default function FlightDetailsScreen() {
           )}
         </View>
       </ScrollView>
-    </WebLayout>
+    </View>
   );
 }
 

@@ -13,21 +13,18 @@ export default function FlightCheckoutScreen() {
 
   if (!url) {
     return (
-      <WebLayout>
          <View style={styles.errorContainer}>
             <Text style={styles.errorText}>Checkout session expired or invalid.</Text>
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Dashboard')}>
                <Text style={styles.backBtnText}>Go Back</Text>
             </TouchableOpacity>
          </View>
-      </WebLayout>
     );
   }
 
   // On Web, we render a full-screen iframe
   if (Platform.OS === 'web') {
     return (
-      <WebLayout>
         <View style={styles.webContainer}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBack}>
@@ -51,7 +48,6 @@ export default function FlightCheckoutScreen() {
             />
           </View>
         </View>
-      </WebLayout>
     );
   }
 
