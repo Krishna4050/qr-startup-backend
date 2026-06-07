@@ -667,7 +667,7 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secret := os.Getenv("DUFFEL_WEBHOOK_SECRET")
+	secret := strings.TrimSpace(os.Getenv("DUFFEL_WEBHOOK_SECRET"))
 	if secret == "" {
 		log.Println("WARNING: DUFFEL_WEBHOOK_SECRET not set, cannot verify webhook!")
 		http.Error(w, "Webhook misconfigured", http.StatusInternalServerError)
@@ -692,7 +692,8 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 	expectedSignature := hex.EncodeToString(mac.Sum(nil))
 
 	if sigHeader != expectedSignature {
-		http.Error(w, "Invalid signature", http.StatusUnauthorized)
+		errMsg := fmt.Sprintf("Invalid signature. Header: %s, Expected: %s, SecretLen: %d", sigHeader, expectedSignature, len(secret))
+		http.Error(w, errMsg, http.StatusUnauthorized)
 		return
 	}
 
