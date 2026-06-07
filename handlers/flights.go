@@ -686,13 +686,33 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Duffel signature is just the raw HMAC SHA256 of the body using the secret
+	// Parse signature header: t=123,v2=abc (or v1=abc)
+	var timestamp, signature string
+	parts := strings.Split(sigHeader, ",")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, "t=") {
+			timestamp = strings.TrimPrefix(part, "t=")
+		} else if strings.HasPrefix(part, "v2=") {
+			signature = strings.TrimPrefix(part, "v2=")
+		} else if strings.HasPrefix(part, "v1=") {
+			signature = strings.TrimPrefix(part, "v1=")
+		}
+	}
+
+	if timestamp == "" || signature == "" {
+		http.Error(w, fmt.Sprintf("Invalid signature format. Header was: %s", sigHeader), http.StatusUnauthorized)
+		return
+	}
+
+	// Verify HMAC-SHA256 of timestamp.body
+	signedPayload := timestamp + "." + string(body)
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(body)
+	mac.Write([]byte(signedPayload))
 	expectedSignature := hex.EncodeToString(mac.Sum(nil))
 
-	if sigHeader != expectedSignature {
-		errMsg := fmt.Sprintf("Invalid signature. Header: %s, Expected: %s, SecretLen: %d", sigHeader, expectedSignature, len(secret))
+	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+		errMsg := fmt.Sprintf("Invalid signature mismatch. Got: %s, Expected: %s, SecretLen: %d", signature, expectedSignature, len(secret))
 		http.Error(w, errMsg, http.StatusUnauthorized)
 		return
 	}
