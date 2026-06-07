@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, TextInput } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import WebLayout from '../components/WebLayout';
 import { ArrowLeft, Plane, XCircle, Euro, CheckCircle2, Printer, Mail } from 'lucide-react-native';
@@ -12,6 +12,8 @@ export default function FlightDetailsScreen() {
 
   const [cancelling, setCancelling] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [emailTo, setEmailTo] = useState(flight.passenger_email || '');
 
   const handlePrint = () => {
     if (Platform.OS === 'web') {
@@ -22,17 +24,22 @@ export default function FlightDetailsScreen() {
   };
 
   const handleEmailTicket = async () => {
+    if (!emailTo) {
+      alert("Please enter an email address.");
+      return;
+    }
     setSendingEmail(true);
     try {
       const pName = flight.passenger_name || 'Passenger';
       await apiClient.post('/api/flights/email-ticket', {
-        email: flight.passenger_email,
+        email: emailTo,
         passenger_name: pName,
         booking_reference: flight.booking_reference,
         total_amount: flight.total_amount,
         currency: flight.currency,
       });
       alert('Ticket emailed successfully!');
+      setShowEmailInput(false);
     } catch (e) {
       console.error(e);
       alert('Failed to send email.');
@@ -223,11 +230,34 @@ export default function FlightDetailsScreen() {
               <Printer color="#FFF" size={20} />
               <Text style={styles.cancelText}>Print Ticket</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.cancelBtn, {flex: 1, backgroundColor: '#0F2D4D'}]} onPress={handleEmailTicket} disabled={sendingEmail}>
-              {sendingEmail ? <ActivityIndicator color="#FFF" /> : <Mail color="#FFF" size={20} />}
-              <Text style={styles.cancelText}>{sendingEmail ? 'Sending...' : 'Send to Email'}</Text>
+            <TouchableOpacity style={[styles.cancelBtn, {flex: 1, backgroundColor: '#0F2D4D'}]} onPress={() => setShowEmailInput(!showEmailInput)}>
+              <Mail color="#FFF" size={20} />
+              <Text style={styles.cancelText}>Send to Email</Text>
             </TouchableOpacity>
           </View>
+
+          {showEmailInput && (
+            <View style={{ backgroundColor: '#F8FAFC', padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#0F2D4D', marginBottom: 8 }}>Enter email address to send ticket:</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  style={{ flex: 1, backgroundColor: '#FFF', borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, height: 44, fontSize: 14, color: '#333' }}
+                  value={emailTo}
+                  onChangeText={setEmailTo}
+                  placeholder="e.g. passenger@email.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity 
+                  style={{ backgroundColor: '#0F2D4D', paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}
+                  onPress={handleEmailTicket}
+                  disabled={sendingEmail}
+                >
+                  {sendingEmail ? <ActivityIndicator color="#FFF" size="small" /> : <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Send</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {flight.status !== 'cancelled' && (
             <View style={styles.actions}>
