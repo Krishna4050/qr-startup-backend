@@ -640,6 +640,24 @@ func CreateDuffelLink(w http.ResponseWriter, r *http.Request) {
 		"url":    duffelRes.Data.URL,
 	})
 }
+// OrderObj defines the Duffel order structure
+type OrderObj struct {
+	ID            string `json:"id"`
+	BookingRef    string `json:"booking_reference"`
+	TotalAmount   string `json:"total_amount"`
+	Currency      string `json:"tax_currency"`
+	TotalCurrency string `json:"total_currency"`
+	Passengers    []PassengerObj `json:"passengers"`
+	Metadata      struct {
+		Reference string `json:"reference"`
+	} `json:"metadata"`
+}
+
+type PassengerObj struct {
+	Email     string `json:"email"`
+	FirstName string `json:"given_name"`
+	LastName  string `json:"family_name"`
+}
 
 // HandleDuffelWebhook handles POST /api/webhooks/duffel
 // Listens for order.created and saves to the database securely.
@@ -668,52 +686,33 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse signature header: t=123,v1=abc
-	var timestamp, signature string
-	parts := strings.Split(sigHeader, ",")
-	for _, part := range parts {
-		if strings.HasPrefix(part, "t=") {
-			timestamp = strings.TrimPrefix(part, "t=")
-		} else if strings.HasPrefix(part, "v1=") {
-			signature = strings.TrimPrefix(part, "v1=")
-		}
-	}
-
-	if timestamp == "" || signature == "" {
-		http.Error(w, "Invalid signature format", http.StatusUnauthorized)
-		return
-	}
-
-	// Verify HMAC-SHA256
-	signedPayload := timestamp + "." + string(body)
+	// Duffel signature is just the raw HMAC SHA256 of the body using the secret
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(signedPayload))
+	mac.Write(body)
 	expectedSignature := hex.EncodeToString(mac.Sum(nil))
 
-	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+	if sigHeader != expectedSignature {
 		http.Error(w, "Invalid signature", http.StatusUnauthorized)
 		return
 	}
 
 	// Parse Payload
+	// Duffel webhooks can have the order inside `data.object` or `object` or `data`. We handle all.
 	var payload struct {
 		Type string `json:"type"`
 		Data struct {
-			ID          string `json:"id"`
-			BookingRef  string `json:"booking_reference"`
+			Object *OrderObj `json:"object"`
+			ID     string    `json:"id"` // fallback
+			BookingRef string `json:"booking_reference"`
 			TotalAmount string `json:"total_amount"`
-			Currency    string `json:"tax_currency"` // Or total_currency depending on duffel
+			Currency string `json:"tax_currency"`
 			TotalCurrency string `json:"total_currency"`
-			Passengers  []struct {
-				Email string `json:"email"`
-				Title string `json:"title"`
-				FirstName string `json:"given_name"`
-				LastName string `json:"family_name"`
-			} `json:"passengers"`
+			Passengers []PassengerObj `json:"passengers"`
 			Metadata struct {
 				Reference string `json:"reference"`
 			} `json:"metadata"`
 		} `json:"data"`
+		Object *OrderObj `json:"object"`
 	}
 
 	if err := json.Unmarshal(body, &payload); err != nil {
@@ -721,14 +720,37 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if payload.Type != "order.created" {
+	if payload.Type != "" && payload.Type != "order.created" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	var order *OrderObj
+	if payload.Data.Object != nil {
+		order = payload.Data.Object
+	} else if payload.Object != nil {
+		order = payload.Object
+	} else {
+		// Fallback to Data directly
+		order = &OrderObj{
+			ID: payload.Data.ID,
+			BookingRef: payload.Data.BookingRef,
+			TotalAmount: payload.Data.TotalAmount,
+			Currency: payload.Data.Currency,
+			TotalCurrency: payload.Data.TotalCurrency,
+			Passengers: payload.Data.Passengers,
+			Metadata: payload.Data.Metadata,
+		}
+	}
+
+	if order.ID == "" {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
 	// Process Booking
 	var userID *string
-	ref := payload.Data.Metadata.Reference
+	ref := order.Metadata.Reference
 	if strings.HasPrefix(ref, "USER_") {
 		id := strings.TrimPrefix(ref, "USER_")
 		userID = &id
@@ -736,14 +758,14 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 
 	email := ""
 	name := ""
-	if len(payload.Data.Passengers) > 0 {
-		email = payload.Data.Passengers[0].Email
-		name = payload.Data.Passengers[0].FirstName + " " + payload.Data.Passengers[0].LastName
+	if len(order.Passengers) > 0 {
+		email = order.Passengers[0].Email
+		name = order.Passengers[0].FirstName + " " + order.Passengers[0].LastName
 	}
 
-	currency := payload.Data.TotalCurrency
+	currency := order.TotalCurrency
 	if currency == "" {
-		currency = payload.Data.Currency
+		currency = order.Currency
 	}
 
 	// Save to Database
