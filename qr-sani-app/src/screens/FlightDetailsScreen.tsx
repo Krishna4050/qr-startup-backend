@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import WebLayout from '../components/WebLayout';
-import { ArrowLeft, Plane, XCircle, Euro, CheckCircle2 } from 'lucide-react-native';
+import { ArrowLeft, Plane, XCircle, Euro, CheckCircle2, Printer, Mail } from 'lucide-react-native';
 import apiClient from '../utils/apiClient';
 
 export default function FlightDetailsScreen() {
@@ -11,6 +11,35 @@ export default function FlightDetailsScreen() {
   const { flight } = route.params || {};
 
   const [cancelling, setCancelling] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  const handlePrint = () => {
+    if (Platform.OS === 'web') {
+      window.print();
+    } else {
+      alert("Printing is only supported on Web.");
+    }
+  };
+
+  const handleEmailTicket = async () => {
+    setSendingEmail(true);
+    try {
+      const pName = flight.passenger_name || 'Passenger';
+      await apiClient.post('/api/flights/email-ticket', {
+        email: flight.passenger_email,
+        passenger_name: pName,
+        booking_reference: flight.booking_reference,
+        total_amount: flight.total_amount,
+        currency: flight.currency,
+      });
+      alert('Ticket emailed successfully!');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to send email.');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
   const [refundAmount, setRefundAmount] = useState<string | null>(null);
 
   useEffect(() => {
@@ -166,10 +195,38 @@ export default function FlightDetailsScreen() {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Refund & Cancellation Policy</Text>
             <View style={styles.policyList}>
-              <Text style={styles.policyText}>• Cancellations made within 24 hours of booking are usually fully refundable.</Text>
-              <Text style={styles.policyText}>• After 24 hours, refunds are subject to the specific airline's fare rules.</Text>
-              <Text style={styles.policyText}>• Once approved, refunds process back to your original payment method in 5-10 business days.</Text>
+              {(() => {
+                const conditions = flight.details?.data?.conditions || flight.details?.conditions;
+                const refund = conditions?.refund_before_departure;
+                
+                if (!refund || refund.allowed === false) {
+                  return <Text style={styles.policyText}>No cancellation and refund for this ticket.</Text>;
+                }
+
+                return (
+                  <>
+                    <Text style={styles.policyText}>• Cancellations are allowed before departure.</Text>
+                    {refund.penalty_amount ? (
+                      <Text style={styles.policyText}>• Penalty fee: {refund.penalty_amount} {refund.penalty_currency}.</Text>
+                    ) : (
+                      <Text style={styles.policyText}>• No penalty fee applies.</Text>
+                    )}
+                    <Text style={styles.policyText}>• Once approved, refunds process back to your original payment method in 5-10 business days.</Text>
+                  </>
+                );
+              })()}
             </View>
+          </View>
+
+          <View style={{flexDirection: 'row', gap: 12, marginBottom: 16}}>
+            <TouchableOpacity style={[styles.cancelBtn, {flex: 1, backgroundColor: '#0F2D4D'}]} onPress={handlePrint}>
+              <Printer color="#FFF" size={20} />
+              <Text style={styles.cancelText}>Print Ticket</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.cancelBtn, {flex: 1, backgroundColor: '#0F2D4D'}]} onPress={handleEmailTicket} disabled={sendingEmail}>
+              {sendingEmail ? <ActivityIndicator color="#FFF" /> : <Mail color="#FFF" size={20} />}
+              <Text style={styles.cancelText}>{sendingEmail ? 'Sending...' : 'Send to Email'}</Text>
+            </TouchableOpacity>
           </View>
 
           {flight.status !== 'cancelled' && (

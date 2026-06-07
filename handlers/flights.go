@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Krishna4050/qr-startup-backend/database"
+	"github.com/resend/resend-go/v2"
 	"io"
 	"log"
 	"net/http"
@@ -527,6 +528,31 @@ func SearchAirports(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
+// EmailTicketManual handles POST /api/flights/email-ticket
+func EmailTicketManual(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Email         string `json:"email"`
+		PassengerName string `json:"passenger_name"`
+		BookingRef    string `json:"booking_reference"`
+		TotalAmount   string `json:"total_amount"`
+		Currency      string `json:"currency"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	go sendTicketEmail(req.Email, req.PassengerName, req.BookingRef, req.TotalAmount, req.Currency)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
+
 // CreateDuffelLink handles POST /api/flights/links
 // It securely creates a Duffel Links session for flight booking.
 func CreateDuffelLink(w http.ResponseWriter, r *http.Request) {
@@ -848,7 +874,52 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Send automated purchase email
+	if email != "" {
+		go sendTicketEmail(email, name, fullOrder.BookingRef, fullOrder.TotalAmount, currency)
+	}
+
 	w.WriteHeader(http.StatusOK)
+}
+
+func sendTicketEmail(toEmail, passengerName, bookingRef, amount, currency string) {
+	apiKey := os.Getenv("RESEND_API_KEY")
+	if apiKey == "" {
+		return
+	}
+	client := resend.NewClient(apiKey)
+
+	htmlContent := fmt.Sprintf(`
+	<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaeb; border-radius: 8px;">
+		<div style="text-align: center; margin-bottom: 20px;">
+			<h2 style="color: #0F2D4D; margin: 0;">Flight Confirmation</h2>
+		</div>
+		<p style="font-size: 16px; color: #333;">Hello %s,</p>
+		<p style="font-size: 16px; color: #333;">Thank you for booking with At Your Service! Your flight is confirmed.</p>
+		<div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0;">
+			<p style="font-size: 16px; margin: 0;"><strong>Booking Reference:</strong> %s</p>
+			<p style="font-size: 16px; margin: 8px 0 0 0;"><strong>Total Paid:</strong> %s %s</p>
+		</div>
+		<p style="font-size: 16px; color: #333;">You can view your ultimate flight itinerary and cancellation policies directly in your dashboard.</p>
+		<div style="text-align: center; margin: 30px 0;">
+			<a href="https://app.krishnaadhikari.com/dashboard" style="background-color: #0F2D4D; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Full Itinerary</a>
+		</div>
+		<p style="font-size: 14px; color: #777; margin-top: 40px; border-top: 1px solid #eaeaeb; padding-top: 20px;">
+			Safe travels!<br>
+			<strong>The At Your Service Team</strong>
+		</p>
+	</div>`, passengerName, bookingRef, amount, currency)
+
+	params := &resend.SendEmailRequest{
+		From:    "Bookings <bookings@krishnaadhikari.com>",
+		To:      []string{toEmail},
+		Subject: "✈️ Your Flight Confirmation: " + bookingRef,
+		Html:    htmlContent,
+	}
+	_, err := client.Emails.Send(params)
+	if err != nil {
+		log.Printf("Failed to send ticket email to %s: %v", toEmail, err)
+	}
 }
 
 // GetUserFlightOrders handles GET /api/flights/orders

@@ -79,6 +79,7 @@ func main(){
 	mux.HandleFunc("POST /api/webhooks/duffel", handlers.HandleDuffelWebhook)
 	mux.HandleFunc("GET /api/flights/orders", handlers.GetUserFlightOrders)
 	mux.HandleFunc("POST /api/flights/cancel", handlers.CancelFlightOrder)
+	mux.HandleFunc("POST /api/flights/email-ticket", handlers.EmailTicketManual)
 	mux.HandleFunc("POST /api/invite", handlers.SendInviteEmail)
 	mux.HandleFunc("POST /api/security/login", handlers.LoginSecurityCheck)
 	mux.HandleFunc("/api/host/welcome-email", handlers.WelcomeEmailHandler)
