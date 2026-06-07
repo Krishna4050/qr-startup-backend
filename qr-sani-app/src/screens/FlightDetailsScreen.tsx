@@ -59,8 +59,9 @@ export default function FlightDetailsScreen() {
 
   const renderPrintStyles = () => {
     if (Platform.OS !== 'web') return null;
+    const StyleElement = 'style' as any;
     return (
-      <style>{`
+      <StyleElement>{`
         @media print {
           body * {
             visibility: hidden;
@@ -82,7 +83,7 @@ export default function FlightDetailsScreen() {
             display: none !important;
           }
         }
-      `}</style>
+      `}</StyleElement>
     );
   };
 
@@ -202,7 +203,7 @@ export default function FlightDetailsScreen() {
     <View style={{ flex: 1 }}>
       {renderPrintStyles()}
       <ScrollView style={styles.container}>
-        <View style={[styles.header, (Platform.OS === 'web') ? { className: 'no-print' } as any : {}]}>
+        <View style={styles.header} {...(Platform.OS === 'web' ? { className: 'no-print' } : {}) as any}>
             <TouchableOpacity onPress={() => navigation.navigate('Dashboard')} style={styles.backBtn}>
                 <ArrowLeft color="#0A192F" size={24} />
                 <Text style={styles.backText}>Back to Dashboard</Text>
@@ -257,7 +258,7 @@ export default function FlightDetailsScreen() {
             </View>
           </View>
 
-          <View style={[{flexDirection: 'row', gap: 12, marginBottom: 16}, (Platform.OS === 'web') ? { className: 'no-print' } as any : {}]}>
+          <View style={{flexDirection: 'row', gap: 12, marginBottom: 16}} {...(Platform.OS === 'web' ? { className: 'no-print' } : {}) as any}>
             <TouchableOpacity style={[styles.cancelBtn, {flex: 1, backgroundColor: '#0F2D4D'}]} onPress={handlePrint}>
               <Printer color="#FFF" size={20} />
               <Text style={styles.cancelText}>Print Ticket</Text>
@@ -269,7 +270,7 @@ export default function FlightDetailsScreen() {
           </View>
 
           {showEmailInput && (
-            <View style={[{ backgroundColor: '#F8FAFC', padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }, (Platform.OS === 'web') ? { className: 'no-print' } as any : {}]}>
+            <View style={{ backgroundColor: '#F8FAFC', padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }} {...(Platform.OS === 'web' ? { className: 'no-print' } : {}) as any}>
               <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#0F2D4D', marginBottom: 8 }}>Enter email address to send ticket:</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TextInput
@@ -292,7 +293,7 @@ export default function FlightDetailsScreen() {
           )}
 
           {flight.status !== 'cancelled' && (
-            <View style={[styles.actions, (Platform.OS === 'web') ? { className: 'no-print' } as any : {}]}>
+            <View style={styles.actions} {...(Platform.OS === 'web' ? { className: 'no-print' } : {}) as any}>
               <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} disabled={cancelling}>
                 {cancelling ? <ActivityIndicator color="#FFF" /> : <XCircle color="#FFF" size={20} />}
                 <Text style={styles.cancelText}>{cancelling ? 'Processing Quote...' : 'Cancel Flight & Get Refund'}</Text>
