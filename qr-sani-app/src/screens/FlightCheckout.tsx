@@ -33,6 +33,12 @@ export default function FlightCheckoutScreen() {
             </TouchableOpacity>
           </View>
           
+          <View style={styles.banner}>
+             <Text style={styles.bannerText}>
+               ⏱ <Text style={{fontWeight: 'bold'}}>Live Airline Pricing:</Text> Flight prices and availability are held for ~15 minutes after selecting a flight. Please complete your checkout promptly to avoid timeouts.
+             </Text>
+          </View>
+          
           <View style={styles.iframeWrapper}>
             {loading && (
                <View style={styles.loaderOverlay}>
@@ -68,6 +74,8 @@ const styles = StyleSheet.create({
   header: { padding: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   headerBack: { flexDirection: 'row', alignItems: 'center' },
   headerBackText: { marginLeft: 8, fontSize: 16, fontWeight: '600', color: '#0A192F' },
+  banner: { backgroundColor: '#FEF3C7', padding: 12, borderBottomWidth: 1, borderBottomColor: '#FDE68A' },
+  bannerText: { color: '#92400E', fontSize: 14, textAlign: 'center' },
   iframeWrapper: { flex: 1, position: 'relative', width: '100%', minHeight: 800 },
   loaderOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   loaderText: { marginTop: 16, fontSize: 16, color: '#64748B', fontWeight: '500' }

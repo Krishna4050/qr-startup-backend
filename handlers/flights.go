@@ -837,11 +837,11 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 	query := `
 		INSERT INTO flight_bookings (
 			user_id, duffel_order_id, booking_reference, total_amount, currency,
-			status, passenger_email, passenger_name
-		) VALUES ($1, $2, $3, $4, $5, 'created', $6, $7)
+			status, passenger_email, passenger_name, flight_details
+		) VALUES ($1, $2, $3, $4, $5, 'created', $6, $7, $8)
 		ON CONFLICT (duffel_order_id) DO NOTHING
 	`
-	_, err = database.DB.Exec(query, userID, fullOrder.ID, fullOrder.BookingRef, fullOrder.TotalAmount, currency, email, name)
+	_, err = database.DB.Exec(query, userID, fullOrder.ID, fullOrder.BookingRef, fullOrder.TotalAmount, currency, email, name, string(fullOrderBody))
 	if err != nil {
 		log.Printf("Failed to insert flight booking: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
