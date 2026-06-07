@@ -570,11 +570,11 @@ export default function DashboardScreen() {
         </View>
 
         <GridOrScroll>
-          {alerts.length === 0 && flightOrders.length === 0 ? (
+          {alerts.length === 0 && flightOrders.filter(f => f.status !== 'cancelled').length === 0 ? (
              <View style={[styles.emptyCard, isMobileWeb && { width: '100%' }]}><Text style={styles.emptyCardText}>No new alerts.</Text></View>
           ) : (
             <>
-            {flightOrders.map((flight) => (
+            {flightOrders.filter(f => f.status !== 'cancelled').map((flight) => (
               <TouchableOpacity key={`flight-${flight.id}`} style={[styles.alertCard, { borderLeftColor: '#3B82F6', backgroundColor: '#EFF6FF' }, isMobileWeb && { width: '100%' }]} onPress={() => navigation.navigate('FlightDetails', { flight })}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={[styles.alertCategory, { color: '#2563EB' }]}>FLIGHT BOOKING - {flight.status.toUpperCase()}</Text>
@@ -597,6 +597,27 @@ export default function DashboardScreen() {
             </>
           )}
         </GridOrScroll>
+
+        {flightOrders.filter(f => f.status === 'cancelled').length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Cancelled Tickets & Refunds</Text>
+            </View>
+            <GridOrScroll>
+              {flightOrders.filter(f => f.status === 'cancelled').map((flight) => (
+                <TouchableOpacity key={`cancelled-${flight.id}`} style={[styles.alertCard, { borderLeftColor: '#EF4444', backgroundColor: '#FEF2F2' }, isMobileWeb && { width: '100%' }]} onPress={() => navigation.navigate('FlightDetails', { flight })}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={[styles.alertCategory, { color: '#DC2626' }]}>FLIGHT CANCELLED</Text>
+                    <Plane color="#EF4444" size={16} />
+                  </View>
+                  <Text style={styles.alertTitle}>Ref: {flight.pnr}</Text>
+                  <Text style={[styles.alertDetail, { color: '#DC2626', fontWeight: '500' }]}>Refund processing in 5-10 days • Tap to view</Text>
+                </TouchableOpacity>
+              ))}
+            </GridOrScroll>
+          </>
+        )}
+
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Friends & Family</Text>

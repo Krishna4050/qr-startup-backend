@@ -876,7 +876,7 @@ func GetUserFlightOrders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := database.DB.Query(`
-		SELECT id, duffel_order_id, booking_reference, total_amount, currency, status, passenger_name, created_at 
+		SELECT id, duffel_order_id, booking_reference, total_amount, currency, status, passenger_name, flight_details, created_at 
 		FROM flight_bookings WHERE user_id = $1 ORDER BY created_at DESC
 	`, userID)
 	if err != nil {
@@ -889,8 +889,13 @@ func GetUserFlightOrders(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var id int
 		var duffelID, pnr, amount, currency, status, name string
+		var detailsBytes []byte
 		var createdAt time.Time
-		if err := rows.Scan(&id, &duffelID, &pnr, &amount, &currency, &status, &name, &createdAt); err == nil {
+		if err := rows.Scan(&id, &duffelID, &pnr, &amount, &currency, &status, &name, &detailsBytes, &createdAt); err == nil {
+			var details map[string]interface{}
+			if len(detailsBytes) > 0 {
+				json.Unmarshal(detailsBytes, &details)
+			}
 			orders = append(orders, map[string]interface{}{
 				"id": id,
 				"duffel_order_id": duffelID,
@@ -899,6 +904,7 @@ func GetUserFlightOrders(w http.ResponseWriter, r *http.Request) {
 				"currency": currency,
 				"status": status,
 				"passenger_name": name,
+				"details": details,
 				"created_at": createdAt,
 			})
 		}
