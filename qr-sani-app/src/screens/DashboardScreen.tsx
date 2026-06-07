@@ -190,7 +190,7 @@ export default function DashboardScreen() {
       setNetworkMembers(data.network_members || 0);
 
       try {
-        const flightRes = await apiClient.get(`/api/flights/orders?user_id=${user.id}`);
+        const flightRes = await apiClient.get(`/api/flights/orders?user_id=${user.id}&email=${encodeURIComponent(user.email || '')}`);
         setFlightOrders(flightRes.data || []);
       } catch (e) {
         console.error("Failed to fetch flight orders", e);

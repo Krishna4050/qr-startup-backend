@@ -767,9 +767,23 @@ func HandleDuffelWebhook(w http.ResponseWriter, r *http.Request) {
 // GetUserFlightOrders handles GET /api/flights/orders
 func GetUserFlightOrders(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("user_id")
+	email := r.URL.Query().Get("email")
+	
 	if userID == "" {
 		http.Error(w, "user_id is required", http.StatusBadRequest)
 		return
+	}
+
+	// First, auto-sync any orphaned guest bookings that match this email to this user_id
+	if email != "" {
+		_, err := database.DB.Exec(`
+			UPDATE flight_bookings 
+			SET user_id = $1 
+			WHERE passenger_email = $2 AND user_id IS NULL
+		`, userID, email)
+		if err != nil {
+			log.Printf("Failed to sync guest bookings: %v", err)
+		}
 	}
 
 	rows, err := database.DB.Query(`
