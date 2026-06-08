@@ -113,3 +113,79 @@ func CheckAdminEmailHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"isAdmin": isAdmin})
 }
+
+// --- FLIGHT SETTINGS ---
+
+type FlightSettings struct {
+	MarkupEnabled    bool    `json:"markup_enabled"`
+	MarkupPercentage float64 `json:"markup_percentage"`
+	MarkupFixed      float64 `json:"markup_fixed"`
+}
+
+// GetFlightSettingsHandler retrieves the flight markup settings
+func GetFlightSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var settings FlightSettings
+	query := `
+		SELECT markup_enabled, markup_percentage, markup_fixed 
+		FROM public.flight_settings 
+		ORDER BY id ASC LIMIT 1
+	`
+	err := database.DB.QueryRow(query).Scan(&settings.MarkupEnabled, &settings.MarkupPercentage, &settings.MarkupFixed)
+	if err != nil {
+		fmt.Printf("Error fetching flight settings: %v\n", err)
+		// Return defaults if table empty or missing
+		settings = FlightSettings{MarkupEnabled: false, MarkupPercentage: 0.0, MarkupFixed: 0.0}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(settings)
+}
+
+// UpdateFlightSettingsHandler updates the flight markup settings
+func UpdateFlightSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req FlightSettings
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	query := `
+		UPDATE public.flight_settings 
+		SET markup_enabled = $1, markup_percentage = $2, markup_fixed = $3, updated_at = now()
+		WHERE id = (SELECT id FROM public.flight_settings ORDER BY id ASC LIMIT 1)
+	`
+	res, err := database.DB.Exec(query, req.MarkupEnabled, req.MarkupPercentage, req.MarkupFixed)
+	if err != nil {
+		fmt.Printf("Error updating flight settings: %v\n", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		// If no row existed, insert one
+		insertQuery := `
+			INSERT INTO public.flight_settings (markup_enabled, markup_percentage, markup_fixed, updated_at) 
+			VALUES ($1, $2, $3, now())
+		`
+		_, err = database.DB.Exec(insertQuery, req.MarkupEnabled, req.MarkupPercentage, req.MarkupFixed)
+		if err != nil {
+			fmt.Printf("Error inserting flight settings: %v\n", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}

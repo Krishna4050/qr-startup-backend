@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"github.com/Krishna4050/qr-startup-backend/database"
 	"github.com/resend/resend-go/v2"
 	"io"
@@ -108,6 +109,20 @@ func SearchFlights(w http.ResponseWriter, r *http.Request) {
 		"status": "success",
 		"data":   allOffers,
 	})
+}
+
+func getFlightSettings() FlightSettings {
+	var settings FlightSettings
+	query := `
+		SELECT markup_enabled, markup_percentage, markup_fixed 
+		FROM public.flight_settings 
+		ORDER BY id ASC LIMIT 1
+	`
+	err := database.DB.QueryRow(query).Scan(&settings.MarkupEnabled, &settings.MarkupPercentage, &settings.MarkupFixed)
+	if err != nil {
+		return FlightSettings{MarkupEnabled: false, MarkupPercentage: 0.0, MarkupFixed: 0.0}
+	}
+	return settings
 }
 
 // Real Duffel API call
@@ -255,7 +270,16 @@ func fetchDuffelFlights(req FlightSearchRequest) []FlightOffer {
 		}
 
 		firstSegment := offer.Slices[0].Segments[0]
+		
+		// Apply dynamic markup if enabled
 		price, _ := strconv.ParseFloat(offer.TotalAmount, 64)
+		settings := getFlightSettings()
+		if settings.MarkupEnabled {
+			markupAmount := (price * (settings.MarkupPercentage / 100)) + settings.MarkupFixed
+			price = price + markupAmount
+			// We round to 2 decimal places to avoid floating point anomalies like 120.0000000001
+			price = math.Round(price*100) / 100
+		}
 		
 		isDirect := len(offer.Slices[0].Segments) == 1
 		stops := len(offer.Slices[0].Segments) - 1
@@ -588,6 +612,15 @@ func CreateDuffelLink(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	settings := getFlightSettings()
+	markupRateStr := "0.00"
+	markupAmountStr := "0.00"
+	
+	if settings.MarkupEnabled {
+		markupRateStr = fmt.Sprintf("%.4f", settings.MarkupPercentage/100.0)
+		markupAmountStr = fmt.Sprintf("%.2f", settings.MarkupFixed)
+	}
+
 	payload := map[string]interface{}{
 		"data": map[string]interface{}{
 			"reference":          reference,
@@ -597,9 +630,9 @@ func CreateDuffelLink(w http.ResponseWriter, r *http.Request) {
 			"primary_color":      "#0A192F",
 			"logo_url":           "https://raw.githubusercontent.com/Krishna4050/qr-startup-backend/main/qr-sani-app/assets/icon.png",
 			"name":               "At Your Service", // Setting name to company name
-			"markup_amount":      "0.00",
-			"markup_currency":    "EUR",
-			"markup_rate":        "0.10", 
+			"markup_amount":      markupAmountStr,
+			"markup_currency":    "EUR", // Always use EUR for fixed amount markup to handle cross-currency standardizing
+			"markup_rate":        markupRateStr, 
 			"flights": map[string]interface{}{
 				"enabled": true,
 			},
