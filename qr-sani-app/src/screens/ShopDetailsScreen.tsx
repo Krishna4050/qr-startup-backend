@@ -71,7 +71,6 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
     }
     
     try {
-      setIsLoading(true);
       const { data: profile } = await supabase_lucifer_core.from('profiles').select('first_name, last_name, phone_number').eq('id', user.id).single();
       
       const hasBasicInfo = !!(profile?.first_name && profile?.last_name);
@@ -80,28 +79,23 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
       if (!hasBasicInfo && !hasPhone) {
         safeAlert("Profile Required", "You must complete your profile and verify your phone number before proceeding.");
         navigation.navigate("EditProfile", { requirePhoneVerification: true });
-        setIsLoading(false);
         return;
       }
       
       if (!hasBasicInfo) {
         safeAlert("Profile Required", "You must provide your first and last name before proceeding.");
         navigation.navigate("EditProfile");
-        setIsLoading(false);
         return;
       }
 
       if (!hasPhone) {
         safeAlert("Verification Required", "You must verify your phone number before proceeding.");
         navigation.navigate("ContactManager");
-        setIsLoading(false);
         return;
       }
 
-      setIsLoading(false);
       onSuccess();
     } catch (e) {
-      setIsLoading(false);
       safeAlert("Error", "Could not verify profile status.");
     }
   };
@@ -121,6 +115,11 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
   };
 
   const handleMessage = () => {
+    if (user?.id === shopData.owner_id) {
+       safeAlert("Not Allowed", "You cannot message your own shop.");
+       return;
+    }
+
     ensureProfileComplete(() => {
       if (isDesktop) {
         navigation.navigate("UserMessages", {
