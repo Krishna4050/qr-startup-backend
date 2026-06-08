@@ -200,7 +200,7 @@ export default function DashboardScreen() {
     };
 
     try {
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Network request timed out')), 8000));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Network request timed out')), 20000));
       await Promise.race([fetchPromise(), timeoutPromise]);
     } catch (error) {
       console.error("[DEBUG] Error fetching dashboard:", error);
@@ -440,12 +440,14 @@ export default function DashboardScreen() {
   }
 
   const getFullName = () => {
-    const fn = profile?.first_name || '';
-    const ln = profile?.last_name || '';
+    if (!profile) return 'User';
+    
+    const fn = profile.first_name || '';
+    const ln = profile.last_name || '';
     const full = `${fn} ${ln}`.trim();
     if (full) return full;
     
-    return profile?.display_name || profile?.username || user?.user_metadata?.full_name || user?.user_metadata?.name || 'User';
+    return profile.display_name || profile.username || 'User';
   };
   const displayName = getFullName();
 
