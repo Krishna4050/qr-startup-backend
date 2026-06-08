@@ -21,3 +21,4 @@ research paper on airbnb/
 002_services_architecture.sql
 005_push_tokens.sql
 firebase-service-account.json
+*.sql
