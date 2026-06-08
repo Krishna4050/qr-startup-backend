@@ -9,10 +9,11 @@ import { decode } from 'base64-arraybuffer';
 import { supabase_lucifer_core } from '../utils/supabase';
 
 export default function EditProfileScreen({ route, isEmbedded }: any) {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+  const { requirePhoneVerification } = route?.params || {};
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(requirePhoneVerification ? true : false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const { user } = useAuth();
 
@@ -213,6 +214,15 @@ export default function EditProfileScreen({ route, isEmbedded }: any) {
       setUsernameStatus('idle');
       Alert.alert("Success", "Profile updated successfully!");
       setIsEditing(false);
+
+      if (requirePhoneVerification) {
+        if (!formData.phone_number) {
+          Alert.alert("Almost Done", "Please verify your phone number to proceed.");
+          navigation.navigate("ContactManager");
+        } else {
+          navigation.goBack(); // They added phone number here, go back to ShopDetailsScreen
+        }
+      }
 
     } catch (error: any) {
       console.log(error.message);

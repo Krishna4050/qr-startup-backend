@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image } from 'react-native';
 import { ArrowLeft, Send, Trash2, Edit2, Check, CheckCheck, Lock } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -15,18 +15,25 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [shopSettings, setShopSettings] = useState<any>(null);
+  const [otherAvatar, setOtherAvatar] = useState<string | null>(null);
 
-  // FIX: We must use Refs for the keys so the Realtime Listener always has the freshest keys!
+  // Presence States
+  const [isOnline, setIsOnline] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const presenceChannelRef = useRef<any>(null);
+
   const keysRef = useRef<KeyPair | null>(null);
   const hostKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!user?.id || !shopId || !otherUserId) return;
+    if (!user?.id || !shopId || !otherUserId) {
+      setLoading(false); // Fix: don't hang if params missing
+      return;
+    }
 
     setupChat();
     
-    // Subscribe to realtime messages specifically for this shop
-    const subscription = supabase_lucifer_core
+    const msgSubscription = supabase_lucifer_core
       .channel(`chat_${shopId}_${user.id}`)
       .on('postgres_changes', { 
           event: '*', 
@@ -35,15 +42,44 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
           filter: `shop_id=eq.${shopId}` 
         }, 
         () => {
-          // Because we use Refs, these are never null when a new message arrives!
           if (keysRef.current && hostKeyRef.current) {
              loadMessages(keysRef.current, hostKeyRef.current);
           }
       })
       .subscribe();
 
+    // Presence Channel setup
+    const presenceRoomId = `presence_shop_${shopId}_user_${[user.id, otherUserId].sort().join('_')}`;
+    const presenceChannel = supabase_lucifer_core.channel(presenceRoomId, {
+      config: { presence: { key: user.id } }
+    });
+    
+    presenceChannelRef.current = presenceChannel;
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        const otherUserPresence = state[otherUserId];
+        setIsOnline(!!otherUserPresence && otherUserPresence.length > 0);
+        
+        if (otherUserPresence && otherUserPresence[0]?.typing) {
+          setIsTyping(true);
+        } else {
+          setIsTyping(false);
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.track({ online: true, typing: false });
+        }
+      });
+
     return () => {
-      supabase_lucifer_core.removeChannel(subscription);
+      supabase_lucifer_core.removeChannel(msgSubscription);
+      if (presenceChannelRef.current) {
+        presenceChannelRef.current.untrack();
+        supabase_lucifer_core.removeChannel(presenceChannelRef.current);
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, shopId, otherUserId]);
@@ -51,15 +87,11 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
   const setupChat = async () => {
     setLoading(true);
     try {
-      // 1. Get/Generate our own keys
       const keys = await getOrCreateKeyPair();
       keysRef.current = keys;
 
       if (user) {
-        await supabase_lucifer_core
-          .from('profiles')
-          .update({ chat_public_key: keys.publicKey })
-          .eq('id', user.id);
+        await supabase_lucifer_core.from('profiles').update({ chat_public_key: keys.publicKey }).eq('id', user.id);
       }
 
       if (!shopName && shopId) {
@@ -67,20 +99,27 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
         if (shopRes) setShopName(shopRes.shop_name);
       }
 
-      // 2. Get Other User's public key and shop settings
       const [otherProfile, settingsRes] = await Promise.all([
-        supabase_lucifer_core.from('profiles').select('chat_public_key').eq('id', otherUserId).single(),
-        supabase_lucifer_core.from('shop_chat_settings').select('*').eq('shop_id', shopId).single()
+        supabase_lucifer_core.from('profiles').select('chat_public_key, avatar_url').eq('id', otherUserId).single(),
+        supabase_lucifer_core.from('shop_chat_settings').select('*').eq('shop_id', shopId).maybeSingle()
       ]);
 
       if (otherProfile.data?.chat_public_key) {
         hostKeyRef.current = otherProfile.data.chat_public_key;
+      } else {
+        // Host has not activated secure messaging! Gracefully stop loading.
+        setLoading(false);
+        return;
       }
+      
+      if (otherProfile.data?.avatar_url) {
+        setOtherAvatar(otherProfile.data.avatar_url);
+      }
+      
       if (settingsRes.data) {
         setShopSettings(settingsRes.data);
       }
 
-      // 3. Load messages
       await loadMessages(keysRef.current, hostKeyRef.current);
 
     } catch (err) {
@@ -93,7 +132,6 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
   const loadMessages = async (keys: KeyPair | null, hostKey: string | null) => {
     if (!keys || !hostKey || !user?.id) return;
     
-    // CRITICAL FIX: Only fetch messages between YOU and the OTHER USER.
     const { data } = await supabase_lucifer_core
       .from('shop_messages')
       .select('*')
@@ -117,6 +155,16 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
     }
   };
 
+  const handleTyping = (text: string) => {
+    // Strip carriage returns or complex formatting to prevent accidental media paste bugs
+    const plainText = text.replace(/[\r]/g, '');
+    setInputText(plainText);
+    
+    if (presenceChannelRef.current) {
+      presenceChannelRef.current.track({ online: true, typing: plainText.length > 0 });
+    }
+  };
+
   const checkBusinessHours = (): boolean => {
     if (!shopSettings) return true; 
 
@@ -136,7 +184,6 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
         return false;
         }
     }
-
     return true;
   };
 
@@ -167,7 +214,6 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
       const { nonce, encrypted } = encryptMessage(inputText.trim(), hostKeyRef.current, keysRef.current.secretKey);
 
       if (editingId) {
-        // Edit existing
         const { error: editError } = await supabase_lucifer_core
           .from('shop_messages')
           .update({ 
@@ -181,7 +227,6 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
         if (editError) throw editError;
         setEditingId(null);
       } else if (user) {
-        // Send new
         const { error: insertError } = await supabase_lucifer_core.from('shop_messages').insert({
           shop_id: shopId,
           sender_id: user.id,
@@ -195,7 +240,9 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
       }
 
       setInputText('');
-      // Optimistically reload messages for instant UI feedback
+      if (presenceChannelRef.current) {
+        presenceChannelRef.current.track({ online: true, typing: false });
+      }
       loadMessages(keysRef.current, hostKeyRef.current);
     } catch (err: any) {
       console.error("Send error", err);
@@ -247,7 +294,11 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
       <View style={[styles.messageRow, isMe ? styles.myRow : styles.theirRow]}>
         {!isMe && (
           <View style={styles.avatarTiny}>
-            <Text style={styles.avatarTinyText}>{shopName ? shopName.charAt(0) : "S"}</Text>
+            {otherAvatar ? (
+               <Image source={{ uri: otherAvatar }} style={{width: 28, height: 28, borderRadius: 14}} />
+            ) : (
+               <Text style={styles.avatarTinyText}>{shopName ? shopName.charAt(0).toUpperCase() : "S"}</Text>
+            )}
           </View>
         )}
         <View style={[styles.messageBubble, isMe ? styles.myBubble : styles.theirBubble]}>
@@ -255,7 +306,7 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
             {item.content}
           </Text>
           
-          <View style={[styles.messageFooter, isMe ? styles.footerRight : styles.footerLeft]}>
+          <View style={styles.messageFooter}>
             <Text style={[styles.timeText, isMe ? styles.myTime : styles.theirTime]}>
               {new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
               {item.is_edited && " (edited)"}
@@ -263,9 +314,9 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
             
             {isMe && !item.is_deleted && (
               <View style={styles.actionIcons}>
-                {item.status === 'read' ? <CheckCheck size={12} color="#E0F2FE" /> : <Check size={12} color="#BAE6FD" />}
                 <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconBtn}><Edit2 size={12} color="#E0F2FE" /></TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDelete(item.id, item.created_at)} style={styles.iconBtn}><Trash2 size={12} color="#FECACA" /></TouchableOpacity>
+                {item.status === 'read' ? <CheckCheck size={14} color="#34D399" /> : <Check size={14} color="#E0F2FE" />}
               </View>
             )}
           </View>
@@ -287,79 +338,143 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
     <View style={styles.container}>
       {!isEmbedded && (
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <ArrowLeft color="#111827" size={24} />
-          </TouchableOpacity>
-          <View>
-             <Text style={styles.headerTitle}>{shopName}</Text>
-             <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 2}}>
-                <Lock size={10} color="#10B981" />
-                <Text style={{fontSize: 10, color: '#10B981', marginLeft: 4}}>End-to-End Encrypted</Text>
-             </View>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+              <ArrowLeft color="#111827" size={24} />
+            </TouchableOpacity>
+            
+            <View style={styles.headerAvatar}>
+              {otherAvatar ? (
+                 <Image source={{ uri: otherAvatar }} style={{width: 40, height: 40, borderRadius: 20}} />
+              ) : (
+                 <Text style={styles.headerAvatarText}>{shopName ? shopName.charAt(0).toUpperCase() : "S"}</Text>
+              )}
+            </View>
+
+            <View>
+               <Text style={styles.headerTitle}>{shopName}</Text>
+               {isTyping ? (
+                 <Text style={styles.typingText}>typing...</Text>
+               ) : isOnline ? (
+                 <Text style={styles.onlineText}>Online</Text>
+               ) : (
+                 <Text style={styles.offlineText}>Offline</Text>
+               )}
+            </View>
+          </View>
+          
+          <View style={styles.encryptionBadge}>
+             <Lock size={12} color="#10B981" />
+             <Text style={styles.encryptionText}>End-to-End Encrypted</Text>
           </View>
         </View>
       )}
 
-      <FlatList
-        data={messages}
-        keyExtractor={item => item.id}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.listContent}
-      />
-
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.inputArea}>
-          <TextInput
-            style={styles.input}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder={editingId ? "Edit message..." : "Secure Message..."}
-            placeholderTextColor="#9CA3AF"
-          />
-          <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
-            <Send color="#0084FF" size={24} />
-          </TouchableOpacity>
+      {/* When embedded, still show presence indicator at the top if no header */}
+      {isEmbedded && (
+        <View style={styles.embeddedHeader}>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <View style={[styles.statusDot, { backgroundColor: isOnline ? '#10B981' : '#9CA3AF' }]} />
+            <Text style={styles.embeddedStatusText}>
+              {isTyping ? 'typing...' : isOnline ? 'Online' : 'Offline'}
+            </Text>
+          </View>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+             <Lock size={10} color="#10B981" />
+             <Text style={[styles.encryptionText, {fontSize: 10, marginLeft: 4}]}>Encrypted</Text>
+          </View>
         </View>
-      </KeyboardAvoidingView>
+      )}
+
+      {!hostKeyRef.current ? (
+        <View style={styles.notReadyContainer}>
+           <Lock color="#9CA3AF" size={48} />
+           <Text style={styles.notReadyTitle}>Shop Offline</Text>
+           <Text style={styles.notReadyText}>The host has not set up their secure inbox yet. Check back later.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={messages}
+          keyExtractor={item => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.listContent}
+          inverted={false} // Typically chat apps map from top to bottom unless inverted, here ascending is used
+        />
+      )}
+
+      {hostKeyRef.current && (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.inputArea}>
+            <TextInput
+              style={styles.input}
+              value={inputText}
+              onChangeText={handleTyping}
+              placeholder={editingId ? "Edit message..." : "Secure Message..."}
+              placeholderTextColor="#9CA3AF"
+              multiline
+            />
+            <TouchableOpacity style={[styles.sendBtn, !inputText.trim() && { opacity: 0.5 }]} onPress={handleSend} disabled={!inputText.trim()}>
+              <Send color="#0084FF" size={24} />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: Platform.OS === 'ios' ? 60 : 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: '#E4E6EB' },
+  // Chat styling reflecting ATS branding + WhatsApp functionality
+  container: { flex: 1, backgroundColor: '#E4E6EB' }, // Neutral grey background
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: Platform.OS === 'ios' ? 60 : 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: '#D1D5DB' },
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
   backBtn: { marginRight: 12, padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#050505' },
+  headerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#0A192F', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  headerAvatarText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+  headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#050505' },
+  
+  onlineText: { fontSize: 12, color: '#10B981', fontWeight: '500' },
+  offlineText: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+  typingText: { fontSize: 12, color: '#0084FF', fontWeight: '500', fontStyle: 'italic' },
+  
+  encryptionBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  encryptionText: { fontSize: 10, color: '#10B981', marginLeft: 4, fontWeight: '600' },
+
+  embeddedHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#F9FAFB', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
+  embeddedStatusText: { fontSize: 12, color: '#4B5563', fontWeight: '500' },
   
   listContent: { padding: 16, paddingBottom: 40 },
   messageRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 12 },
   myRow: { justifyContent: 'flex-end' },
   theirRow: { justifyContent: 'flex-start' },
   
-  avatarTiny: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#E4E6EB', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
-  avatarTinyText: { fontSize: 12, fontWeight: 'bold', color: '#050505' },
+  avatarTiny: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#0A192F', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  avatarTinyText: { fontSize: 12, fontWeight: 'bold', color: '#FFF' },
 
-  messageBubble: { maxWidth: '75%', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20 },
-  myBubble: { backgroundColor: '#0084FF', borderBottomRightRadius: 4 },
-  theirBubble: { backgroundColor: '#F3F4F6', borderBottomLeftRadius: 4 },
+  messageBubble: { maxWidth: '80%', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 1, elevation: 1 },
+  myBubble: { backgroundColor: '#0A192F', borderBottomRightRadius: 4 }, // ATS Dark Blue for self
+  theirBubble: { backgroundColor: '#FFFFFF', borderBottomLeftRadius: 4 },
   
   messageText: { fontSize: 15, lineHeight: 20 },
   myText: { color: '#FFFFFF' },
   theirText: { color: '#050505' },
   deletedText: { fontStyle: 'italic', opacity: 0.8 },
   
-  messageFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  footerRight: { justifyContent: 'flex-end' },
-  footerLeft: { justifyContent: 'flex-start' },
+  messageFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4, minWidth: 60 },
   
-  timeText: { fontSize: 11 },
-  myTime: { color: '#BAE6FD' },
+  timeText: { fontSize: 11, marginLeft: 8 },
+  myTime: { color: '#9CA3AF' },
   theirTime: { color: '#9CA3AF' },
   
-  actionIcons: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 8 },
+  actionIcons: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 6 },
   iconBtn: { padding: 2 },
   
-  inputArea: { flexDirection: 'row', padding: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderColor: '#E4E6EB', alignItems: 'center', paddingBottom: Platform.OS === 'ios' ? 30 : 12 },
-  input: { flex: 1, backgroundColor: '#F0F2F5', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, fontSize: 15, marginRight: 12, color: '#050505' },
-  sendBtn: { padding: 8, justifyContent: 'center', alignItems: 'center' }
+  inputArea: { flexDirection: 'row', padding: 10, backgroundColor: '#F0F2F5', alignItems: 'flex-end', paddingBottom: Platform.OS === 'ios' ? 30 : 10 },
+  input: { flex: 1, backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderRadius: 20, fontSize: 15, marginRight: 10, color: '#050505', maxHeight: 100 },
+  sendBtn: { padding: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A192F', borderRadius: 24, width: 44, height: 44, marginBottom: 2 },
+
+  notReadyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
+  notReadyTitle: { fontSize: 20, fontWeight: 'bold', color: '#374151', marginTop: 16, marginBottom: 8 },
+  notReadyText: { fontSize: 15, color: '#6B7280', textAlign: 'center', lineHeight: 22 }
 });

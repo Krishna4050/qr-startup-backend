@@ -64,6 +64,48 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
     }
   };
 
+  const ensureProfileComplete = async (onSuccess: () => void) => {
+    if (!user) {
+      safeAlert("Sign In Required", "Please sign in to proceed.");
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      const { data: profile } = await supabase_lucifer_core.from('profiles').select('first_name, last_name, phone_number').eq('id', user.id).single();
+      
+      const hasBasicInfo = !!(profile?.first_name && profile?.last_name);
+      const hasPhone = !!profile?.phone_number;
+
+      if (!hasBasicInfo && !hasPhone) {
+        safeAlert("Profile Required", "You must complete your profile and verify your phone number before proceeding.");
+        navigation.navigate("EditProfile", { requirePhoneVerification: true });
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!hasBasicInfo) {
+        safeAlert("Profile Required", "You must provide your first and last name before proceeding.");
+        navigation.navigate("EditProfile");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!hasPhone) {
+        safeAlert("Verification Required", "You must verify your phone number before proceeding.");
+        navigation.navigate("ContactManager");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(false);
+      onSuccess();
+    } catch (e) {
+      setIsLoading(false);
+      safeAlert("Error", "Could not verify profile status.");
+    }
+  };
+
   const handleDirections = () => {
     if (!user) {
       safeAlert("Sign In Required", "Please sign in to get directions.");
@@ -79,109 +121,97 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
   };
 
   const handleMessage = () => {
-    if (!user) {
-      safeAlert("Sign In Required", "Please sign in to message this shop.");
-      return;
-    }
-    if (isDesktop) {
-      navigation.navigate("UserMessages", {
-        shopId: shopData.id,
-        shopName: shopData.shop_name,
-        hostId: shopData.owner_id
-      });
-    } else {
-      navigation.navigate("ChatScreen", {
-        shopId: shopData.id,
-        shopName: shopData.shop_name,
-        otherUserId: shopData.owner_id
-      });
-    }
+    ensureProfileComplete(() => {
+      if (isDesktop) {
+        navigation.navigate("UserMessages", {
+          shopId: shopData.id,
+          shopName: shopData.shop_name,
+          hostId: shopData.owner_id
+        });
+      } else {
+        navigation.navigate("ChatScreen", {
+          shopId: shopData.id,
+          shopName: shopData.shop_name,
+          otherUserId: shopData.owner_id
+        });
+      }
+    });
   };
 
   const handleCall = async () => {
-    if (!user) {
-      safeAlert("Sign In Required", "Please sign in to call this shop.");
-      return;
-    }
+    ensureProfileComplete(async () => {
+      try {
+        const { data: tags, error } = await supabase_lucifer_core.from('qr_tags').select('id').eq('owner_id', user.id).limit(1);
+        if (error) throw error;
 
-    try {
-      const { data: tags, error } = await supabase_lucifer_core.from('qr_tags').select('id').eq('owner_id', user.id).limit(1);
-      if (error) throw error;
+        if (!tags || tags.length === 0) {
+          safeAlert("Premium Feature", "You must be an active member of our QR System to use the proxy calling service.");
+          return;
+        }
 
-      if (!tags || tags.length === 0) {
-        safeAlert("Premium Feature", "You must be an active member of our QR System to use the proxy calling service.");
-        return;
+        const { data: profile } = await supabase_lucifer_core.from('profiles').select('phone_number').eq('id', user.id).single();
+        const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+        if (!backendUrl) throw new Error("Backend URL missing");
+
+        safeAlert("Connecting...", "You will receive a call from our system shortly connecting you to the shop.");
+        
+        await fetch(`${backendUrl}/api/call-shop`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shop_id: shopData.id, phone_number: profile.phone_number })
+        });
+
+      } catch (err) {
+        console.error(err);
+        safeAlert("Error", "Something went wrong while initiating the call.");
       }
-
-      const { data: profile } = await supabase_lucifer_core.from('profiles').select('phone_number').eq('id', user.id).single();
-      if (!profile?.phone_number) {
-        safeAlert("Profile Incomplete", "Please add a verified phone number to your profile to make calls.");
-        return;
-      }
-
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-      if (!backendUrl) throw new Error("Backend URL missing");
-
-      safeAlert("Connecting...", "You will receive a call from our system shortly connecting you to the shop.");
-      
-      await fetch(`${backendUrl}/api/call-shop`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shop_id: shopData.id, phone_number: profile.phone_number })
-      });
-
-    } catch (err) {
-      console.error(err);
-      safeAlert("Error", "Something went wrong while initiating the call.");
-    }
+    });
   };
 
   const handleBookReservation = async () => {
-    if (!user) {
-      safeAlert("Sign In Required", "Please sign in to book.");
-      return;
-    }
     if (!reservationDate) {
       safeAlert("Missing Info", "Please provide a valid date.");
       return;
     }
 
-    setIsBooking(true);
-    try {
-      // 1. Create Reservation
-      const { error } = await supabase_lucifer_core.from('shop_reservations').insert({
-        shop_id: shopData.id,
-        user_id: user!.id,
-        reservation_date: reservationDate,
-        message: reservationMessage,
-        status: 'pending'
-      });
+    ensureProfileComplete(async () => {
+      setIsBooking(true);
+      try {
+        // 1. Create Reservation
+        const { error } = await supabase_lucifer_core.from('shop_reservations').insert({
+          shop_id: shopData.id,
+          user_id: user!.id,
+          reservation_date: reservationDate,
+          message: reservationMessage,
+          status: 'pending'
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // 2. Trigger Notification Email via Go Backend
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-      if (backendUrl) {
-        // Fetch host email to notify them
-        const { data: hostProfile } = await supabase_lucifer_core.from('profiles').select('email').eq('id', shopData.owner_id).single();
-        if (hostProfile?.email) {
-          await fetch(`${backendUrl}/api/host/message-notification-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ shop_name: shopData.shop_name, email: hostProfile.email })
-          }).catch(console.error); // Ignore failures, it's just an email
+        // 2. Trigger Notification Email via Go Backend
+        const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+        if (backendUrl) {
+          // Fetch host email to notify them
+          const { data: hostProfile } = await supabase_lucifer_core.from('profiles').select('email').eq('id', shopData.owner_id).single();
+          if (hostProfile?.email) {
+            await fetch(`${backendUrl}/api/host/message-notification-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ shop_name: shopData.shop_name, email: hostProfile.email })
+            }).catch(console.error); // Ignore failures, it's just an email
+          }
         }
-      }
 
-      safeAlert("Success", "Reservation requested! The host will review it soon.");
-      setShowReservationModal(false);
-      setReservationDate('');
-      setReservationMessage('');
-    } catch (e: any) {
-      safeAlert("Error", e.message);
-    } finally {
-      setIsBooking(false);
-    }
+        safeAlert("Success", "Reservation requested! The host will review it soon.");
+        setShowReservationModal(false);
+        setReservationDate('');
+        setReservationMessage('');
+      } catch (e: any) {
+        safeAlert("Error", e.message);
+      } finally {
+        setIsBooking(false);
+      }
+    });
   };
 
   const renderDesktopPhotos = () => {
@@ -241,8 +271,9 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
       
       {/* @ts-ignore */}
       <TouchableOpacity style={[styles.btnPrimary, { cursor: Platform.OS === 'web' ? 'pointer' : 'auto' }]} onPress={() => {
-        if (!user) { safeAlert("Sign In Required", "Please sign in to book."); return; }
-        setShowReservationModal(true);
+        ensureProfileComplete(() => {
+          setShowReservationModal(true);
+        });
       }}>
         <Calendar color="#FFFFFF" size={20} style={styles.btnIcon} />
         <Text style={styles.btnPrimaryText}>Book a Reservation</Text>
