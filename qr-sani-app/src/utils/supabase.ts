@@ -41,6 +41,8 @@ export const supabase_lucifer_core = createClient(supabaseUrl, supabaseAnonKey, 
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false, // Prevents URL parser hang on web
-    lock: (name, timeout, fn) => fn(), // BYPASS BUGGY NAVIGATOR.LOCKS!
+    lock: Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.locks 
+          ? undefined // Use standard Web Locks API to prevent multi-tab race conditions
+          : (name, timeout, fn) => fn(), // Bypass on mobile
   },
 });
