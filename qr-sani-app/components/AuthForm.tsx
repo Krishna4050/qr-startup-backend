@@ -234,9 +234,11 @@ export default function AuthForm() {
 
           <View style={styles.socialRow}>
             <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
+               <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style={{ width: 20, height: 20, marginRight: 8 }} />
                <Text style={styles.socialButtonText}>Google</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialButton} onPress={handleAppleLogin}>
+               <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" style={{ width: 18, height: 20, marginRight: 8 }} />
                <Text style={styles.socialButtonText}>Apple</Text>
             </TouchableOpacity>
           </View>
@@ -397,6 +399,24 @@ export default function AuthForm() {
               {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Sign Up</Text>}
             </TouchableOpacity>
           </View>
+
+          {/* Social Logins on Signup */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.socialRow}>
+            <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
+               <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style={{ width: 20, height: 20, marginRight: 8 }} />
+               <Text style={styles.socialButtonText}>Google</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} onPress={handleAppleLogin}>
+               <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" style={{ width: 18, height: 20, marginRight: 8 }} />
+               <Text style={styles.socialButtonText}>Apple</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -415,15 +435,15 @@ export default function AuthForm() {
     </View>
   );
 
-  return (
+  return Platform.OS === 'web' ? (
+    <View style={styles.container}>
+      {FormContent}
+    </View>
+  ) : (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      {Platform.OS === 'web' ? (
-         FormContent
-      ) : (
-         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            {FormContent}
-         </TouchableWithoutFeedback>
-      )}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        {FormContent}
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
@@ -431,7 +451,7 @@ export default function AuthForm() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F4F9', // Google-like light background
+    backgroundColor: '#E8F0FE', // Slightly more vibrant colorful blue tint
   },
   innerContainer: {
     flex: 1,
@@ -441,19 +461,20 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    borderRadius: 12,
     width: '100%',
     maxWidth: 448,
     paddingHorizontal: 40,
     paddingTop: 48,
     paddingBottom: 36,
-    borderWidth: Platform.OS === 'web' ? 1 : 0,
-    borderColor: '#DADCE0',
-    shadowColor: Platform.OS !== 'web' ? '#000' : 'transparent',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 2,
+    borderWidth: 0,
+    borderTopWidth: 6,
+    borderColor: '#0A66C2', // Vibrant blue accent on top
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 4,
   },
   stepContainer: {
     width: '100%',
@@ -583,14 +604,22 @@ const styles = StyleSheet.create({
   },
   socialButton: {
     flex: 1,
+    flexDirection: 'row',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#DADCE0',
+    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
+    elevation: 1,
   },
   socialButtonText: {
-    color: '#374151',
+    color: '#3C4043',
     fontWeight: '500',
     fontSize: 14,
   }
