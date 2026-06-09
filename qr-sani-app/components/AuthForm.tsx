@@ -265,7 +265,7 @@ export default function AuthForm() {
               )}
 
               <TouchableOpacity style={styles.mainButton} onPress={isLogin ? lucifer_signIn : sani_signUp} disabled={loading}>
-                {loading ? <ActivityIndicator color="#F2F3F4" /> : <Text style={styles.mainButtonText}>{isLogin ? 'Sign In' : 'Sign Up'}</Text>}
+                {loading ? <ActivityIndicator color="#0F2D4D" /> : <Text style={styles.mainButtonText}>{isLogin ? 'Sign In' : 'Sign Up'}</Text>}
               </TouchableOpacity>
 
         <View style={styles.footer}>
