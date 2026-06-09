@@ -5,6 +5,10 @@ import AuthForm from '../../components/AuthForm';
 import ResponsiveWrapper from '../components/ResponsiveWrapper';
 
 export default function LoginScreen({ navigation }: any) {
+  if (Platform.OS === 'web') {
+    return <AuthForm />;
+  }
+
   return (
     <ResponsiveWrapper bg="#F3F4F6">
       <KeyboardAvoidingView 
