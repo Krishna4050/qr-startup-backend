@@ -15,7 +15,7 @@ export default function LoginScreen({ navigation }: any) {
         style={styles.container} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {Platform.OS !== 'web' && <GradientHeader />}
+        <GradientHeader />
         
         <View style={styles.formContainer}>
           <AuthForm />
