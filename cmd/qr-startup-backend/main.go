@@ -113,6 +113,7 @@ func main(){
 	mux.HandleFunc("POST /api/profile", middleware.RequireAuth(handlers.UpdateProfile))
 	mux.HandleFunc("GET /api/profile/check-username", middleware.RequireAuth(handlers.CheckUsername))
 	mux.HandleFunc("GET /api/messages", middleware.RequireAuth(handlers.GetUserMessages))
+	mux.HandleFunc("POST /api/auth/verify-email", handlers.CheckEmailAndTurnstileHandler)
 	
 	// Directory API
 	mux.HandleFunc("GET /api/directory", middleware.RequireAuth(handlers.GetServicesDirectoryHandler))
