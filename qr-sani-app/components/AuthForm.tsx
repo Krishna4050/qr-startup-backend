@@ -188,11 +188,10 @@ export default function AuthForm() {
           <Text style={styles.subtitle}>Use your ATS Finland Account</Text>
           
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
-            <Mail color="#4B5563" size={20} style={styles.inputIcon} />
             <TextInput 
               style={styles.input} 
               placeholder="Email or phone" 
-              placeholderTextColor="#9CA3AF" 
+              placeholderTextColor="#5F6368" 
               keyboardType="email-address" 
               autoCapitalize="none" 
               value={email} 
@@ -403,24 +402,28 @@ export default function AuthForm() {
     }
   };
 
+  const FormContent = (
+    <View style={styles.innerContainer}>
+      <View style={styles.card}>
+        {renderContent()}
+      </View>
+      <View style={styles.footerLinks}>
+        <TouchableOpacity><Text style={styles.footerLink}>Help</Text></TouchableOpacity>
+        <TouchableOpacity><Text style={styles.footerLink}>Privacy</Text></TouchableOpacity>
+        <TouchableOpacity><Text style={styles.footerLink}>Terms</Text></TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.innerContainer}>
-          
-          <View style={styles.card}>
-            {/* Optional: Add Logo here */}
-            {renderContent()}
-          </View>
-
-          <View style={styles.footerLinks}>
-            <TouchableOpacity><Text style={styles.footerLink}>Help</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLink}>Privacy</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLink}>Terms</Text></TouchableOpacity>
-          </View>
-
-        </View>
-      </TouchableWithoutFeedback>
+      {Platform.OS === 'web' ? (
+         FormContent
+      ) : (
+         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            {FormContent}
+         </TouchableWithoutFeedback>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -438,13 +441,17 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 8,
     width: '100%',
-    maxWidth: 450,
-    padding: 40,
-    shadowColor: '#000',
+    maxWidth: 448,
+    paddingHorizontal: 40,
+    paddingTop: 48,
+    paddingBottom: 36,
+    borderWidth: Platform.OS === 'web' ? 1 : 0,
+    borderColor: '#DADCE0',
+    shadowColor: Platform.OS !== 'web' ? '#000' : 'transparent',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 2,
   },
@@ -452,26 +459,28 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '400',
-    color: '#1F2937',
+    color: '#202124',
     marginBottom: 8,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   subtitle: {
     fontSize: 16,
-    color: '#4B5563',
-    marginBottom: 32,
+    color: '#202124',
+    marginBottom: 40,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 52,
+    borderColor: '#DADCE0',
+    borderRadius: 4,
+    paddingHorizontal: 14,
+    height: 56,
     backgroundColor: '#FFFFFF',
   },
   inputError: {
