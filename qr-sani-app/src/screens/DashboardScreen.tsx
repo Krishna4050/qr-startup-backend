@@ -893,13 +893,18 @@ export default function DashboardScreen() {
                                    // The Go backend automatically syncs `profiles` AND `auth.users` for us!
                                } catch (err: any) {
                                    setVerifyLoading(false);
-                                   setVerifyError(err.response?.data || err.message || 'Invalid verification code');
+                                   const errorMessage = err.response?.data?.error || err.response?.data || err.message || 'Invalid verification code';
+                                   setVerifyError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
                                    return;
                                }
                            }
 
                            // Force refresh the session to get updated confirmed_at
-                           await supabase_lucifer_core.auth.getSession();
+                           try {
+                               await supabase_lucifer_core.auth.refreshSession();
+                           } catch (sessionErr: any) {
+                               console.warn("Session refresh timed out/failed, but verification succeeded:", sessionErr);
+                           }
                            
                            setVerifyLoading(false);
                            setVerifyStep('success');
