@@ -761,15 +761,27 @@ export default function DashboardScreen() {
                         {verifyError ? <Text style={{ color: 'red', marginBottom: 12, textAlign: 'center' }}>{verifyError}</Text> : null}
                         <TouchableOpacity style={styles.primaryButtonBlock} onPress={async () => {
                            setVerifyLoading(true); setVerifyError('');
-                           // If the target already exists on the user, we MUST use resend()
-                           const { error } = await supabase_lucifer_core.auth.resend({ 
-                               type: verifyType === 'email' ? 'signup' : 'phone_change', // 'signup' for email resend
-                               email: verifyType === 'email' ? verifyTarget : undefined,
-                               phone: verifyType === 'phone' ? verifyTarget : undefined,
-                           });
-                           setVerifyLoading(false);
-                           if (error) setVerifyError(error.message);
-                           else setVerifyStep('otp');
+                           
+                           if (verifyType === 'email') {
+                               // Native Supabase Email Auth
+                               const { error } = await supabase_lucifer_core.auth.resend({ 
+                                   type: 'signup',
+                                   email: verifyTarget,
+                               });
+                               setVerifyLoading(false);
+                               if (error) setVerifyError(error.message);
+                               else setVerifyStep('otp');
+                           } else {
+                               // Custom Go Twilio SMS
+                               try {
+                                   await apiClient.post('/api/user/phone/send-otp', { phone_number: verifyTarget });
+                                   setVerifyLoading(false);
+                                   setVerifyStep('otp');
+                               } catch (err: any) {
+                                   setVerifyLoading(false);
+                                   setVerifyError(err.response?.data || err.message || 'Failed to send SMS');
+                               }
+                           }
                         }}>
                            {verifyLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Send Code to {verifyType}</Text>}
                         </TouchableOpacity>
@@ -796,14 +808,26 @@ export default function DashboardScreen() {
                         <TouchableOpacity style={styles.primaryButtonBlock} onPress={async () => {
                            if (!verifyTarget.trim()) { setVerifyError(`Please enter a valid ${verifyType}`); return; }
                            setVerifyLoading(true); setVerifyError('');
-                           // Adding a NEW email or phone requires updateUser
-                           const { error } = await supabase_lucifer_core.auth.updateUser({ 
-                               email: verifyType === 'email' ? verifyTarget : undefined,
-                               phone: verifyType === 'phone' ? verifyTarget : undefined 
-                           });
-                           setVerifyLoading(false);
-                           if (error) setVerifyError(error.message);
-                           else setVerifyStep('otp');
+                           
+                           if (verifyType === 'email') {
+                               // Adding a NEW email requires updateUser
+                               const { error } = await supabase_lucifer_core.auth.updateUser({ 
+                                   email: verifyTarget
+                               });
+                               setVerifyLoading(false);
+                               if (error) setVerifyError(error.message);
+                               else setVerifyStep('otp');
+                           } else {
+                               // Custom Go Twilio SMS
+                               try {
+                                   await apiClient.post('/api/user/phone/send-otp', { phone_number: verifyTarget });
+                                   setVerifyLoading(false);
+                                   setVerifyStep('otp');
+                               } catch (err: any) {
+                                   setVerifyLoading(false);
+                                   setVerifyError(err.response?.data || err.message || 'Failed to send SMS');
+                               }
+                           }
                         }}>
                            {verifyLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Send Code</Text>}
                         </TouchableOpacity>
@@ -829,50 +853,53 @@ export default function DashboardScreen() {
                            if (verifyOtp.length < 6) { setVerifyError('Please enter a valid 6-digit code'); return; }
                            setVerifyLoading(true); setVerifyError('');
                            
-                           // Determine the correct OTP type
-                           // If user already had this target but it was unverified, we used resend(type: signup), so we verify with type: signup
-                           // If user didn't have it and we used updateUser, we verify with type: email_change or phone_change
-                           const isNewTarget = verifyType === 'email' ? user?.email !== verifyTarget : user?.phone !== verifyTarget;
-                           const otpType = verifyType === 'email' 
-                               ? (isNewTarget ? 'email_change' : 'signup') 
-                               : 'phone_change'; // phone uses phone_change for both new and resend usually, but let's try signup fallback
+                           if (verifyType === 'email') {
+                               // Determine the correct OTP type
+                               const isNewTarget = user?.email !== verifyTarget;
+                               const otpType = isNewTarget ? 'email_change' : 'signup';
 
-                           const { error } = await supabase_lucifer_core.auth.verifyOtp({ 
-                               email: verifyType === 'email' ? verifyTarget : undefined, 
-                               phone: verifyType === 'phone' ? verifyTarget : undefined,
-                               token: verifyOtp, 
-                               type: otpType as any 
-                           });
-                           
-                           if (error && otpType !== 'signup') {
-                              // Fallback try signup if it was actually a fresh unverified account
-                              const { error: err2 } = await supabase_lucifer_core.auth.verifyOtp({ 
-                                  email: verifyType === 'email' ? verifyTarget : undefined, 
-                                  phone: verifyType === 'phone' ? verifyTarget : undefined,
-                                  token: verifyOtp, 
-                                  type: 'signup'
-                              });
-                              if (err2) {
-                                 setVerifyLoading(false);
-                                 setVerifyError(err2.message);
-                                 return;
-                              }
-                           } else if (error) {
-                              setVerifyLoading(false);
-                              setVerifyError(error.message);
-                              return;
+                               const { error } = await supabase_lucifer_core.auth.verifyOtp({ 
+                                   email: verifyTarget, 
+                                   token: verifyOtp, 
+                                   type: otpType as any 
+                               });
+                               
+                               if (error && otpType !== 'signup') {
+                                  // Fallback try signup if it was actually a fresh unverified account
+                                  const { error: err2 } = await supabase_lucifer_core.auth.verifyOtp({ 
+                                      email: verifyTarget, 
+                                      token: verifyOtp, 
+                                      type: 'signup'
+                                  });
+                                  if (err2) {
+                                     setVerifyLoading(false);
+                                     setVerifyError(err2.message);
+                                     return;
+                                  }
+                               } else if (error) {
+                                  setVerifyLoading(false);
+                                  setVerifyError(error.message);
+                                  return;
+                               }
+                               
+                               // Redundant sync for email
+                               if (user?.id) {
+                                  await supabase_lucifer_core.from('profiles').update({ is_email_verified: true }).eq('id', user.id);
+                               }
+                           } else {
+                               // Custom Go Twilio SMS Verify
+                               try {
+                                   await apiClient.post('/api/user/phone/verify-otp', { phone_number: verifyTarget, code: verifyOtp });
+                                   // The Go backend automatically syncs `profiles` AND `auth.users` for us!
+                               } catch (err: any) {
+                                   setVerifyLoading(false);
+                                   setVerifyError(err.response?.data || err.message || 'Invalid verification code');
+                                   return;
+                               }
                            }
 
                            // Force refresh the session to get updated confirmed_at
                            await supabase_lucifer_core.auth.getSession();
-                           
-                           // Optional redundant sync
-                           if (user?.id) {
-                              const updatePayload = verifyType === 'email' 
-                                  ? { is_email_verified: true } 
-                                  : { is_phone_verified: true, phone_number: verifyTarget };
-                              await supabase_lucifer_core.from('profiles').update(updatePayload).eq('id', user.id);
-                           }
                            
                            setVerifyLoading(false);
                            setVerifyStep('success');

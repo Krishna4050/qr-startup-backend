@@ -115,6 +115,10 @@ func main(){
 	mux.HandleFunc("GET /api/messages", middleware.RequireAuth(handlers.GetUserMessages))
 	mux.HandleFunc("POST /api/auth/verify-contact", handlers.CheckContactAndTurnstileHandler)
 	
+	// --- NEW: Custom User Phone Verification APIs ---
+	mux.HandleFunc("POST /api/user/phone/send-otp", middleware.RequireAuth(handlers.SendUserPhoneOTP))
+	mux.HandleFunc("POST /api/user/phone/verify-otp", middleware.RequireAuth(handlers.VerifyUserPhoneOTP))
+	
 	// Directory API
 	mux.HandleFunc("GET /api/directory", middleware.RequireAuth(handlers.GetServicesDirectoryHandler))
 	
