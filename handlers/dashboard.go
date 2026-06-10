@@ -78,7 +78,8 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 	// 1. Fetch Profile
 	database.DB.QueryRow(`
 		SELECT COALESCE(p.display_name, ''), COALESCE(p.username, ''), COALESCE(p.avatar_url, ''), COALESCE(p.first_name, ''), COALESCE(p.last_name, ''), 
-		       (u.email_confirmed_at IS NOT NULL), (u.phone_confirmed_at IS NOT NULL)
+		       COALESCE(p.is_email_verified, false) OR (u.email_confirmed_at IS NOT NULL), 
+		       COALESCE(p.is_phone_verified, false) OR (u.phone_confirmed_at IS NOT NULL)
 		FROM public.profiles p
 		JOIN auth.users u ON p.id = u.id
 		WHERE p.id = $1

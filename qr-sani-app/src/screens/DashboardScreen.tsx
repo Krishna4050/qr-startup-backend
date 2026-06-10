@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
-import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle, ShieldAlert, LayoutGrid, Globe, Wrench, Bike, Car, Bed, BusFront, Train, Plane, X } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator, Alert, Image, TextInput } from 'react-native';
+import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle, ShieldAlert, LayoutGrid, Globe, Wrench, Bike, Car, Bed, BusFront, Train, Plane, X, CheckCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
@@ -47,6 +47,12 @@ export default function DashboardScreen() {
   const [showWebPushPrompt, setShowWebPushPrompt] = useState(false);
   const [showConfirmAccount, setShowConfirmAccount] = useState(false);
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
+
+  const [verifyEmailStep, setVerifyEmailStep] = useState<'idle' | 'input' | 'otp' | 'success'>('idle');
+  const [verifyEmailAddress, setVerifyEmailAddress] = useState('');
+  const [verifyEmailOtp, setVerifyEmailOtp] = useState('');
+  const [verifyEmailLoading, setVerifyEmailLoading] = useState(false);
+  const [verifyEmailError, setVerifyEmailError] = useState('');
 
   const totalTags = tags.length;
   const foundItems = tags.filter(t => t.status === 'found' && !t.is_shared).length;
@@ -714,19 +720,111 @@ export default function DashboardScreen() {
       {showConfirmAccount && !showCompleteProfile && (
         <View style={styles.confirmAccountOverlay}>
           <View style={[styles.confirmAccountModal, isMobileWeb && { width: '90%' }]}>
-            <View style={styles.confirmAccountIconBg}>
-               <AlertTriangle color="#F59E0B" size={32} />
-            </View>
-            <Text style={styles.confirmAccountTitle}>Let us know it's really you</Text>
-            <Text style={styles.confirmAccountDesc}>
-              Please verify your {(!profile?.is_email_verified && !profile?.is_phone_verified) ? 'email and phone number' : !profile?.is_email_verified ? 'email' : 'phone number'} to secure your account and unlock all features.
-            </Text>
-            <TouchableOpacity style={styles.primaryButtonBlock} onPress={() => { setShowConfirmAccount(false); navigation.navigate('Settings'); }}>
-              <Text style={styles.primaryButtonText}>Verify Now</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ marginTop: 16 }} onPress={() => setShowConfirmAccount(false)}>
-              <Text style={styles.linkText}>Remind me later</Text>
-            </TouchableOpacity>
+             {verifyEmailStep === 'idle' ? (
+                <>
+                  <View style={styles.confirmAccountIconBg}>
+                     <AlertTriangle color="#F59E0B" size={32} />
+                  </View>
+                  <Text style={styles.confirmAccountTitle}>Let us know it's really you</Text>
+                  <Text style={styles.confirmAccountDesc}>
+                    Please verify your {(!profile?.is_email_verified && !profile?.is_phone_verified) ? 'email and phone number' : !profile?.is_email_verified ? 'email' : 'phone number'} to secure your account and unlock all features.
+                  </Text>
+                  <TouchableOpacity style={styles.primaryButtonBlock} onPress={() => { 
+                      if (!profile?.is_phone_verified) {
+                         setShowConfirmAccount(false);
+                         if (isDesktop) {
+                            navigation.navigate('Profile', { activeTab: 'Contact Details & Emergency' });
+                         } else {
+                            navigation.navigate('ContactManager');
+                         }
+                      } else {
+                         setVerifyEmailStep('input');
+                      }
+                  }}>
+                    <Text style={styles.primaryButtonText}>Verify Now</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ marginTop: 16 }} onPress={() => setShowConfirmAccount(false)}>
+                    <Text style={styles.linkText}>Remind me later</Text>
+                  </TouchableOpacity>
+                </>
+             ) : verifyEmailStep === 'input' ? (
+                <>
+                  <Text style={styles.confirmAccountTitle}>Verify your email</Text>
+                  <Text style={styles.confirmAccountDesc}>Enter your email address below to receive a verification code.</Text>
+                  <TextInput 
+                     style={{ borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, width: '100%', marginBottom: 16 }}
+                     placeholder="Email address"
+                     value={verifyEmailAddress}
+                     onChangeText={setVerifyEmailAddress}
+                     autoCapitalize="none"
+                     keyboardType="email-address"
+                  />
+                  {verifyEmailError ? <Text style={{ color: 'red', marginBottom: 12 }}>{verifyEmailError}</Text> : null}
+                  <TouchableOpacity style={styles.primaryButtonBlock} onPress={async () => {
+                     setVerifyEmailLoading(true); setVerifyEmailError('');
+                     const { error } = await supabase_lucifer_core.auth.updateUser({ email: verifyEmailAddress });
+                     setVerifyEmailLoading(false);
+                     if (error) {
+                        setVerifyEmailError(error.message);
+                     } else {
+                        setVerifyEmailStep('otp');
+                     }
+                  }}>
+                    {verifyEmailLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Send Code</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ marginTop: 16 }} onPress={() => setVerifyEmailStep('idle')}>
+                    <Text style={styles.linkText}>Back</Text>
+                  </TouchableOpacity>
+                </>
+             ) : verifyEmailStep === 'otp' ? (
+                <>
+                  <Text style={styles.confirmAccountTitle}>Enter OTP</Text>
+                  <Text style={styles.confirmAccountDesc}>Enter the 6-digit code sent to {verifyEmailAddress}.</Text>
+                  <TextInput 
+                     style={{ borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, width: '100%', marginBottom: 16, textAlign: 'center', fontSize: 24, letterSpacing: 8 }}
+                     placeholder="000000"
+                     value={verifyEmailOtp}
+                     onChangeText={setVerifyEmailOtp}
+                     keyboardType="number-pad"
+                     maxLength={6}
+                  />
+                  {verifyEmailError ? <Text style={{ color: 'red', marginBottom: 12 }}>{verifyEmailError}</Text> : null}
+                  <TouchableOpacity style={styles.primaryButtonBlock} onPress={async () => {
+                     setVerifyEmailLoading(true); setVerifyEmailError('');
+                     const { data, error } = await supabase_lucifer_core.auth.verifyOtp({ email: verifyEmailAddress, token: verifyEmailOtp, type: 'email_change' });
+                     if (error) {
+                         const { error: err2 } = await supabase_lucifer_core.auth.verifyOtp({ email: verifyEmailAddress, token: verifyEmailOtp, type: 'signup' });
+                         if (err2) {
+                            setVerifyEmailLoading(false);
+                            setVerifyEmailError(err2.message);
+                            return;
+                         }
+                     }
+                     const { data: sessionData } = await supabase_lucifer_core.auth.getSession();
+                     if (sessionData?.session?.user?.id) {
+                         await supabase_lucifer_core.from('profiles').update({ is_email_verified: true }).eq('id', sessionData.session.user.id);
+                     }
+                     setVerifyEmailLoading(false);
+                     setVerifyEmailStep('success');
+                  }}>
+                    {verifyEmailLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Verify</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ marginTop: 16 }} onPress={() => setVerifyEmailStep('input')}>
+                    <Text style={styles.linkText}>Back</Text>
+                  </TouchableOpacity>
+                </>
+             ) : (
+                <>
+                  <View style={styles.confirmAccountIconBg}>
+                     <CheckCircle color="#10B981" size={32} />
+                  </View>
+                  <Text style={styles.confirmAccountTitle}>Success!</Text>
+                  <Text style={styles.confirmAccountDesc}>Email address successfully verified.</Text>
+                  <TouchableOpacity style={styles.primaryButtonBlock} onPress={() => { setShowConfirmAccount(false); setVerifyEmailStep('idle'); fetchDashboardData(); }}>
+                    <Text style={styles.primaryButtonText}>Close</Text>
+                  </TouchableOpacity>
+                </>
+             )}
           </View>
         </View>
       )}
