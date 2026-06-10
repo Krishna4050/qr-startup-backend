@@ -95,9 +95,9 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
   const checkPasswordStrength = (pwd: string) => {
     if (pwd.length < 9) return 'Weak';
-    if (pwd.toLowerCase().includes(firstName.toLowerCase()) && firstName !== '') return 'Weak';
-    if (pwd.toLowerCase().includes(lastName.toLowerCase()) && lastName !== '') return 'Weak';
-    if (pwd.toLowerCase().includes(contact.toLowerCase())) return 'Weak';
+    if (firstName && pwd.toLowerCase().includes(firstName.toLowerCase())) return 'Weak';
+    if (lastName && pwd.toLowerCase().includes(lastName.toLowerCase())) return 'Weak';
+    if (contact && pwd.toLowerCase().includes(contact.toLowerCase())) return 'Weak';
 
     let score = 0;
     if (/[A-Z]/.test(pwd)) score++;
@@ -302,9 +302,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       const checkDelay = setTimeout(async () => {
         setIsCheckingUsername(true);
         try {
-          const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-          const res = await fetch(`${backendUrl}/api/profile/check-username?username=${username.toLowerCase()}`);
-          const data = await res.json();
+          const { data } = await apiClient.get(`/api/profile/check-username?username=${username.toLowerCase().trim()}`);
           setUsernameTaken(data.taken);
           if (data.taken) {
             setUsernameSuggestions([username.toLowerCase() + '123', username.toLowerCase() + '_fi', username.toLowerCase() + new Date().getFullYear()]);
