@@ -814,16 +814,36 @@ export default function DashboardScreen() {
                         ? 'Please verify your email and phone number to secure your account and unlock all features.' 
                         : 'Phone is not verified. Please add and verify your phone number to secure your account and unlock all features.'}
                   </Text>
-                  <TouchableOpacity style={styles.primaryButtonBlock} onPress={() => { 
-                      setShowConfirmAccount(false);
-                      if (isDesktop) {
-                         navigation.navigate('Profile', { activeTab: 'Contact Details & Emergency' });
-                      } else {
-                         navigation.navigate('ContactManager');
-                      }
-                  }}>
-                    <Text style={styles.primaryButtonText}>Verify Now</Text>
-                  </TouchableOpacity>
+                  
+                  {(!profile?.is_email_verified && !profile?.is_phone_verified) ? (
+                      <>
+                        <TouchableOpacity style={[styles.primaryButtonBlock, { marginBottom: 8 }]} onPress={() => setVerifyEmailStep('input')}>
+                          <Text style={styles.primaryButtonText}>Verify Email Now</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.primaryButtonBlock, { backgroundColor: '#F3F4F6' }]} onPress={() => { 
+                            setShowConfirmAccount(false);
+                            if (isDesktop) {
+                               navigation.navigate('Profile', { activeTab: 'Contact Details & Emergency' });
+                            } else {
+                               navigation.navigate('ContactManager');
+                            }
+                        }}>
+                          <Text style={[styles.primaryButtonText, { color: '#0F2D4D' }]}>Verify Phone Now</Text>
+                        </TouchableOpacity>
+                      </>
+                  ) : (
+                      <TouchableOpacity style={styles.primaryButtonBlock} onPress={() => { 
+                          setShowConfirmAccount(false);
+                          if (isDesktop) {
+                             navigation.navigate('Profile', { activeTab: 'Contact Details & Emergency' });
+                          } else {
+                             navigation.navigate('ContactManager');
+                          }
+                      }}>
+                        <Text style={styles.primaryButtonText}>Verify Phone Now</Text>
+                      </TouchableOpacity>
+                  )}
+
                   <TouchableOpacity style={{ marginTop: 16 }} onPress={() => setShowConfirmAccount(false)}>
                     <Text style={styles.linkText}>Remind me later</Text>
                   </TouchableOpacity>
