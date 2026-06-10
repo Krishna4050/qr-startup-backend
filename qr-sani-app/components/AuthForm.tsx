@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Text, View, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, ScrollView, StyleSheet } from 'react-native';
-import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, User, Users, Compass, Camera, Upload, Navigation, MapPin, Sparkles } from 'lucide-react-native';
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, User, Users, Compass, Camera, Upload, Navigation, MapPin, Sparkles, Calendar, AtSign } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
 import { registerForPushNotificationsAsync } from '../src/utils/notifications';
 import { useNavigation } from '@react-navigation/native';
@@ -624,12 +624,26 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
           <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
             <Text style={styles.title}>Tell us about Yourself</Text>
-            <Text style={styles.subtitle}>Legal name</Text>
+            <Text style={styles.subtitle}>Let's get to know you better</Text>
             
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="First name" value={firstName} onChangeText={setFirstName} /></View>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Middle name (optional)" value={middleName} onChangeText={setMiddleName} /></View>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Last name" value={lastName} onChangeText={setLastName} /></View>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Preferred name (optional)" value={preferredName} onChangeText={setPreferredName} /></View>
+            <View style={[styles.inputWrapper, error && !firstName ? styles.inputError : null]}>
+              <User color="#6B7280" size={20} style={styles.inputIcon} />
+              <TextInput style={styles.input} placeholder="First name" placeholderTextColor="#9CA3AF" value={firstName} onChangeText={(t) => {setFirstName(t); setError('');}} />
+            </View>
+            <View style={styles.inputWrapper}>
+              <User color="#6B7280" size={20} style={styles.inputIcon} />
+              <TextInput style={styles.input} placeholder="Middle name (optional)" placeholderTextColor="#9CA3AF" value={middleName} onChangeText={setMiddleName} />
+            </View>
+            <View style={[styles.inputWrapper, error && !lastName ? styles.inputError : null]}>
+              <User color="#6B7280" size={20} style={styles.inputIcon} />
+              <TextInput style={styles.input} placeholder="Last name" placeholderTextColor="#9CA3AF" value={lastName} onChangeText={(t) => {setLastName(t); setError('');}} />
+            </View>
+            <View style={styles.inputWrapper}>
+              <User color="#6B7280" size={20} style={styles.inputIcon} />
+              <TextInput style={styles.input} placeholder="Preferred name (optional)" placeholderTextColor="#9CA3AF" value={preferredName} onChangeText={setPreferredName} />
+            </View>
+
+            {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
 
             <View style={[styles.actionRow, { marginTop: 40 }]}>
               <TouchableOpacity onPress={() => setStep('signup_otp')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
@@ -646,11 +660,12 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     if (step === 'signup_dob') {
       return (
         <View style={styles.stepContainer}>
-          <Text style={styles.title}>How old are you?</Text>
-          <Text style={styles.subtitle}>Date of birth</Text>
+          <Text style={styles.title}>When were you born?</Text>
+          <Text style={styles.subtitle}>You must be at least 18 years old.</Text>
           
-          <View style={[styles.inputWrapper, { marginTop: 24 }]}>
-            <TextInput style={[styles.input, { letterSpacing: 4, fontSize: 24, textAlign: 'center' }]} placeholder="YYYY-MM-DD" placeholderTextColor="#9CA3AF" keyboardType="number-pad" maxLength={10} value={dob} onChangeText={handleDobChange} autoFocus />
+          <View style={[styles.inputWrapper, { marginTop: 24, paddingLeft: 24 }]}>
+            <Calendar color="#6B7280" size={24} style={[styles.inputIcon, { marginRight: 16 }]} />
+            <TextInput style={[styles.input, { letterSpacing: 4, fontSize: 24 }]} placeholder="YYYY-MM-DD" placeholderTextColor="#D1D5DB" keyboardType="number-pad" maxLength={10} value={dob} onChangeText={handleDobChange} autoFocus />
           </View>
 
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
@@ -734,11 +749,11 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
             <Text style={styles.title}>Confirm your location</Text>
             
-            <View style={[styles.inputWrapper, { marginTop: 16 }]}><TextInput style={styles.input} placeholder="Country" value={country} onChangeText={setCountry} /></View>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="State" value={stateName} onChangeText={setStateName} /></View>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="City" value={city} onChangeText={setCity} /></View>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Street" value={street} onChangeText={setStreet} /></View>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Zip Code" value={zipCode} onChangeText={setZipCode} /></View>
+            <View style={[styles.inputWrapper, { marginTop: 16 }]}><MapPin color="#9CA3AF" size={20} style={styles.inputIcon} /><TextInput style={styles.input} placeholder="Country" placeholderTextColor="#9CA3AF" value={country} onChangeText={setCountry} /></View>
+            <View style={styles.inputWrapper}><MapPin color="#9CA3AF" size={20} style={styles.inputIcon} /><TextInput style={styles.input} placeholder="State" placeholderTextColor="#9CA3AF" value={stateName} onChangeText={setStateName} /></View>
+            <View style={styles.inputWrapper}><MapPin color="#9CA3AF" size={20} style={styles.inputIcon} /><TextInput style={styles.input} placeholder="City" placeholderTextColor="#9CA3AF" value={city} onChangeText={setCity} /></View>
+            <View style={styles.inputWrapper}><Navigation color="#9CA3AF" size={20} style={styles.inputIcon} /><TextInput style={styles.input} placeholder="Street" placeholderTextColor="#9CA3AF" value={street} onChangeText={setStreet} /></View>
+            <View style={styles.inputWrapper}><Navigation color="#9CA3AF" size={20} style={styles.inputIcon} /><TextInput style={styles.input} placeholder="Zip Code" placeholderTextColor="#9CA3AF" value={zipCode} onChangeText={setZipCode} /></View>
 
             {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
 
@@ -774,10 +789,11 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
                </TouchableOpacity>
             </View>
 
-            <Text style={[styles.subtitle, { textAlign: 'left', marginBottom: 8, fontWeight: 'bold' }]}>Account Info</Text>
+            <Text style={[styles.subtitle, { textAlign: 'left', marginBottom: 12, fontWeight: 'bold' }]}>Account Credentials</Text>
             
             <View style={styles.inputWrapper}>
-              <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} autoCapitalize="none" />
+              <AtSign color="#6B7280" size={20} style={styles.inputIcon} />
+              <TextInput style={styles.input} placeholder="Username" placeholderTextColor="#9CA3AF" value={username} onChangeText={(t) => {setUsername(t); setError('');}} autoCapitalize="none" />
               {isCheckingUsername ? <ActivityIndicator size="small" color="#0A66C2" /> : (username.length > 2 && !usernameTaken ? <CheckCircle color="#059669" size={20} /> : null)}
             </View>
             
@@ -795,19 +811,21 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             )}
 
             <View style={styles.inputWrapper}>
-              <TextInput style={styles.input} placeholder="Password" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
+              <Lock color="#6B7280" size={20} style={styles.inputIcon} />
+              <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#9CA3AF" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
-                {showPassword ? <EyeOff color="#4B5563" size={20} /> : <Eye color="#4B5563" size={20} />}
+                {showPassword ? <EyeOff color="#9CA3AF" size={20} /> : <Eye color="#9CA3AF" size={20} />}
               </TouchableOpacity>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: -4, marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: -8, marginBottom: 16, paddingLeft: 12 }}>
                <Text style={{ fontSize: 12, color: passwordStrength === 'Strong' ? '#059669' : passwordStrength === 'Medium' ? '#D97706' : '#DC2626' }}>
                  Strength: {passwordStrength || 'Weak'}
                </Text>
             </View>
 
             <View style={styles.inputWrapper}>
-              <TextInput style={styles.input} placeholder="Confirm Password" secureTextEntry={!showPassword} value={confirmPassword} onChangeText={setConfirmPassword} />
+              <Lock color="#6B7280" size={20} style={styles.inputIcon} />
+              <TextInput style={styles.input} placeholder="Confirm Password" placeholderTextColor="#9CA3AF" secureTextEntry={!showPassword} value={confirmPassword} onChangeText={setConfirmPassword} />
             </View>
 
             <Text style={[styles.subtitle, { textAlign: 'left', marginBottom: 8, marginTop: 16, fontWeight: 'bold' }]}>Let your personality shine through.</Text>
@@ -909,14 +927,14 @@ const styles = StyleSheet.create({
   innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 24, width: '100%', maxWidth: 448, maxHeight: '100%', flexShrink: 1, paddingHorizontal: 40, paddingTop: 48, paddingBottom: 36, shadowColor: '#0A66C2', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.08, shadowRadius: 32, elevation: 4, display: 'flex', flexDirection: 'column' },
   stepContainer: { width: '100%', flexShrink: 1 },
-  title: { fontSize: 24, fontWeight: '400', color: '#202124', marginBottom: 8, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
-  subtitle: { fontSize: 16, color: '#202124', marginBottom: 40, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
-  helperText: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 12, height: 48, marginBottom: 12, backgroundColor: '#FFFFFF' },
-  inputError: { borderColor: '#DC2626', backgroundColor: '#FEF2F2' },
-  inputIcon: { marginRight: 8 },
+  title: { fontSize: 28, fontWeight: '700', color: '#111827', marginBottom: 8, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
+  subtitle: { fontSize: 16, color: '#6B7280', marginBottom: 32, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
+  helperText: { fontSize: 13, color: '#9CA3AF', marginBottom: 16 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 16, backgroundColor: '#F9FAFB' },
+  inputError: { borderColor: '#EF4444', backgroundColor: '#FEF2F2', borderWidth: 1.5 },
+  inputIcon: { marginRight: 12 },
   input: { flex: 1, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any,
-  inlineErrorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  inlineErrorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, marginBottom: 8 },
   inlineErrorText: { color: '#DC2626', fontSize: 12, marginLeft: 6 },
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 32 },
   linkText: { color: '#0A66C2', fontSize: 14, fontWeight: '600' },
