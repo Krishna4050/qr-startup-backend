@@ -6,7 +6,7 @@ import { registerForPushNotificationsAsync } from '../src/utils/notifications';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
-import apiClient from '../src/api/apiClient';
+import apiClient from '../src/utils/apiClient';
 
 // Dynamically import Turnstile so it doesn't break React Native iOS/Android builds
 let Turnstile: any = null;
@@ -77,7 +77,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
   }, [contact]);
 
   useEffect(() => {
-    if (initialStep === 'signup_details') {
+    if (initialStep === 'signup_name') {
       supabase_lucifer_core.auth.getUser().then(({ data }) => {
         if (data.user) {
           if (data.user.email) {
