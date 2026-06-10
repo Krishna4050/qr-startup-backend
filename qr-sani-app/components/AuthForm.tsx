@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Text, View, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, ScrollView, StyleSheet } from 'react-native';
-import { Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react-native';
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, User, Users, Compass, Camera, Upload, Navigation, MapPin, Sparkles } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
 import { registerForPushNotificationsAsync } from '../src/utils/notifications';
 import { useNavigation } from '@react-navigation/native';
+import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
+import apiClient from '../src/api/apiClient';
 
 // Dynamically import Turnstile so it doesn't break React Native iOS/Android builds
 let Turnstile: any = null;
@@ -16,13 +19,13 @@ if (Platform.OS === 'web') {
 }
 
 type AuthFormProps = {
-  initialStep?: 'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_details' | 'signup_terms';
+  initialStep?: 'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_name' | 'signup_dob' | 'signup_gender' | 'signup_location' | 'signup_profile' | 'signup_terms';
   onSuccess?: () => void;
 };
 
 export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFormProps) {
   const navigation = useNavigation<any>();
-  const [step, setStep] = useState<'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_details' | 'signup_terms'>(initialStep);
+  const [step, setStep] = useState<'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_name' | 'signup_dob' | 'signup_gender' | 'signup_location' | 'signup_profile' | 'signup_terms'>(initialStep);
   
   // States
   const [contact, setContact] = useState(''); // Email or Phone
@@ -41,10 +44,23 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
   const [preferredName, setPreferredName] = useState('');
   const [dob, setDob] = useState('');
   const [country, setCountry] = useState('Finland');
+  const [stateName, setStateName] = useState('');
   const [city, setCity] = useState('');
   const [street, setStreet] = useState('');
   const [houseNumber, setHouseNumber] = useState('');
+  const [zipCode, setZipCode] = useState('');
+  const [manualLocation, setManualLocation] = useState(false);
+  
+  const [gender, setGender] = useState('');
+  const [customGender, setCustomGender] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [bio, setBio] = useState('');
+  
   const [username, setUsername] = useState('');
+  const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameTaken, setUsernameTaken] = useState(false);
+  
   const [confirmPassword, setConfirmPassword] = useState('');
   const [promotionsOptOut, setPromotionsOptOut] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState('');
@@ -192,7 +208,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
       if (verifyErr) throw verifyErr;
       if (data.user) {
         // OTP Verified, User created & session active!
-        setStep('signup_details');
+        setStep('signup_name');
       }
     } catch (err: any) {
       setError(err.message || 'Invalid code.');
@@ -200,13 +216,17 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
     setLoading(false);
   };
 
-  const handleDetailsSubmit = async () => {
-    if (!firstName || !lastName || !dob || !city || !street || !username) {
+  const handleFinalizeProfile = async () => {
+    if (!firstName || !lastName || !dob || !username) {
       setError('Please fill in all required fields.');
       return;
     }
+    if (usernameTaken) {
+      setError('Please choose an available username.');
+      return;
+    }
     if (passwordStrength === 'Weak' || password.length < 9) {
-      setError('Password is too weak. Must be at least 9 characters and cannot contain your name/email.');
+      setError('Password is too weak. Must be at least 9 characters.');
       return;
     }
     if (password !== confirmPassword) {
@@ -217,19 +237,133 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
     setLoading(true);
     setError('');
 
-    // Check username
-    const { data: isAvailable } = await supabase_lucifer_core.rpc('check_username_available', {
-      requested_username: username.toLowerCase()
-    });
+    try {
+      // 1. Upload Avatar if present and not a remote URL
+      let uploadedAvatarUrl = avatarUrl;
+      if (avatarUrl && !avatarUrl.startsWith('http')) {
+        const formData = new FormData();
+        formData.append('file', {
+          uri: avatarUrl,
+          name: 'avatar.jpg',
+          type: 'image/jpeg',
+        } as any);
+        const uploadRes = await apiClient.post('/api/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        uploadedAvatarUrl = uploadRes.data.url;
+      }
 
-    if (!isAvailable) {
-      setError('This username is already taken.');
-      setLoading(false);
-      return;
+      // 2. Submit Profile
+      await apiClient.post('/api/profile', {
+        first_name: firstName,
+        middle_name: middleName,
+        last_name: lastName,
+        preferred_name: preferredName,
+        date_of_birth: dob,
+        gender: customGender ? customGender : gender,
+        country,
+        state: stateName,
+        city,
+        street,
+        zip_code: zipCode,
+        house_number: houseNumber,
+        bio,
+        username: username.toLowerCase(),
+        avatar_url: uploadedAvatarUrl,
+      });
+
+      // 3. Update Auth User Password
+      const { error: pwdErr } = await supabase_lucifer_core.auth.updateUser({ password });
+      if (pwdErr) throw pwdErr;
+
+      setStep('signup_terms');
+    } catch (e: any) {
+      setError(e.response?.data?.error || e.message || 'Failed to save profile');
     }
-
-    setStep('signup_terms');
     setLoading(false);
+  };
+
+  const handleDobChange = (text: string) => {
+    const cleaned = text.replace(/\D/g, '');
+    let formatted = cleaned;
+    if (cleaned.length > 4) {
+      formatted = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+    }
+    if (cleaned.length > 6) {
+      formatted = formatted.slice(0, 7) + '-' + cleaned.slice(6, 8);
+    }
+    setDob(formatted);
+    setError('');
+  };
+
+  useEffect(() => {
+    if (username.length > 2) {
+      const checkDelay = setTimeout(async () => {
+        setIsCheckingUsername(true);
+        try {
+          const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+          const res = await fetch(`${backendUrl}/api/profile/check-username?username=${username.toLowerCase()}`);
+          const data = await res.json();
+          setUsernameTaken(data.taken);
+          if (data.taken) {
+            setUsernameSuggestions([username.toLowerCase() + '123', username.toLowerCase() + '_fi', username.toLowerCase() + new Date().getFullYear()]);
+          } else {
+            setUsernameSuggestions([]);
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsCheckingUsername(false);
+        }
+      }, 500);
+      return () => clearTimeout(checkDelay);
+    } else {
+      setUsernameTaken(false);
+      setUsernameSuggestions([]);
+    }
+  }, [username]);
+
+  const handleLocationToggle = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setError('Permission to access location was denied. Please enter manually.');
+        setManualLocation(true);
+        setLoading(false);
+        return;
+      }
+      let location = await Location.getCurrentPositionAsync({});
+      let geocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude
+      });
+      if (geocode && geocode.length > 0) {
+        setCountry(geocode[0].country || 'Finland');
+        setStateName(geocode[0].region || '');
+        setCity(geocode[0].city || '');
+        setStreet(geocode[0].street || '');
+        setZipCode(geocode[0].postalCode || '');
+      }
+      setStep('signup_profile');
+    } catch (e: any) {
+      setError('Location detection failed. Please enter manually.');
+      setManualLocation(true);
+    }
+    setLoading(false);
+  };
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setAvatarUrl(result.assets[0].uri);
+    }
   };
 
   const handleTermsSubmit = async () => {
@@ -484,43 +618,188 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
       );
     }
 
-    if (step === 'signup_details') {
+    if (step === 'signup_name') {
       return (
-        <ScrollView 
-          style={{ flexShrink: 1, width: '100%' }} 
-          contentContainerStyle={{ flexGrow: 1 }} 
-          showsVerticalScrollIndicator={true}
-        >
+        <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
           <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
-            <Text style={styles.title}>Finish signing up</Text>
+            <Text style={styles.title}>Tell us about Yourself</Text>
             <Text style={styles.subtitle}>Legal name</Text>
-            <Text style={styles.helperText}>Make sure it matches the name on your government ID.</Text>
-
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="First name on ID" value={firstName} onChangeText={setFirstName} /></View>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Middle name (optional)" value={middleName} onChangeText={setMiddleName} /></View>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Last name on ID" value={lastName} onChangeText={setLastName} /></View>
             
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Preferred first name (optional)" value={preferredName} onChangeText={setPreferredName} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="First name" value={firstName} onChangeText={setFirstName} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Middle name (optional)" value={middleName} onChangeText={setMiddleName} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Last name" value={lastName} onChangeText={setLastName} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Preferred name (optional)" value={preferredName} onChangeText={setPreferredName} /></View>
 
-            <Text style={[styles.subtitle, { marginTop: 24 }]}>Date of birth</Text>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="YYYY-MM-DD" value={dob} onChangeText={setDob} /></View>
+            <View style={[styles.actionRow, { marginTop: 40 }]}>
+              <TouchableOpacity onPress={() => setStep('signup_otp')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.primaryButton} onPress={() => {
+                 if (!firstName || !lastName) setError('First and Last name are required');
+                 else { setError(''); setStep('signup_dob'); }
+              }}><Text style={styles.primaryButtonText}>Next</Text></TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      );
+    }
 
-            <Text style={[styles.subtitle, { marginTop: 24 }]}>Address</Text>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Country" value={country} onChangeText={setCountry} /></View>
+    if (step === 'signup_dob') {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>How old are you?</Text>
+          <Text style={styles.subtitle}>Date of birth</Text>
+          
+          <View style={[styles.inputWrapper, { marginTop: 24 }]}>
+            <TextInput style={[styles.input, { letterSpacing: 4, fontSize: 24, textAlign: 'center' }]} placeholder="YYYY-MM-DD" placeholderTextColor="#9CA3AF" keyboardType="number-pad" maxLength={10} value={dob} onChangeText={handleDobChange} autoFocus />
+          </View>
+
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+
+          <View style={[styles.actionRow, { marginTop: 40 }]}>
+            <TouchableOpacity onPress={() => setStep('signup_name')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => {
+               if (dob.length < 10) setError('Please enter a valid date (YYYY-MM-DD)');
+               else { setError(''); setStep('signup_gender'); }
+            }}><Text style={styles.primaryButtonText}>Next</Text></TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    if (step === 'signup_gender') {
+      return (
+        <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+          <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
+            <Text style={styles.title}>Which gender best describes you?</Text>
+            <Text style={styles.subtitle}>This helps us personalize your experience.</Text>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
+              <TouchableOpacity style={[styles.genderCard, gender === 'Male' && styles.genderCardSelected]} onPress={() => setGender('Male')}>
+                 <User color={gender === 'Male' ? '#0A66C2' : '#6B7280'} size={32} />
+                 <Text style={[styles.genderText, gender === 'Male' && styles.genderTextSelected]}>Male</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.genderCard, gender === 'Female' && styles.genderCardSelected]} onPress={() => setGender('Female')}>
+                 <User color={gender === 'Female' ? '#0A66C2' : '#6B7280'} size={32} />
+                 <Text style={[styles.genderText, gender === 'Female' && styles.genderTextSelected]}>Female</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.genderCard, gender === 'Other' && styles.genderCardSelected]} onPress={() => setGender('Other')}>
+                 <Sparkles color={gender === 'Other' ? '#0A66C2' : '#6B7280'} size={32} />
+                 <Text style={[styles.genderText, gender === 'Other' && styles.genderTextSelected]}>Other</Text>
+              </TouchableOpacity>
+            </View>
+
+            {gender === 'Other' && (
+              <View style={[styles.inputWrapper, { marginTop: 24 }]}>
+                <TextInput style={styles.input} placeholder="Specify your gender (optional)" value={customGender} onChangeText={setCustomGender} />
+              </View>
+            )}
+
+            <View style={[styles.actionRow, { marginTop: 40 }]}>
+              <TouchableOpacity onPress={() => setStep('signup_dob')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.primaryButton} onPress={() => {
+                 if (!gender) setGender('Other'); // Default to other if blank
+                 setStep('signup_location');
+              }}><Text style={styles.primaryButtonText}>Next</Text></TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    if (step === 'signup_location') {
+      if (!manualLocation) {
+        return (
+          <View style={[styles.stepContainer, { alignItems: 'center' }]}>
+             <MapPin color="#0A66C2" size={64} style={{ marginBottom: 24, opacity: 0.8 }} />
+             <Text style={styles.title}>Enable your location</Text>
+             <Text style={styles.subtitle}>You'll need to enable your location in order to find the best local features.</Text>
+
+             <TouchableOpacity style={[styles.primaryButton, { width: '100%', paddingVertical: 16, marginTop: 40, borderRadius: 32 }]} onPress={handleLocationToggle} disabled={loading}>
+               {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[styles.primaryButtonText, { fontSize: 16 }]}>Enable location</Text>}
+             </TouchableOpacity>
+
+             <TouchableOpacity style={{ marginTop: 24 }} onPress={() => setManualLocation(true)}>
+                <Text style={[styles.linkText, { color: '#6B7280' }]}>Enter location manually?</Text>
+             </TouchableOpacity>
+
+             <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0 }} onPress={() => setStep('signup_gender')}>
+               <Text style={styles.linkText}>Back</Text>
+             </TouchableOpacity>
+          </View>
+        );
+      }
+
+      return (
+        <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+          <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
+            <Text style={styles.title}>Confirm your location</Text>
+            
+            <View style={[styles.inputWrapper, { marginTop: 16 }]}><TextInput style={styles.input} placeholder="Country" value={country} onChangeText={setCountry} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="State" value={stateName} onChangeText={setStateName} /></View>
             <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="City" value={city} onChangeText={setCity} /></View>
             <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Street" value={street} onChangeText={setStreet} /></View>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="House Number" value={houseNumber} onChangeText={setHouseNumber} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Zip Code" value={zipCode} onChangeText={setZipCode} /></View>
 
-            <Text style={[styles.subtitle, { marginTop: 24 }]}>Account Info</Text>
-            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Username (no spaces/special chars)" value={username} onChangeText={setUsername} autoCapitalize="none" /></View>
+            {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+
+            <View style={[styles.actionRow, { marginTop: 40 }]}>
+              <TouchableOpacity onPress={() => setManualLocation(false)}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.primaryButton} onPress={() => {
+                 if (!country || !city) setError('Country and City are required');
+                 else { setError(''); setStep('signup_profile'); }
+              }}><Text style={styles.primaryButtonText}>Next</Text></TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    if (step === 'signup_profile') {
+      return (
+        <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+          <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
+            <Text style={styles.title}>Upload Profile</Text>
+            <Text style={styles.subtitle}>Personalize your profile with a photo and a brief bio.</Text>
+
+            <View style={{ alignItems: 'center', marginBottom: 24 }}>
+               <TouchableOpacity style={styles.avatarUploadBlock} onPress={pickImage}>
+                 {avatarUrl ? (
+                   <img src={avatarUrl} style={{ width: 120, height: 120, borderRadius: 60, objectFit: 'cover' }} />
+                 ) : (
+                   <View style={styles.avatarPlaceholder}>
+                     <Camera color="#6B7280" size={32} />
+                     <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 8 }}>Upload picture</Text>
+                   </View>
+                 )}
+               </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.subtitle, { textAlign: 'left', marginBottom: 8, fontWeight: 'bold' }]}>Account Info</Text>
             
+            <View style={styles.inputWrapper}>
+              <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} autoCapitalize="none" />
+              {isCheckingUsername ? <ActivityIndicator size="small" color="#0A66C2" /> : (username.length > 2 && !usernameTaken ? <CheckCircle color="#059669" size={20} /> : null)}
+            </View>
+            
+            {usernameTaken && (
+              <View style={{ marginBottom: 16 }}>
+                 <Text style={{ color: '#DC2626', fontSize: 12, marginBottom: 8 }}>Username is taken. Try these:</Text>
+                 <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                   {usernameSuggestions.map(sug => (
+                      <TouchableOpacity key={sug} style={styles.suggestionChip} onPress={() => setUsername(sug)}>
+                        <Text style={{ color: '#0A66C2', fontSize: 12 }}>{sug}</Text>
+                      </TouchableOpacity>
+                   ))}
+                 </View>
+              </View>
+            )}
+
             <View style={styles.inputWrapper}>
               <TextInput style={styles.input} placeholder="Password" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
                 {showPassword ? <EyeOff color="#4B5563" size={20} /> : <Eye color="#4B5563" size={20} />}
               </TouchableOpacity>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: -4, marginBottom: 12 }}>
                <Text style={{ fontSize: 12, color: passwordStrength === 'Strong' ? '#059669' : passwordStrength === 'Medium' ? '#D97706' : '#DC2626' }}>
                  Strength: {passwordStrength || 'Weak'}
                </Text>
@@ -530,16 +809,20 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
               <TextInput style={styles.input} placeholder="Confirm Password" secureTextEntry={!showPassword} value={confirmPassword} onChangeText={setConfirmPassword} />
             </View>
 
-            {error ? (
-              <View style={styles.inlineErrorRow}>
-                 <AlertCircle color="#DC2626" size={14} />
-                 <Text style={styles.inlineErrorText}>{error}</Text>
-              </View>
-            ) : null}
+            <Text style={[styles.subtitle, { textAlign: 'left', marginBottom: 8, marginTop: 16, fontWeight: 'bold' }]}>Let your personality shine through.</Text>
+            <View style={[styles.inputWrapper, { height: 100, alignItems: 'flex-start', paddingTop: 12 }]}>
+              <TextInput style={[styles.input, { height: '100%', outlineStyle: 'none' } as any]} placeholder="Tell us about yourself" multiline value={bio} onChangeText={setBio} maxLength={500} />
+            </View>
+            <Text style={{ alignSelf: 'flex-end', fontSize: 12, color: '#9CA3AF', marginTop: -8 }}>{bio.length}/500</Text>
 
-            <TouchableOpacity style={[styles.primaryButton, { width: '100%', marginTop: 24 }]} onPress={handleDetailsSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Continue</Text>}
-            </TouchableOpacity>
+            {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+
+            <View style={[styles.actionRow, { marginTop: 40 }]}>
+              <TouchableOpacity onPress={() => setStep('signup_location')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.primaryButton} onPress={handleFinalizeProfile} disabled={loading || isCheckingUsername}>
+                 {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Continue</Text>}
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       );
@@ -573,7 +856,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
           ) : null}
 
           <View style={[styles.actionRow, { marginTop: 40 }]}>
-            <TouchableOpacity onPress={() => setStep('signup_details')}>
+            <TouchableOpacity onPress={() => setStep('signup_profile')}>
               <Text style={styles.linkText}>Back</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.primaryButton} onPress={handleTermsSubmit} disabled={loading}>
@@ -636,5 +919,12 @@ const styles = StyleSheet.create({
   socialButtonText: { color: '#374151', fontSize: 14, fontWeight: '600' },
   disclaimerText: { fontSize: 12, color: '#6B7280', lineHeight: 18 },
   checkbox: { width: 20, height: 20, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
-  checkboxChecked: { backgroundColor: '#0F2D4D', borderColor: '#0F2D4D' }
+  checkboxChecked: { backgroundColor: '#0F2D4D', borderColor: '#0F2D4D' },
+  genderCard: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 12, paddingVertical: 24, marginHorizontal: 4, backgroundColor: '#FFFFFF' },
+  genderCardSelected: { borderColor: '#0A66C2', backgroundColor: '#F0F9FF' },
+  genderText: { marginTop: 8, fontSize: 14, color: '#6B7280', fontWeight: '500' },
+  genderTextSelected: { color: '#0A66C2', fontWeight: '600' },
+  avatarUploadBlock: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#E5E7EB', borderStyle: 'dashed' },
+  avatarPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  suggestionChip: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#E0F2FE', borderRadius: 16, marginRight: 8, marginBottom: 8 }
 });

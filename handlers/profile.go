@@ -21,6 +21,8 @@ type ProfileData struct {
 	City          *string `json:"city"`
 	Street        *string `json:"street"`
 	HouseNumber   *string `json:"house_number"`
+	State         *string `json:"state"`
+	ZipCode       *string `json:"zip_code"`
 	Bio           *string `json:"bio"`
 }
 
@@ -40,12 +42,12 @@ func GetProfile(w http.ResponseWriter, r *http.Request) {
 	p.ID = userID
 
 	err := database.DB.QueryRow(`
-		SELECT first_name, last_name, username, gender, date_of_birth, avatar_url, phone_number, country, city, street, house_number, bio
+		SELECT first_name, last_name, username, gender, date_of_birth, avatar_url, phone_number, country, city, street, house_number, state, zip_code, bio
 		FROM public.profiles
 		WHERE id = $1
 	`, userID).Scan(
 		&p.FirstName, &p.LastName, &p.Username, &p.Gender, &p.DateOfBirth, &p.AvatarURL,
-		&p.PhoneNumber, &p.Country, &p.City, &p.Street, &p.HouseNumber, &p.Bio,
+		&p.PhoneNumber, &p.Country, &p.City, &p.Street, &p.HouseNumber, &p.State, &p.ZipCode, &p.Bio,
 	)
 
 	if err != nil {
@@ -83,8 +85,8 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Update existing profile or insert if it doesn't exist (UPSERT)
 	query := `
-		INSERT INTO public.profiles (id, first_name, last_name, username, gender, date_of_birth, avatar_url, phone_number, country, city, street, house_number, bio)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO public.profiles (id, first_name, last_name, username, gender, date_of_birth, avatar_url, phone_number, country, city, street, house_number, state, zip_code, bio)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		ON CONFLICT (id) DO UPDATE SET
 			first_name = EXCLUDED.first_name,
 			last_name = EXCLUDED.last_name,
@@ -97,13 +99,15 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 			city = EXCLUDED.city,
 			street = EXCLUDED.street,
 			house_number = EXCLUDED.house_number,
+			state = EXCLUDED.state,
+			zip_code = EXCLUDED.zip_code,
 			bio = EXCLUDED.bio,
 			updated_at = NOW();
 	`
 
 	_, err := database.DB.Exec(query,
 		userID, req.FirstName, req.LastName, req.Username, req.Gender, req.DateOfBirth, req.AvatarURL,
-		req.PhoneNumber, req.Country, req.City, req.Street, req.HouseNumber, req.Bio,
+		req.PhoneNumber, req.Country, req.City, req.Street, req.HouseNumber, req.State, req.ZipCode, req.Bio,
 	)
 
 	if err != nil {
