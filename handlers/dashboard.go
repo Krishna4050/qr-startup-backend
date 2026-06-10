@@ -13,8 +13,10 @@ type DashboardProfile struct {
 	DisplayName string `json:"display_name"`
 	Username    string `json:"username"`
 	AvatarURL   string `json:"avatar_url"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	IsEmailVerified bool   `json:"is_email_verified"`
+	IsPhoneVerified bool   `json:"is_phone_verified"`
 }
 
 type DashboardTag struct {
@@ -75,9 +77,9 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Fetch Profile
 	database.DB.QueryRow(`
-		SELECT COALESCE(display_name, ''), COALESCE(username, ''), COALESCE(avatar_url, ''), COALESCE(first_name, ''), COALESCE(last_name, '')
+		SELECT COALESCE(display_name, ''), COALESCE(username, ''), COALESCE(avatar_url, ''), COALESCE(first_name, ''), COALESCE(last_name, ''), COALESCE(is_email_verified, false), COALESCE(is_phone_verified, false)
 		FROM public.profiles WHERE id = $1
-	`, userID).Scan(&response.Profile.DisplayName, &response.Profile.Username, &response.Profile.AvatarURL, &response.Profile.FirstName, &response.Profile.LastName)
+	`, userID).Scan(&response.Profile.DisplayName, &response.Profile.Username, &response.Profile.AvatarURL, &response.Profile.FirstName, &response.Profile.LastName, &response.Profile.IsEmailVerified, &response.Profile.IsPhoneVerified)
 
 	// 2. Fetch My Tags
 	rows, err := database.DB.Query(`

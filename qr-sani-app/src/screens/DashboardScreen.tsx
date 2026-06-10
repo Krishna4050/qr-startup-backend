@@ -11,6 +11,7 @@ import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+import AuthForm from '../../components/AuthForm';
 import { messaging } from '../utils/firebase';
 import { getToken } from 'firebase/messaging';
 import { useResponsive } from '../hooks/useResponsive';
@@ -45,6 +46,7 @@ export default function DashboardScreen() {
 
   const [showWebPushPrompt, setShowWebPushPrompt] = useState(false);
   const [showConfirmAccount, setShowConfirmAccount] = useState(false);
+  const [showCompleteProfile, setShowCompleteProfile] = useState(false);
 
   const totalTags = tags.length;
   const foundItems = tags.filter(t => t.status === 'found' && !t.is_shared).length;
@@ -184,9 +186,14 @@ export default function DashboardScreen() {
 
       setProfile(data.profile || { display_name: user.user_metadata?.username });
       
-      // Check if email or phone verification is missing
-      if (data.profile && (!data.profile.is_email_verified || !data.profile.is_phone_verified)) {
-        setShowConfirmAccount(true);
+      if (data.profile) {
+        if (!data.profile.first_name || !data.profile.username) {
+          // User verified OTP but hasn't completed their profile details yet
+          setShowCompleteProfile(true);
+        } else if (!data.profile.is_email_verified || !data.profile.is_phone_verified) {
+          // User completed profile but missing one contact verification
+          setShowConfirmAccount(true);
+        }
       }
 
       setTags([...(data.my_visible_tags || []), ...(data.shared_visible_tags || [])]);
@@ -682,7 +689,29 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {showConfirmAccount && (
+      {showCompleteProfile && (
+        <View style={styles.confirmAccountOverlay}>
+          <View style={[styles.confirmAccountModal, { width: 500, padding: 0, overflow: 'hidden' }, isMobileWeb && { width: '95%' }]}>
+            <View style={{ width: '100%', padding: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+               <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827' }}>Complete Your Profile</Text>
+               <TouchableOpacity onPress={() => setShowCompleteProfile(false)}>
+                  <X color="#6B7280" size={24} />
+               </TouchableOpacity>
+            </View>
+            <View style={{ width: '100%', height: 600 }}>
+              <AuthForm 
+                initialStep="signup_details" 
+                onSuccess={() => {
+                   setShowCompleteProfile(false);
+                   fetchDashboardData();
+                }} 
+              />
+            </View>
+          </View>
+        </View>
+      )}
+
+      {showConfirmAccount && !showCompleteProfile && (
         <View style={styles.confirmAccountOverlay}>
           <View style={[styles.confirmAccountModal, isMobileWeb && { width: '90%' }]}>
             <View style={styles.confirmAccountIconBg}>

@@ -15,9 +15,14 @@ if (Platform.OS === 'web') {
   }
 }
 
-export default function AuthForm() {
+type AuthFormProps = {
+  initialStep?: 'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_details' | 'signup_terms';
+  onSuccess?: () => void;
+};
+
+export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFormProps) {
   const navigation = useNavigation<any>();
-  const [step, setStep] = useState<'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_details' | 'signup_terms'>('contact');
+  const [step, setStep] = useState<'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_details' | 'signup_terms'>(initialStep);
   
   // States
   const [contact, setContact] = useState(''); // Email or Phone
@@ -54,6 +59,22 @@ export default function AuthForm() {
       setIsPhone(false);
     }
   }, [contact]);
+
+  useEffect(() => {
+    if (initialStep === 'signup_details') {
+      supabase_lucifer_core.auth.getUser().then(({ data }) => {
+        if (data.user) {
+          if (data.user.email) {
+            setContact(data.user.email);
+            setIsPhone(false);
+          } else if (data.user.phone) {
+            setContact(data.user.phone);
+            setIsPhone(true);
+          }
+        }
+      });
+    }
+  }, [initialStep]);
 
   const checkPasswordStrength = (pwd: string) => {
     if (pwd.length < 9) return 'Weak';
@@ -248,7 +269,11 @@ export default function AuthForm() {
         const { error: profileErr } = await supabase_lucifer_core.from('profiles').update(profileData).eq('id', user.id);
         if (profileErr) throw profileErr;
 
-        handleLoginSuccess(user);
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          handleLoginSuccess(user);
+        }
       }
     } catch (err: any) {
       setError(err.message);
