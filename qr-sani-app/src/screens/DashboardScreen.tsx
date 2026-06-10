@@ -720,63 +720,7 @@ export default function DashboardScreen() {
       {showConfirmAccount && !showCompleteProfile && (
         <View style={styles.confirmAccountOverlay}>
           <View style={[styles.confirmAccountModal, isMobileWeb && { width: '90%' }]}>
-             {verifyEmailStep === 'idle' ? (
-                <>
-                  <View style={styles.confirmAccountIconBg}>
-                     <AlertTriangle color="#F59E0B" size={32} />
-                  </View>
-                  <Text style={styles.confirmAccountTitle}>Let us know it's really you</Text>
-                  <Text style={styles.confirmAccountDesc}>
-                    Please verify your {(!profile?.is_email_verified && !profile?.is_phone_verified) ? 'email and phone number' : !profile?.is_email_verified ? 'email' : 'phone number'} to secure your account and unlock all features.
-                  </Text>
-                  <TouchableOpacity style={styles.primaryButtonBlock} onPress={() => { 
-                      if (!profile?.is_phone_verified) {
-                         setShowConfirmAccount(false);
-                         if (isDesktop) {
-                            navigation.navigate('Profile', { activeTab: 'Contact Details & Emergency' });
-                         } else {
-                            navigation.navigate('ContactManager');
-                         }
-                      } else {
-                         setVerifyEmailStep('input');
-                      }
-                  }}>
-                    <Text style={styles.primaryButtonText}>Verify Now</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={{ marginTop: 16 }} onPress={() => setShowConfirmAccount(false)}>
-                    <Text style={styles.linkText}>Remind me later</Text>
-                  </TouchableOpacity>
-                </>
-             ) : verifyEmailStep === 'input' ? (
-                <>
-                  <Text style={styles.confirmAccountTitle}>Verify your email</Text>
-                  <Text style={styles.confirmAccountDesc}>Enter your email address below to receive a verification code.</Text>
-                  <TextInput 
-                     style={{ borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, width: '100%', marginBottom: 16 }}
-                     placeholder="Email address"
-                     value={verifyEmailAddress}
-                     onChangeText={setVerifyEmailAddress}
-                     autoCapitalize="none"
-                     keyboardType="email-address"
-                  />
-                  {verifyEmailError ? <Text style={{ color: 'red', marginBottom: 12 }}>{verifyEmailError}</Text> : null}
-                  <TouchableOpacity style={styles.primaryButtonBlock} onPress={async () => {
-                     setVerifyEmailLoading(true); setVerifyEmailError('');
-                     const { error } = await supabase_lucifer_core.auth.updateUser({ email: verifyEmailAddress });
-                     setVerifyEmailLoading(false);
-                     if (error) {
-                        setVerifyEmailError(error.message);
-                     } else {
-                        setVerifyEmailStep('otp');
-                     }
-                  }}>
-                    {verifyEmailLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Send Code</Text>}
-                  </TouchableOpacity>
-                  <TouchableOpacity style={{ marginTop: 16 }} onPress={() => setVerifyEmailStep('idle')}>
-                    <Text style={styles.linkText}>Back</Text>
-                  </TouchableOpacity>
-                </>
-             ) : verifyEmailStep === 'otp' ? (
+             {verifyEmailStep === 'otp' ? (
                 <>
                   <Text style={styles.confirmAccountTitle}>Enter OTP</Text>
                   <Text style={styles.confirmAccountDesc}>Enter the 6-digit code sent to {verifyEmailAddress}.</Text>
@@ -813,7 +757,7 @@ export default function DashboardScreen() {
                     <Text style={styles.linkText}>Back</Text>
                   </TouchableOpacity>
                 </>
-             ) : (
+             ) : verifyEmailStep === 'success' ? (
                 <>
                   <View style={styles.confirmAccountIconBg}>
                      <CheckCircle color="#10B981" size={32} />
@@ -822,6 +766,66 @@ export default function DashboardScreen() {
                   <Text style={styles.confirmAccountDesc}>Email address successfully verified.</Text>
                   <TouchableOpacity style={styles.primaryButtonBlock} onPress={() => { setShowConfirmAccount(false); setVerifyEmailStep('idle'); fetchDashboardData(); }}>
                     <Text style={styles.primaryButtonText}>Close</Text>
+                  </TouchableOpacity>
+                </>
+             ) : (!profile?.is_email_verified && profile?.is_phone_verified) || verifyEmailStep === 'input' ? (
+                <>
+                  <Text style={styles.confirmAccountTitle}>Verify your email</Text>
+                  <Text style={styles.confirmAccountDesc}>Email is not verified. Please enter your email address to verify.</Text>
+                  <TextInput 
+                     style={{ borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, width: '100%', marginBottom: 16 }}
+                     placeholder="Email address"
+                     value={verifyEmailAddress}
+                     onChangeText={setVerifyEmailAddress}
+                     autoCapitalize="none"
+                     keyboardType="email-address"
+                  />
+                  {verifyEmailError ? <Text style={{ color: 'red', marginBottom: 12 }}>{verifyEmailError}</Text> : null}
+                  <TouchableOpacity style={styles.primaryButtonBlock} onPress={async () => {
+                     setVerifyEmailLoading(true); setVerifyEmailError('');
+                     const { error } = await supabase_lucifer_core.auth.updateUser({ email: verifyEmailAddress });
+                     setVerifyEmailLoading(false);
+                     if (error) {
+                        setVerifyEmailError(error.message);
+                     } else {
+                        setVerifyEmailStep('otp');
+                     }
+                  }}>
+                    {verifyEmailLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Send Code</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ marginTop: 16 }} onPress={() => {
+                      if (!profile?.is_phone_verified) {
+                         setVerifyEmailStep('idle');
+                      } else {
+                         setShowConfirmAccount(false);
+                      }
+                  }}>
+                    <Text style={styles.linkText}>{!profile?.is_phone_verified ? "Back" : "Remind me later"}</Text>
+                  </TouchableOpacity>
+                </>
+             ) : (
+                <>
+                  <View style={styles.confirmAccountIconBg}>
+                     <AlertTriangle color="#F59E0B" size={32} />
+                  </View>
+                  <Text style={styles.confirmAccountTitle}>Let us know it's really you</Text>
+                  <Text style={styles.confirmAccountDesc}>
+                    {(!profile?.is_email_verified && !profile?.is_phone_verified) 
+                        ? 'Please verify your email and phone number to secure your account and unlock all features.' 
+                        : 'Phone is not verified. Please add and verify your phone number to secure your account and unlock all features.'}
+                  </Text>
+                  <TouchableOpacity style={styles.primaryButtonBlock} onPress={() => { 
+                      setShowConfirmAccount(false);
+                      if (isDesktop) {
+                         navigation.navigate('Profile', { activeTab: 'Contact Details & Emergency' });
+                      } else {
+                         navigation.navigate('ContactManager');
+                      }
+                  }}>
+                    <Text style={styles.primaryButtonText}>Verify Now</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ marginTop: 16 }} onPress={() => setShowConfirmAccount(false)}>
+                    <Text style={styles.linkText}>Remind me later</Text>
                   </TouchableOpacity>
                 </>
              )}
