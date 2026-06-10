@@ -319,13 +319,13 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
     if (step === 'contact') {
       return (
         <View style={styles.stepContainer}>
-          <Text style={styles.title}>Sign in or Sign up</Text>
-          <Text style={styles.subtitle}>Welcome to ATS Finland</Text>
+          <Text style={styles.title}>Sign in</Text>
+          <Text style={styles.subtitle}>Use your ATS Finland Account</Text>
           
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
             <TextInput 
               style={styles.input} 
-              placeholder="Email or phone number (+country code)" 
+              placeholder="Email or phone" 
               placeholderTextColor="#5F6368" 
               keyboardType="email-address" 
               autoCapitalize="none" 
@@ -341,10 +341,22 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
             </View>
           ) : null}
 
+          <TouchableOpacity style={{ marginTop: 8 }} onPress={() => {}}>
+            <Text style={styles.linkText}>Forgot email?</Text>
+          </TouchableOpacity>
+
+          <View style={{ marginTop: 32 }}>
+            <Text style={styles.disclaimerText}>
+              Not your computer? Use Guest mode to sign in privately.
+            </Text>
+          </View>
+
           <View style={styles.actionRow}>
-            <View/>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleContactSubmit}>
-              <Text style={styles.primaryButtonText}>Continue</Text>
+            <TouchableOpacity onPress={() => {}}>
+              <Text style={styles.linkText}>Create account</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleContactSubmit} disabled={loading}>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Next</Text>}
             </TouchableOpacity>
           </View>
 
@@ -597,8 +609,8 @@ const styles = StyleSheet.create({
   innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 12, width: '100%', maxWidth: 448, paddingHorizontal: 40, paddingTop: 48, paddingBottom: 36, borderTopWidth: 6, borderColor: '#0A66C2', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 4 },
   stepContainer: { width: '100%' },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#111827', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#4B5563', marginBottom: 24 },
+  title: { fontSize: 24, fontWeight: '400', color: '#202124', marginBottom: 8, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
+  subtitle: { fontSize: 16, color: '#202124', marginBottom: 40, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
   helperText: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
   inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 12, height: 48, marginBottom: 12, backgroundColor: '#FFFFFF' },
   inputError: { borderColor: '#DC2626', backgroundColor: '#FEF2F2' },
@@ -606,10 +618,10 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any,
   inlineErrorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   inlineErrorText: { color: '#DC2626', fontSize: 12, marginLeft: 6 },
-  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24 },
-  linkText: { color: '#0F2D4D', fontSize: 14, fontWeight: '600' },
-  primaryButton: { backgroundColor: '#0F2D4D', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center', minWidth: 100 },
-  primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 32 },
+  linkText: { color: '#0A66C2', fontSize: 14, fontWeight: '600' },
+  primaryButton: { backgroundColor: '#0A66C2', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, alignItems: 'center', justifyContent: 'center', minWidth: 100 },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
   chipWrapper: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 8 },
   chipText: { fontSize: 14, color: '#374151', fontWeight: '500' },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
