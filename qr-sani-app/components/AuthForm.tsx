@@ -237,6 +237,9 @@ export default function AuthForm() {
           house_number: houseNumber,
           username: username.toLowerCase(),
           promotions_opt_out: promotionsOptOut,
+          promotions_opt_out_at: promotionsOptOut ? new Date().toISOString() : null,
+          terms_agreed: true,
+          terms_agreed_at: new Date().toISOString(),
           is_email_verified: !isPhone,
           is_phone_verified: isPhone,
           phone_number: isPhone ? contact : null,
@@ -545,11 +548,19 @@ export default function AuthForm() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
       {Platform.OS === 'web' ? (
         <View style={styles.container}>
-          {renderContent()}
+          <View style={styles.innerContainer}>
+            <View style={styles.card}>
+              {renderContent()}
+            </View>
+          </View>
         </View>
       ) : (
         <View style={styles.container}>
-          {renderContent()}
+          <View style={styles.innerContainer}>
+            <View style={styles.card}>
+              {renderContent()}
+            </View>
+          </View>
         </View>
       )}
     </KeyboardAvoidingView>
@@ -557,8 +568,10 @@ export default function AuthForm() {
 }
 
 const styles = StyleSheet.create({
-  container: { width: '100%', flex: 1, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
-  stepContainer: { width: '100%', flex: 1 },
+  container: { flex: 1, backgroundColor: '#E8F0FE', width: '100%' },
+  innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 12, width: '100%', maxWidth: 448, paddingHorizontal: 40, paddingTop: 48, paddingBottom: 36, borderTopWidth: 6, borderColor: '#0A66C2', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 4 },
+  stepContainer: { width: '100%' },
   title: { fontSize: 24, fontWeight: 'bold', color: '#111827', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#4B5563', marginBottom: 24 },
   helperText: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
