@@ -868,7 +868,9 @@ export default function DashboardScreen() {
                            
                            // Optional redundant sync
                            if (user?.id) {
-                              const updatePayload = verifyType === 'email' ? { is_email_verified: true } : { is_phone_verified: true };
+                              const updatePayload = verifyType === 'email' 
+                                  ? { is_email_verified: true } 
+                                  : { is_phone_verified: true, phone_number: verifyTarget };
                               await supabase_lucifer_core.from('profiles').update(updatePayload).eq('id', user.id);
                            }
                            
