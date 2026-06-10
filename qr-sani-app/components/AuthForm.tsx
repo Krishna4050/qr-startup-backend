@@ -486,8 +486,12 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
 
     if (step === 'signup_details') {
       return (
-        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-          <View style={[styles.stepContainer, { paddingBottom: 40 }]}>
+        <ScrollView 
+          style={{ flexShrink: 1, width: '100%' }} 
+          contentContainerStyle={{ flexGrow: 1 }} 
+          showsVerticalScrollIndicator={true}
+        >
+          <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
             <Text style={styles.title}>Finish signing up</Text>
             <Text style={styles.subtitle}>Legal name</Text>
             <Text style={styles.helperText}>Make sure it matches the name on your government ID.</Text>
@@ -607,8 +611,8 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#E8F0FE', width: '100%' },
   innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 12, width: '100%', maxWidth: 448, paddingHorizontal: 40, paddingTop: 48, paddingBottom: 36, borderTopWidth: 6, borderColor: '#0A66C2', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 4 },
-  stepContainer: { width: '100%' },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 12, width: '100%', maxWidth: 448, maxHeight: '100%', flexShrink: 1, paddingHorizontal: 40, paddingTop: 48, paddingBottom: 36, borderTopWidth: 6, borderColor: '#0A66C2', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 4, display: 'flex', flexDirection: 'column' },
+  stepContainer: { width: '100%', flexShrink: 1 },
   title: { fontSize: 24, fontWeight: '400', color: '#202124', marginBottom: 8, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
   subtitle: { fontSize: 16, color: '#202124', marginBottom: 40, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
   helperText: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
