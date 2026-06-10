@@ -10,7 +10,7 @@ import ContactManagerScreen from './ContactManagerScreen';
 import FilteredTagsScreen from './FilteredTagsScreen';
 import { useResponsive } from '../hooks/useResponsive';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ route }: any) {
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
@@ -23,7 +23,13 @@ export default function ProfileScreen() {
   const [saveHistory, setSaveHistory] = useState(true);
 
   const { isDesktop } = useResponsive();
-  const [activeTab, setActiveTab] = useState('Profile Information');
+  const [activeTab, setActiveTab] = useState(route?.params?.activeTab || 'Profile Information');
+
+  useEffect(() => {
+    if (route?.params?.activeTab) {
+      setActiveTab(route.params.activeTab);
+    }
+  }, [route?.params?.activeTab]);
 
   const fetchProfileData = async () => {
     try {
