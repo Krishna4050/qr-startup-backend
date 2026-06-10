@@ -793,7 +793,21 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             
             <View style={styles.inputWrapper}>
               <AtSign color="#6B7280" size={20} style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Username" placeholderTextColor="#9CA3AF" value={username} onChangeText={(t) => {setUsername(t); setError('');}} autoCapitalize="none" />
+              <TextInput 
+                style={styles.input} 
+                placeholder="Username" 
+                placeholderTextColor="#9CA3AF" 
+                value={username} 
+                onChangeText={(t) => {setUsername(t); setError('');}} 
+                autoCapitalize="none" 
+                autoComplete="off"
+                autoCorrect={false}
+                spellCheck={false}
+                textContentType="none"
+                importantForAutofill="no"
+                // @ts-ignore
+                autoFill="off"
+              />
               {isCheckingUsername ? <ActivityIndicator size="small" color="#0A66C2" /> : (username.length > 2 && !usernameTaken ? <CheckCircle color="#059669" size={20} /> : null)}
             </View>
             
@@ -812,7 +826,21 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
             <View style={styles.inputWrapper}>
               <Lock color="#6B7280" size={20} style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#9CA3AF" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
+              <TextInput 
+                style={styles.input} 
+                placeholder="Password" 
+                placeholderTextColor="#9CA3AF" 
+                secureTextEntry={!showPassword} 
+                value={password} 
+                onChangeText={handlePasswordChange} 
+                autoComplete="off"
+                autoCorrect={false}
+                spellCheck={false}
+                textContentType="newPassword"
+                importantForAutofill="no"
+                // @ts-ignore
+                autoFill="off"
+              />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
                 {showPassword ? <EyeOff color="#9CA3AF" size={20} /> : <Eye color="#9CA3AF" size={20} />}
               </TouchableOpacity>
@@ -825,7 +853,21 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
             <View style={styles.inputWrapper}>
               <Lock color="#6B7280" size={20} style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Confirm Password" placeholderTextColor="#9CA3AF" secureTextEntry={!showPassword} value={confirmPassword} onChangeText={setConfirmPassword} />
+              <TextInput 
+                style={styles.input} 
+                placeholder="Confirm Password" 
+                placeholderTextColor="#9CA3AF" 
+                secureTextEntry={!showPassword} 
+                value={confirmPassword} 
+                onChangeText={setConfirmPassword} 
+                autoComplete="off"
+                autoCorrect={false}
+                spellCheck={false}
+                textContentType="newPassword"
+                importantForAutofill="no"
+                // @ts-ignore
+                autoFill="off"
+              />
             </View>
 
             <Text style={[styles.subtitle, { textAlign: 'left', marginBottom: 8, marginTop: 16, fontWeight: 'bold' }]}>Let your personality shine through.</Text>
