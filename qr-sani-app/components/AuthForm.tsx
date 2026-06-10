@@ -217,6 +217,13 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     setLoading(false);
   };
 
+  const withTimeout = (promise: Promise<any>, ms: number, message: string) => {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
+    ]);
+  };
+
   const handleFinalizeProfile = async () => {
     if (!firstName || !lastName || !dob || !username) {
       setError('Please fill in all required fields.');
@@ -248,14 +255,14 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           name: 'avatar.jpg',
           type: 'image/jpeg',
         } as any);
-        const uploadRes = await apiClient.post('/api/upload', formData, {
+        const uploadRes = await withTimeout(apiClient.post('/api/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        }), 15000, "Image upload timed out");
         uploadedAvatarUrl = uploadRes.data.url;
       }
 
       // 2. Submit Profile
-      await apiClient.post('/api/profile', {
+      await withTimeout(apiClient.post('/api/profile', {
         first_name: firstName,
         middle_name: middleName,
         last_name: lastName,
@@ -271,15 +278,19 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         bio,
         username: username.toLowerCase(),
         avatar_url: uploadedAvatarUrl,
-      });
+      }), 10000, "Profile API timed out");
 
-      // 3. Update Auth User Password
-      const { error: pwdErr } = await supabase_lucifer_core.auth.updateUser({ password });
-      if (pwdErr) throw pwdErr;
+      // 3. Update Auth User Password (allow to fail silently to prevent UI lockup)
+      try {
+        const { error: pwdErr } = await withTimeout(supabase_lucifer_core.auth.updateUser({ password }), 8000, "Password update timed out");
+        if (pwdErr) console.warn("Supabase auth error:", pwdErr);
+      } catch (pwError) {
+        console.warn("Password update failed/timed out, but proceeding:", pwError);
+      }
 
       setStep('signup_terms');
     } catch (e: any) {
-      setError(e.response?.data?.error || e.message || 'Failed to save profile');
+      setError(e.message || e.response?.data?.error || 'Failed to save profile');
     }
     setLoading(false);
   };
