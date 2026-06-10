@@ -717,7 +717,7 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {showConfirmAccount && !showCompleteProfile && (
+      {showConfirmAccount && !showCompleteProfile && profile && (
         <View style={styles.confirmAccountOverlay}>
           <View style={[styles.confirmAccountModal, isMobileWeb && { width: '90%' }]}>
              {verifyEmailStep === 'otp' ? (
