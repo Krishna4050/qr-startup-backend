@@ -722,6 +722,7 @@ export default function DashboardScreen() {
             <View style={{ width: '100%', height: 600 }}>
               <AuthForm 
                 initialStep="signup_name" 
+                isModal={true}
                 onSuccess={() => {
                    setShowCompleteProfile(false);
                    fetchDashboardData();

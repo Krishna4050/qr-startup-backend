@@ -21,9 +21,10 @@ if (Platform.OS === 'web') {
 type AuthFormProps = {
   initialStep?: 'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_name' | 'signup_dob' | 'signup_gender' | 'signup_location' | 'signup_profile' | 'signup_terms';
   onSuccess?: () => void;
+  isModal?: boolean;
 };
 
-export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFormProps) {
+export default function AuthForm({ initialStep = 'contact', onSuccess, isModal = false }: AuthFormProps) {
   const navigation = useNavigation<any>();
   const [step, setStep] = useState<'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_name' | 'signup_dob' | 'signup_gender' | 'signup_location' | 'signup_profile' | 'signup_terms'>(initialStep);
   
@@ -868,6 +869,18 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
     }
   };
 
+  const content = renderContent();
+
+  if (isModal) {
+    return (
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
+         <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, width: '100%', maxWidth: 448, alignSelf: 'center' }}>
+           {content}
+         </View>
+      </KeyboardAvoidingView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
       {Platform.OS === 'web' ? (
@@ -894,7 +907,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess }: AuthFor
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#E8F0FE', width: '100%' },
   innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 12, width: '100%', maxWidth: 448, maxHeight: '100%', flexShrink: 1, paddingHorizontal: 40, paddingTop: 48, paddingBottom: 36, borderTopWidth: 6, borderColor: '#0A66C2', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 4, display: 'flex', flexDirection: 'column' },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 24, width: '100%', maxWidth: 448, maxHeight: '100%', flexShrink: 1, paddingHorizontal: 40, paddingTop: 48, paddingBottom: 36, shadowColor: '#0A66C2', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.08, shadowRadius: 32, elevation: 4, display: 'flex', flexDirection: 'column' },
   stepContainer: { width: '100%', flexShrink: 1 },
   title: { fontSize: 24, fontWeight: '400', color: '#202124', marginBottom: 8, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
   subtitle: { fontSize: 16, color: '#202124', marginBottom: 40, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
