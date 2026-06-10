@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ScrollView, StyleSheet } from 'react-native';
-import { Mail, Lock, AtSign, Eye, EyeOff, AlertCircle, ChevronLeft } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { Text, View, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, ScrollView, StyleSheet } from 'react-native';
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
 import { registerForPushNotificationsAsync } from '../src/utils/notifications';
 import { useNavigation } from '@react-navigation/native';
@@ -17,20 +17,76 @@ if (Platform.OS === 'web') {
 
 export default function AuthForm() {
   const navigation = useNavigation<any>();
-  const [step, setStep] = useState<'email' | 'verify' | 'email_not_found' | 'password' | 'signup'>('email');
+  const [step, setStep] = useState<'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_details' | 'signup_terms'>('contact');
   
-  const [email, setEmail] = useState('');
+  // States
+  const [contact, setContact] = useState(''); // Email or Phone
+  const [isPhone, setIsPhone] = useState(false);
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
+  // Signup States
+  const [otp, setOtp] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [preferredName, setPreferredName] = useState('');
+  const [dob, setDob] = useState('');
+  const [country, setCountry] = useState('Finland');
+  const [city, setCity] = useState('');
+  const [street, setStreet] = useState('');
+  const [houseNumber, setHouseNumber] = useState('');
+  const [username, setUsername] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [promotionsOptOut, setPromotionsOptOut] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState('');
+
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
-  const handleEmailSubmit = () => {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  useEffect(() => {
+    // Determine if contact is phone or email
+    if (contact.startsWith('+') || /^\d+$/.test(contact)) {
+      setIsPhone(true);
+    } else {
+      setIsPhone(false);
+    }
+  }, [contact]);
+
+  const checkPasswordStrength = (pwd: string) => {
+    if (pwd.length < 9) return 'Weak';
+    if (pwd.toLowerCase().includes(firstName.toLowerCase()) && firstName !== '') return 'Weak';
+    if (pwd.toLowerCase().includes(lastName.toLowerCase()) && lastName !== '') return 'Weak';
+    if (pwd.toLowerCase().includes(contact.toLowerCase())) return 'Weak';
+
+    let score = 0;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[a-z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+    if (score < 3) return 'Medium';
+    return 'Strong';
+  };
+
+  const handlePasswordChange = (t: string) => {
+    setPassword(t);
+    setPasswordStrength(checkPasswordStrength(t));
+    setError('');
+  };
+
+  const handleContactSubmit = () => {
+    if (!contact) {
+      setError('Please enter an email or phone number.');
+      return;
+    }
+    if (isPhone && !contact.startsWith('+')) {
+      setError('Please include your country code (e.g., +358).');
+      return;
+    }
+    if (!isPhone && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) {
       setError('Please enter a valid email address.');
       return;
     }
@@ -50,33 +106,38 @@ export default function AuthForm() {
     
     try {
       const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL; 
-      const res = await fetch(`${backendUrl}/api/auth/verify-email`, {
+      const res = await fetch(`${backendUrl}/api/auth/verify-contact`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ email: email.toLowerCase(), turnstile_token: token })
+         body: JSON.stringify({ contact: contact.toLowerCase(), turnstile_token: token })
       });
       
       if (!res.ok) {
         setError('Verification failed. Please try again.');
-        setStep('email');
+        setStep('contact');
         setLoading(false);
         return;
       }
       
       const data = await res.json();
       if (data.exists) {
-        setStep('password');
+        setStep('password'); // Login flow
       } else {
-        setStep('email_not_found');
+        // New User -> Send OTP and go to signup_otp
+        const { error: otpError } = await supabase_lucifer_core.auth.signInWithOtp(
+          isPhone ? { phone: contact } : { email: contact }
+        );
+        if (otpError) throw otpError;
+        setStep('signup_otp');
       }
-    } catch (err) {
-      setError('Network error. Please try again.');
-      setStep('email');
+    } catch (err: any) {
+      setError(err.message || 'Network error. Please try again.');
+      setStep('contact');
     }
     setLoading(false);
   };
 
-  const handlePasswordSubmit = async () => {
+  const handleLoginSubmit = async () => {
     if (!password) {
       setError('Enter your password.');
       return;
@@ -84,30 +145,51 @@ export default function AuthForm() {
     setLoading(true);
     setError('');
 
-    const { error, data } = await supabase_lucifer_core.auth.signInWithPassword({ email, password });
+    const credentials = isPhone ? { phone: contact, password } : { email: contact, password };
+    const { error, data } = await supabase_lucifer_core.auth.signInWithPassword(credentials as any);
     
     if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-         setError('Wrong password. Try again or click Forgot password to reset it.');
-      } else if (error.message.includes('Email not confirmed')) {
-         await supabase_lucifer_core.auth.resend({ type: 'signup', email: email });
-         navigation.replace('OtpVerification', { email: email });
-      } else {
-         setError(error.message);
-      }
+      setError(error.message);
     } else {
       handleLoginSuccess(data.user);
     }
     setLoading(false);
   };
 
-  const handleSignupSubmit = async () => {
-    if (!username || username.length < 3) {
-      setError('Username must be at least 3 characters.');
+  const handleOtpSubmit = async () => {
+    if (otp.length < 6) return;
+    setLoading(true);
+    setError('');
+
+    try {
+      const { data, error: verifyErr } = await supabase_lucifer_core.auth.verifyOtp({
+        [isPhone ? 'phone' : 'email']: contact,
+        token: otp,
+        type: isPhone ? 'sms' : 'email',
+      } as any);
+
+      if (verifyErr) throw verifyErr;
+      if (data.user) {
+        // OTP Verified, User created & session active!
+        setStep('signup_details');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Invalid code.');
+    }
+    setLoading(false);
+  };
+
+  const handleDetailsSubmit = async () => {
+    if (!firstName || !lastName || !dob || !city || !street || !username) {
+      setError('Please fill in all required fields.');
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+    if (passwordStrength === 'Weak' || password.length < 9) {
+      setError('Password is too weak. Must be at least 9 characters and cannot contain your name/email.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
       return;
     }
 
@@ -125,16 +207,48 @@ export default function AuthForm() {
       return;
     }
 
-    const { error, data } = await supabase_lucifer_core.auth.signUp({
-      email, 
-      password, 
-      options: { data: { username: username.toLowerCase() } }
-    });
+    setStep('signup_terms');
+    setLoading(false);
+  };
 
-    if (error) {
-      setError(error.message);
-    } else {
-      navigation.replace('OtpVerification', { email: email }); 
+  const handleTermsSubmit = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      // 1. Update auth.users with the new password
+      const { error: pwdError } = await supabase_lucifer_core.auth.updateUser({ password });
+      if (pwdError) throw pwdError;
+
+      // 2. Update public.profiles with the demographic data
+      const { data: sessionData } = await supabase_lucifer_core.auth.getSession();
+      const user = sessionData?.session?.user;
+      
+      if (user) {
+        const profileData = {
+          first_name: firstName,
+          middle_name: middleName,
+          last_name: lastName,
+          preferred_name: preferredName,
+          date_of_birth: dob,
+          country,
+          city,
+          street,
+          house_number: houseNumber,
+          username: username.toLowerCase(),
+          promotions_opt_out: promotionsOptOut,
+          is_email_verified: !isPhone,
+          is_phone_verified: isPhone,
+          phone_number: isPhone ? contact : null,
+        };
+
+        const { error: profileErr } = await supabase_lucifer_core.from('profiles').update(profileData).eq('id', user.id);
+        if (profileErr) throw profileErr;
+
+        handleLoginSuccess(user);
+      }
+    } catch (err: any) {
+      setError(err.message);
     }
     setLoading(false);
   };
@@ -162,41 +276,34 @@ export default function AuthForm() {
   };
 
   const handleGoogleLogin = async () => {
-    // In Expo, standard Supabase OAuth opens a browser session
     const { data, error } = await supabase_lucifer_core.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: Platform.OS === 'web' ? window.location.origin + '/dashboard' : 'your-app-scheme://dashboard'
-      }
+      options: { redirectTo: Platform.OS === 'web' ? window.location.origin + '/dashboard' : 'your-app-scheme://dashboard' }
     });
     if (error) setError(error.message);
   };
 
   const handleAppleLogin = async () => {
-    if (Platform.OS === 'web') {
-      alert("Apple Login is coming soon!");
-    }
-    // Apple Login temporarily disabled until Apple Developer Program enrollment
-    return;
+    if (Platform.OS === 'web') alert("Apple Login is coming soon!");
   };
 
   const renderContent = () => {
-    if (step === 'email') {
+    if (step === 'contact') {
       return (
         <View style={styles.stepContainer}>
-          <Text style={styles.title}>Sign in</Text>
-          <Text style={styles.subtitle}>Use your ATS Finland Account</Text>
+          <Text style={styles.title}>Sign in or Sign up</Text>
+          <Text style={styles.subtitle}>Welcome to ATS Finland</Text>
           
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
             <TextInput 
               style={styles.input} 
-              placeholder="Email or phone" 
+              placeholder="Email or phone number (+country code)" 
               placeholderTextColor="#5F6368" 
               keyboardType="email-address" 
               autoCapitalize="none" 
-              value={email} 
-              onChangeText={(t) => {setEmail(t); setError('');}} 
-              onSubmitEditing={handleEmailSubmit}
+              value={contact} 
+              onChangeText={(t) => {setContact(t); setError('');}} 
+              onSubmitEditing={handleContactSubmit}
             />
           </View>
           {error ? (
@@ -206,22 +313,10 @@ export default function AuthForm() {
             </View>
           ) : null}
 
-          <TouchableOpacity style={{ marginTop: 8 }} onPress={() => {}}>
-            <Text style={styles.linkText}>Forgot email?</Text>
-          </TouchableOpacity>
-
-          <View style={{ marginTop: 32 }}>
-            <Text style={styles.disclaimerText}>
-              Not your computer? Use Guest mode to sign in privately.
-            </Text>
-          </View>
-
           <View style={styles.actionRow}>
-            <TouchableOpacity onPress={() => setStep('signup')}>
-              <Text style={styles.linkText}>Create account</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleEmailSubmit}>
-              <Text style={styles.primaryButtonText}>Next</Text>
+            <View/>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleContactSubmit}>
+              <Text style={styles.primaryButtonText}>Continue</Text>
             </TouchableOpacity>
           </View>
 
@@ -266,39 +361,12 @@ export default function AuthForm() {
       );
     }
 
-    if (step === 'email_not_found') {
-      return (
-        <View style={styles.stepContainer}>
-          <Text style={styles.title}>Account not found</Text>
-          <View style={styles.chipWrapper}>
-            <Text style={styles.chipText}>{email}</Text>
-          </View>
-          
-          <View style={[styles.inlineErrorRow, { marginTop: 16, backgroundColor: '#FEF2F2', padding: 12, borderRadius: 8 }]}>
-             <AlertCircle color="#DC2626" size={16} />
-             <Text style={[styles.inlineErrorText, { fontSize: 14 }]}>
-               This email address doesn't exist in our system. Do you want to create a new account?
-             </Text>
-          </View>
-
-          <View style={[styles.actionRow, { marginTop: 32 }]}>
-            <TouchableOpacity onPress={() => setStep('email')}>
-              <Text style={styles.linkText}>Use different email</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryButton} onPress={() => setStep('signup')}>
-              <Text style={styles.primaryButtonText}>Continue</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      );
-    }
-
     if (step === 'password') {
       return (
         <View style={styles.stepContainer}>
-          <Text style={styles.title}>Welcome</Text>
-          <TouchableOpacity style={styles.chipWrapper} onPress={() => setStep('email')}>
-            <Text style={styles.chipText}>{email}</Text>
+          <Text style={styles.title}>Welcome back</Text>
+          <TouchableOpacity style={styles.chipWrapper} onPress={() => setStep('contact')}>
+            <Text style={styles.chipText}>{contact}</Text>
           </TouchableOpacity>
           
           <View style={[styles.inputWrapper, error ? styles.inputError : null, { marginTop: 24 }]}>
@@ -310,7 +378,7 @@ export default function AuthForm() {
               secureTextEntry={!showPassword} 
               value={password} 
               onChangeText={(t) => {setPassword(t); setError('');}} 
-              onSubmitEditing={handlePasswordSubmit}
+              onSubmitEditing={handleLoginSubmit}
               autoFocus
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
@@ -325,63 +393,36 @@ export default function AuthForm() {
             </View>
           ) : null}
 
-          <TouchableOpacity style={{ marginTop: 8 }} onPress={() => {}}>
-            <Text style={styles.linkText}>Forgot password?</Text>
-          </TouchableOpacity>
-
           <View style={[styles.actionRow, { marginTop: 40 }]}>
-            <TouchableOpacity onPress={() => setStep('email')}>
+            <TouchableOpacity onPress={() => setStep('contact')}>
               <Text style={styles.linkText}>Back</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryButton} onPress={handlePasswordSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Next</Text>}
+            <TouchableOpacity style={styles.primaryButton} onPress={handleLoginSubmit} disabled={loading}>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Log in</Text>}
             </TouchableOpacity>
           </View>
         </View>
       );
     }
 
-    if (step === 'signup') {
+    if (step === 'signup_otp') {
       return (
         <View style={styles.stepContainer}>
-          <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Enter your details below</Text>
+          <Text style={styles.title}>Confirm your {isPhone ? 'number' : 'email'}</Text>
+          <Text style={styles.subtitle}>We sent a code to {contact}</Text>
           
-          <View style={styles.inputWrapper}>
-            <Mail color="#4B5563" size={20} style={styles.inputIcon} />
+          <View style={[styles.inputWrapper, { marginTop: 24 }]}>
             <TextInput 
-              style={styles.input} 
-              value={email} 
-              editable={false}
-              color="#9CA3AF"
-            />
-          </View>
-
-          <View style={[styles.inputWrapper, { marginTop: 16 }]}>
-            <AtSign color="#4B5563" size={20} style={styles.inputIcon} />
-            <TextInput 
-              style={styles.input} 
-              placeholder="Choose a username" 
+              style={[styles.input, { letterSpacing: 8, fontSize: 24, textAlign: 'center' }]} 
+              placeholder="000000" 
               placeholderTextColor="#9CA3AF" 
-              autoCapitalize="none" 
-              value={username} 
-              onChangeText={(t) => {setUsername(t); setError('');}} 
+              keyboardType="number-pad" 
+              maxLength={6}
+              value={otp} 
+              onChangeText={(t) => {setOtp(t); setError('');}} 
+              onSubmitEditing={handleOtpSubmit}
+              autoFocus
             />
-          </View>
-
-          <View style={[styles.inputWrapper, { marginTop: 16 }]}>
-            <Lock color="#4B5563" size={20} style={styles.inputIcon} />
-            <TextInput 
-              style={styles.input} 
-              placeholder="Create password" 
-              placeholderTextColor="#9CA3AF" 
-              secureTextEntry={!showPassword} 
-              value={password} 
-              onChangeText={(t) => {setPassword(t); setError('');}} 
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
-              {showPassword ? <EyeOff color="#4B5563" size={20} /> : <Eye color="#4B5563" size={20} />}
-            </TouchableOpacity>
           </View>
 
           {error ? (
@@ -392,29 +433,107 @@ export default function AuthForm() {
           ) : null}
 
           <View style={[styles.actionRow, { marginTop: 40 }]}>
-            <TouchableOpacity onPress={() => setStep('email')}>
+            <TouchableOpacity onPress={() => setStep('contact')}>
               <Text style={styles.linkText}>Back</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleSignupSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Sign Up</Text>}
+            <TouchableOpacity style={styles.primaryButton} onPress={handleOtpSubmit} disabled={loading || otp.length < 6}>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Verify</Text>}
             </TouchableOpacity>
           </View>
+        </View>
+      );
+    }
 
-          {/* Social Logins on Signup */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
+    if (step === 'signup_details') {
+      return (
+        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+          <View style={[styles.stepContainer, { paddingBottom: 40 }]}>
+            <Text style={styles.title}>Finish signing up</Text>
+            <Text style={styles.subtitle}>Legal name</Text>
+            <Text style={styles.helperText}>Make sure it matches the name on your government ID.</Text>
 
-          <View style={styles.socialRow}>
-            <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
-               <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style={{ width: 20, height: 20, marginRight: 8 }} />
-               <Text style={styles.socialButtonText}>Google</Text>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="First name on ID" value={firstName} onChangeText={setFirstName} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Middle name (optional)" value={middleName} onChangeText={setMiddleName} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Last name on ID" value={lastName} onChangeText={setLastName} /></View>
+            
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Preferred first name (optional)" value={preferredName} onChangeText={setPreferredName} /></View>
+
+            <Text style={[styles.subtitle, { marginTop: 24 }]}>Date of birth</Text>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="YYYY-MM-DD" value={dob} onChangeText={setDob} /></View>
+
+            <Text style={[styles.subtitle, { marginTop: 24 }]}>Address</Text>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Country" value={country} onChangeText={setCountry} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="City" value={city} onChangeText={setCity} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Street" value={street} onChangeText={setStreet} /></View>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="House Number" value={houseNumber} onChangeText={setHouseNumber} /></View>
+
+            <Text style={[styles.subtitle, { marginTop: 24 }]}>Account Info</Text>
+            <View style={styles.inputWrapper}><TextInput style={styles.input} placeholder="Username (no spaces/special chars)" value={username} onChangeText={setUsername} autoCapitalize="none" /></View>
+            
+            <View style={styles.inputWrapper}>
+              <TextInput style={styles.input} placeholder="Password" secureTextEntry={!showPassword} value={password} onChangeText={handlePasswordChange} />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
+                {showPassword ? <EyeOff color="#4B5563" size={20} /> : <Eye color="#4B5563" size={20} />}
+              </TouchableOpacity>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, marginBottom: 8 }}>
+               <Text style={{ fontSize: 12, color: passwordStrength === 'Strong' ? '#059669' : passwordStrength === 'Medium' ? '#D97706' : '#DC2626' }}>
+                 Strength: {passwordStrength || 'Weak'}
+               </Text>
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <TextInput style={styles.input} placeholder="Confirm Password" secureTextEntry={!showPassword} value={confirmPassword} onChangeText={setConfirmPassword} />
+            </View>
+
+            {error ? (
+              <View style={styles.inlineErrorRow}>
+                 <AlertCircle color="#DC2626" size={14} />
+                 <Text style={styles.inlineErrorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            <TouchableOpacity style={[styles.primaryButton, { width: '100%', marginTop: 24 }]} onPress={handleDetailsSubmit} disabled={loading}>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Continue</Text>}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={handleAppleLogin}>
-               <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" style={{ width: 18, height: 20, marginRight: 8 }} />
-               <Text style={styles.socialButtonText}>Apple</Text>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    if (step === 'signup_terms') {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Almost done</Text>
+          
+          <Text style={[styles.disclaimerText, { marginTop: 24 }]}>
+            ATS will send you promotions such as deals and marketing notifications. You can opt out anytime via account settings or within marketing emails.
+          </Text>
+
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16 }} onPress={() => setPromotionsOptOut(!promotionsOptOut)}>
+             <View style={[styles.checkbox, promotionsOptOut && styles.checkboxChecked]}>
+               {promotionsOptOut && <CheckCircle color="#FFF" size={14} />}
+             </View>
+             <Text style={{ marginLeft: 8, color: '#374151', flex: 1 }}>I don’t want to receive ATS promotions.</Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.disclaimerText, { marginTop: 32 }]}>
+            By selecting Agree and continue, I agree to ATS Terms of Service, Payments Terms of Service, and Nondiscrimination Policy, and acknowledge the Privacy Policy.
+          </Text>
+
+          {error ? (
+            <View style={styles.inlineErrorRow}>
+               <AlertCircle color="#DC2626" size={14} />
+               <Text style={styles.inlineErrorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <View style={[styles.actionRow, { marginTop: 40 }]}>
+            <TouchableOpacity onPress={() => setStep('signup_details')}>
+              <Text style={styles.linkText}>Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleTermsSubmit} disabled={loading}>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Agree and continue</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -422,205 +541,46 @@ export default function AuthForm() {
     }
   };
 
-  const FormContent = (
-    <View style={styles.innerContainer}>
-      <View style={styles.card}>
-        {renderContent()}
-      </View>
-      <View style={styles.footerLinks}>
-        <TouchableOpacity><Text style={styles.footerLink}>Help</Text></TouchableOpacity>
-        <TouchableOpacity><Text style={styles.footerLink}>Privacy</Text></TouchableOpacity>
-        <TouchableOpacity><Text style={styles.footerLink}>Terms</Text></TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  return Platform.OS === 'web' ? (
-    <View style={styles.container}>
-      {FormContent}
-    </View>
-  ) : (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        {FormContent}
-      </TouchableWithoutFeedback>
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
+      {Platform.OS === 'web' ? (
+        <View style={styles.container}>
+          {renderContent()}
+        </View>
+      ) : (
+        <View style={styles.container}>
+          {renderContent()}
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#E8F0FE', // Slightly more vibrant colorful blue tint
-  },
-  innerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 448,
-    paddingHorizontal: 40,
-    paddingTop: 48,
-    paddingBottom: 36,
-    borderWidth: 0,
-    borderTopWidth: 6,
-    borderColor: '#0A66C2', // Vibrant blue accent on top
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 4,
-  },
-  stepContainer: {
-    width: '100%',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '400',
-    color: '#202124',
-    marginBottom: 8,
-    textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#202124',
-    marginBottom: 40,
-    textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#DADCE0',
-    borderRadius: 4,
-    paddingHorizontal: 14,
-    height: 56,
-    backgroundColor: '#FFFFFF',
-  },
-  inputError: {
-    borderColor: '#DC2626',
-    borderWidth: 2,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#111827',
-    // @ts-ignore
-    outlineStyle: 'none', // Web specific to remove default focus outline
-  },
-  inlineErrorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    paddingHorizontal: 4,
-  },
-  inlineErrorText: {
-    color: '#DC2626',
-    fontSize: 12,
-    marginLeft: 6,
-  },
-  linkText: {
-    color: '#0A66C2', // Google blue
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  disclaimerText: {
-    color: '#4B5563',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  primaryButton: {
-    backgroundColor: '#0A66C2',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24, // Pill shape like Google
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  chipWrapper: {
-    alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  chipText: {
-    fontSize: 14,
-    color: '#4B5563',
-    fontWeight: '500',
-  },
-  footerLinks: {
-    flexDirection: 'row',
-    gap: 24,
-    marginTop: 24,
-  },
-  footerLink: {
-    color: '#6B7280',
-    fontSize: 12,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#9CA3AF',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  socialRow: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  socialButton: {
-    flex: 1,
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: '#DADCE0',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  socialButtonText: {
-    color: '#3C4043',
-    fontWeight: '500',
-    fontSize: 14,
-  }
+  container: { width: '100%', flex: 1, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  stepContainer: { width: '100%', flex: 1 },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#111827', marginBottom: 8 },
+  subtitle: { fontSize: 16, color: '#4B5563', marginBottom: 24 },
+  helperText: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 12, height: 48, marginBottom: 12, backgroundColor: '#FFFFFF' },
+  inputError: { borderColor: '#DC2626', backgroundColor: '#FEF2F2' },
+  inputIcon: { marginRight: 8 },
+  input: { flex: 1, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any,
+  inlineErrorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  inlineErrorText: { color: '#DC2626', fontSize: 12, marginLeft: 6 },
+  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24 },
+  linkText: { color: '#0F2D4D', fontSize: 14, fontWeight: '600' },
+  primaryButton: { backgroundColor: '#0F2D4D', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center', minWidth: 100 },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  chipWrapper: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 8 },
+  chipText: { fontSize: 14, color: '#374151', fontWeight: '500' },
+  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
+  dividerText: { marginHorizontal: 16, color: '#6B7280', fontSize: 12, fontWeight: '500' },
+  socialRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  socialButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingVertical: 10, marginHorizontal: 4 },
+  socialButtonText: { color: '#374151', fontSize: 14, fontWeight: '600' },
+  disclaimerText: { fontSize: 12, color: '#6B7280', lineHeight: 18 },
+  checkbox: { width: 20, height: 20, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  checkboxChecked: { backgroundColor: '#0F2D4D', borderColor: '#0F2D4D' }
 });

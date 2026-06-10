@@ -44,6 +44,7 @@ export default function DashboardScreen() {
   const [flightDealsCity, setFlightDealsCity] = useState('');
 
   const [showWebPushPrompt, setShowWebPushPrompt] = useState(false);
+  const [showConfirmAccount, setShowConfirmAccount] = useState(false);
 
   const totalTags = tags.length;
   const foundItems = tags.filter(t => t.status === 'found' && !t.is_shared).length;
@@ -182,6 +183,12 @@ export default function DashboardScreen() {
       const data = res.data;
 
       setProfile(data.profile || { display_name: user.user_metadata?.username });
+      
+      // Check if email or phone verification is missing
+      if (data.profile && (!data.profile.is_email_verified || !data.profile.is_phone_verified)) {
+        setShowConfirmAccount(true);
+      }
+
       setTags([...(data.my_visible_tags || []), ...(data.shared_visible_tags || [])]);
       setSharedWithMe(data.shared_visible_tags || []);
       setPausedTagsCount(data.paused_tags_count || 0);
@@ -674,6 +681,26 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {showConfirmAccount && (
+        <View style={styles.confirmAccountOverlay}>
+          <View style={[styles.confirmAccountModal, isMobileWeb && { width: '90%' }]}>
+            <View style={styles.confirmAccountIconBg}>
+               <AlertTriangle color="#F59E0B" size={32} />
+            </View>
+            <Text style={styles.confirmAccountTitle}>Let us know it's really you</Text>
+            <Text style={styles.confirmAccountDesc}>
+              Please verify your {(!profile?.is_email_verified && !profile?.is_phone_verified) ? 'email and phone number' : !profile?.is_email_verified ? 'email' : 'phone number'} to secure your account and unlock all features.
+            </Text>
+            <TouchableOpacity style={styles.primaryButtonBlock} onPress={() => { setShowConfirmAccount(false); navigation.navigate('Settings'); }}>
+              <Text style={styles.primaryButtonText}>Verify Now</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ marginTop: 16 }} onPress={() => setShowConfirmAccount(false)}>
+              <Text style={styles.linkText}>Remind me later</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -809,4 +836,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
+  confirmAccountOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10000,
+  },
+  confirmAccountModal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 32,
+    width: 400,
+    alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10
+  },
+  confirmAccountIconBg: {
+    width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEF3C7', justifyContent: 'center', alignItems: 'center', marginBottom: 24
+  },
+  confirmAccountTitle: {
+    fontSize: 22, fontWeight: 'bold', color: '#111827', marginBottom: 12, textAlign: 'center'
+  },
+  confirmAccountDesc: {
+    fontSize: 15, color: '#4B5563', textAlign: 'center', marginBottom: 32, lineHeight: 22
+  },
+  primaryButtonBlock: {
+    backgroundColor: '#0F2D4D', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center', width: '100%'
+  }
 });
