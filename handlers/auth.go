@@ -60,13 +60,25 @@ func CheckContactAndTurnstileHandler(w http.ResponseWriter, r *http.Request) {
 	// 2. Check if contact exists in public.profiles or auth.users
 	
 	var count int
-	// Attempt to query auth.users directly. 
-	// If it fails due to permissions, it means backend is not running as superuser.
-	err := database.DB.QueryRow("SELECT COUNT(*) FROM auth.users WHERE email = $1 OR phone = $1", req.Contact).Scan(&count)
+	// Attempt to query auth.users directly. We check if they have a password OR have completed their profile (terms_agreed).
+	// If they have neither, they abandoned signup before setting a password, so we treat them as a new user.
+	err := database.DB.QueryRow(`
+		SELECT COUNT(*) 
+		FROM auth.users u
+		LEFT JOIN public.profiles p ON u.id = p.id
+		WHERE (u.email = $1 OR u.phone = $1) 
+		  AND (u.encrypted_password IS NOT NULL OR p.terms_agreed = true)
+	`, req.Contact).Scan(&count)
+
 	if err != nil {
-		// If auth.users is inaccessible, check profiles instead.
-		// Note: profiles usually has phone_number, not phone
-		err = database.DB.QueryRow("SELECT COUNT(*) FROM public.profiles WHERE email = $1 OR phone_number = $1", req.Contact).Scan(&count)
+		// If auth.users is inaccessible (e.g. lack of permissions), fallback to just profiles
+		err = database.DB.QueryRow(`
+			SELECT COUNT(*) 
+			FROM public.profiles 
+			WHERE (email = $1 OR phone_number = $1) 
+			  AND terms_agreed = true
+		`, req.Contact).Scan(&count)
+
 		if err != nil {
 			log.Printf("Error checking contact: %v\n", err)
 			http.Error(w, "Database error", http.StatusInternalServerError)

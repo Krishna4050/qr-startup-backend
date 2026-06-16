@@ -18,7 +18,7 @@ if (Platform.OS === 'web') {
   }
 }
 
-type AuthStep = 'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_name' | 'signup_dob' | 'signup_gender' | 'signup_location' | 'signup_profile' | 'signup_terms' | 'forgot_email_contact' | 'forgot_email_otp' | 'forgot_email_result' | 'forgot_password_method' | 'forgot_password_contact' | 'forgot_password_otp' | 'forgot_password_new' | 'forgot_password_signout';
+type AuthStep = 'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_password' | 'signup_name' | 'signup_dob' | 'signup_gender' | 'signup_location' | 'signup_profile' | 'signup_terms' | 'forgot_email_contact' | 'forgot_email_otp' | 'forgot_email_result' | 'forgot_password_method' | 'forgot_password_contact' | 'forgot_password_otp' | 'forgot_password_new' | 'forgot_password_signout';
 
 type AuthFormProps = {
   initialStep?: AuthStep;
@@ -223,7 +223,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       if (verifyErr) throw verifyErr;
       if (data.user) {
         // OTP Verified, User created & session active!
-        setStep('signup_name');
+        setStep('signup_password');
       }
     } catch (err: any) {
       setError(err.message || 'Invalid code.');
@@ -245,14 +245,6 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     }
     if (usernameTaken) {
       setError('Please choose an available username.');
-      return;
-    }
-    if (passwordStrength === 'Weak' || password.length < 9) {
-      setError('Password is too weak. Must be at least 9 characters.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
       return;
     }
 
@@ -294,15 +286,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         avatar_url: uploadedAvatarUrl,
       }), 10000, "Profile API timed out");
 
-      // 3. Update Auth User Password (allow to fail silently to prevent UI lockup)
-      try {
-        const { error: pwdErr } = await withTimeout(supabase_lucifer_core.auth.updateUser({ password }), 8000, "Password update timed out");
-        if (pwdErr) console.warn("Supabase auth error:", pwdErr);
-      } catch (pwError) {
-        console.warn("Password update failed/timed out, but proceeding:", pwError);
-      }
-
-      setStep('signup_terms');
+      if (onSuccess) onSuccess();
     } catch (e: any) {
       setError(e.message || e.response?.data?.error || 'Failed to save profile');
     }
@@ -482,22 +466,12 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       const { error: pwdError } = await supabase_lucifer_core.auth.updateUser({ password });
       if (pwdError) throw pwdError;
 
-      // 2. Update public.profiles with the demographic data
+      // 2. Update public.profiles with ONLY terms and verification data
       const { data: sessionData } = await supabase_lucifer_core.auth.getSession();
       const user = sessionData?.session?.user;
       
       if (user) {
         const profileData = {
-          first_name: firstName,
-          middle_name: middleName,
-          last_name: lastName,
-          preferred_name: preferredName,
-          date_of_birth: dob,
-          country,
-          city,
-          street,
-          house_number: houseNumber,
-          username: username.toLowerCase(),
           promotions_opt_out: promotionsOptOut,
           promotions_opt_out_at: promotionsOptOut ? new Date().toISOString() : null,
           terms_agreed: true,
@@ -510,11 +484,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         const { error: profileErr } = await supabase_lucifer_core.from('profiles').update(profileData).eq('id', user.id);
         if (profileErr) throw profileErr;
 
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          handleLoginSuccess(user);
-        }
+        handleLoginSuccess(user);
       }
     } catch (err: any) {
       setError(err.message);
@@ -732,6 +702,82 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       );
     }
 
+    if (step === 'signup_password') {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Secure your account</Text>
+          <Text style={styles.subtitle}>Create a strong password for your new account</Text>
+          
+          <View style={[styles.inputWrapper, { marginTop: 24 }]}>
+            <Lock color="#6B7280" size={20} style={styles.inputIcon} />
+            <TextInput 
+              style={styles.input} 
+              placeholder="Password" 
+              placeholderTextColor="#9CA3AF" 
+              secureTextEntry={!showPassword} 
+              value={password} 
+              onChangeText={handlePasswordChange} 
+              autoComplete="off"
+              autoCorrect={false}
+              spellCheck={false}
+              textContentType="newPassword"
+              importantForAutofill="no"
+              // @ts-ignore
+              autoFill="off"
+              autoFocus
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
+              {showPassword ? <EyeOff color="#9CA3AF" size={20} /> : <Eye color="#9CA3AF" size={20} />}
+            </TouchableOpacity>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: -8, marginBottom: 16, paddingLeft: 12 }}>
+             <Text style={{ fontSize: 12, color: passwordStrength === 'Strong' ? '#059669' : passwordStrength === 'Medium' ? '#D97706' : '#DC2626' }}>
+               Strength: {passwordStrength || 'Weak'}
+             </Text>
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Lock color="#6B7280" size={20} style={styles.inputIcon} />
+            <TextInput 
+              style={styles.input} 
+              placeholder="Confirm Password" 
+              placeholderTextColor="#9CA3AF" 
+              secureTextEntry={!showPassword} 
+              value={confirmPassword} 
+              onChangeText={setConfirmPassword} 
+              autoComplete="off"
+              autoCorrect={false}
+              spellCheck={false}
+              textContentType="newPassword"
+              importantForAutofill="no"
+              // @ts-ignore
+              autoFill="off"
+            />
+          </View>
+
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity onPress={() => setStep('signup_otp')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => {
+              if (passwordStrength === 'Weak' || password.length < 9) {
+                setError('Password is too weak. Must be at least 9 characters.');
+                return;
+              }
+              if (password !== confirmPassword) {
+                setError('Passwords do not match.');
+                return;
+              }
+              setError('');
+              setStep('signup_terms');
+            }}>
+               <Text style={styles.primaryButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
     if (step === 'signup_name') {
       return (
         <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
@@ -937,51 +983,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
               </View>
             )}
 
-            <View style={styles.inputWrapper}>
-              <Lock color="#6B7280" size={20} style={styles.inputIcon} />
-              <TextInput 
-                style={styles.input} 
-                placeholder="Password" 
-                placeholderTextColor="#9CA3AF" 
-                secureTextEntry={!showPassword} 
-                value={password} 
-                onChangeText={handlePasswordChange} 
-                autoComplete="off"
-                autoCorrect={false}
-                spellCheck={false}
-                textContentType="newPassword"
-                importantForAutofill="no"
-                // @ts-ignore
-                autoFill="off"
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
-                {showPassword ? <EyeOff color="#9CA3AF" size={20} /> : <Eye color="#9CA3AF" size={20} />}
-              </TouchableOpacity>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: -8, marginBottom: 16, paddingLeft: 12 }}>
-               <Text style={{ fontSize: 12, color: passwordStrength === 'Strong' ? '#059669' : passwordStrength === 'Medium' ? '#D97706' : '#DC2626' }}>
-                 Strength: {passwordStrength || 'Weak'}
-               </Text>
-            </View>
 
-            <View style={styles.inputWrapper}>
-              <Lock color="#6B7280" size={20} style={styles.inputIcon} />
-              <TextInput 
-                style={styles.input} 
-                placeholder="Confirm Password" 
-                placeholderTextColor="#9CA3AF" 
-                secureTextEntry={!showPassword} 
-                value={confirmPassword} 
-                onChangeText={setConfirmPassword} 
-                autoComplete="off"
-                autoCorrect={false}
-                spellCheck={false}
-                textContentType="newPassword"
-                importantForAutofill="no"
-                // @ts-ignore
-                autoFill="off"
-              />
-            </View>
 
             <Text style={[styles.subtitle, { textAlign: 'left', marginBottom: 8, marginTop: 16, fontWeight: 'bold' }]}>Let your personality shine through.</Text>
             <View style={[styles.inputWrapper, { height: 100, alignItems: 'flex-start', paddingTop: 12 }]}>

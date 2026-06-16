@@ -89,21 +89,21 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		INSERT INTO public.profiles (id, first_name, last_name, username, gender, date_of_birth, avatar_url, phone_number, country, city, street, house_number, state, zip_code, bio, recovery_email)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		ON CONFLICT (id) DO UPDATE SET
-			first_name = EXCLUDED.first_name,
-			last_name = EXCLUDED.last_name,
-			username = EXCLUDED.username,
-			gender = EXCLUDED.gender,
-			date_of_birth = EXCLUDED.date_of_birth,
-			avatar_url = EXCLUDED.avatar_url,
-			phone_number = EXCLUDED.phone_number,
-			country = EXCLUDED.country,
-			city = EXCLUDED.city,
-			street = EXCLUDED.street,
-			house_number = EXCLUDED.house_number,
-			state = EXCLUDED.state,
-			zip_code = EXCLUDED.zip_code,
-			bio = EXCLUDED.bio,
-			recovery_email = EXCLUDED.recovery_email,
+			first_name = COALESCE(EXCLUDED.first_name, public.profiles.first_name),
+			last_name = COALESCE(EXCLUDED.last_name, public.profiles.last_name),
+			username = COALESCE(EXCLUDED.username, public.profiles.username),
+			gender = COALESCE(EXCLUDED.gender, public.profiles.gender),
+			date_of_birth = COALESCE(EXCLUDED.date_of_birth, public.profiles.date_of_birth),
+			avatar_url = COALESCE(EXCLUDED.avatar_url, public.profiles.avatar_url),
+			phone_number = COALESCE(EXCLUDED.phone_number, public.profiles.phone_number),
+			country = COALESCE(EXCLUDED.country, public.profiles.country),
+			city = COALESCE(EXCLUDED.city, public.profiles.city),
+			street = COALESCE(EXCLUDED.street, public.profiles.street),
+			house_number = COALESCE(EXCLUDED.house_number, public.profiles.house_number),
+			state = COALESCE(EXCLUDED.state, public.profiles.state),
+			zip_code = COALESCE(EXCLUDED.zip_code, public.profiles.zip_code),
+			bio = COALESCE(EXCLUDED.bio, public.profiles.bio),
+			recovery_email = COALESCE(EXCLUDED.recovery_email, public.profiles.recovery_email),
 			updated_at = NOW();
 	`
 
