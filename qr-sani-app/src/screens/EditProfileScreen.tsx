@@ -20,7 +20,7 @@ export default function EditProfileScreen({ route, isEmbedded }: any) {
   // Form Data State
   const [formData, setFormData] = useState({
     first_name: '', last_name: '', username: '', gender: '', date_of_birth: '',
-    avatar_url: '',
+    avatar_url: '', recovery_email: '',
     phone_number: '', country: '', city: '', street: '', house_number: '', bio: ''
   });
 
@@ -45,7 +45,8 @@ export default function EditProfileScreen({ route, isEmbedded }: any) {
           first_name: data.first_name || '', last_name: data.last_name || '', username: data.username || '',
           gender: data.gender || '', date_of_birth: data.date_of_birth || '', phone_number: data.phone_number || '',
           country: data.country || '', city: data.city || '', street: data.street || '',
-          house_number: data.house_number || '', bio: data.bio || '', avatar_url: data.avatar_url || ''
+          house_number: data.house_number || '', bio: data.bio || '', avatar_url: data.avatar_url || '',
+          recovery_email: data.recovery_email || ''
         });
         setOriginalUsername(data.username || ''); // Remember their current username!
       }
@@ -327,6 +328,23 @@ export default function EditProfileScreen({ route, isEmbedded }: any) {
           </View>
           {errors.date_of_birth && <Text style={styles.errorText}>{errors.date_of_birth}</Text>}
         </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Recovery Email (Optional)</Text>
+        <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 8 }}>Used for securely recovering your account.</Text>
+        <View style={[styles.inputContainer, !isEditing && styles.inputDisabled, errors.recovery_email && styles.inputError]}>
+          <TextInput 
+            style={[styles.input, !isEditing && styles.textDisabled]} 
+            editable={isEditing} 
+            placeholder="recovery@example.com" 
+            autoCapitalize="none"
+            keyboardType="email-address"
+            value={formData.recovery_email} 
+            onChangeText={(t) => updateField('recovery_email', t)} 
+          />
+        </View>
+        {errors.recovery_email && <Text style={styles.errorText}>{errors.recovery_email}</Text>}
       </View>
 
       {/* --- ADDRESS SECTION --- */}

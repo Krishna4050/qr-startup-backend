@@ -115,6 +115,13 @@ func main(){
 	mux.HandleFunc("GET /api/messages", middleware.RequireAuth(handlers.GetUserMessages))
 	mux.HandleFunc("POST /api/auth/verify-contact", handlers.CheckContactAndTurnstileHandler)
 	
+	// --- NEW: Secure Account Recovery APIs ---
+	mux.HandleFunc("POST /api/auth/recovery/forgot-email/send-otp", handlers.ForgotEmailSendOTP)
+	mux.HandleFunc("POST /api/auth/recovery/forgot-email/verify-otp", handlers.ForgotEmailVerifyOTP)
+	mux.HandleFunc("POST /api/auth/recovery/forgot-password/send-otp", handlers.ForgotPasswordSendOTP)
+	mux.HandleFunc("POST /api/auth/recovery/forgot-password/verify-otp", handlers.ForgotPasswordVerifyOTP)
+	mux.HandleFunc("POST /api/auth/recovery/forgot-password/reset", handlers.ForgotPasswordReset)
+	
 	// --- NEW: Custom User Phone Verification APIs ---
 	mux.HandleFunc("POST /api/user/phone/send-otp", middleware.RequireAuth(handlers.SendUserPhoneOTP))
 	mux.HandleFunc("POST /api/user/phone/verify-otp", middleware.RequireAuth(handlers.VerifyUserPhoneOTP))

@@ -18,15 +18,17 @@ if (Platform.OS === 'web') {
   }
 }
 
+type AuthStep = 'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_name' | 'signup_dob' | 'signup_gender' | 'signup_location' | 'signup_profile' | 'signup_terms' | 'forgot_email_contact' | 'forgot_email_otp' | 'forgot_email_result' | 'forgot_password_method' | 'forgot_password_contact' | 'forgot_password_otp' | 'forgot_password_new' | 'forgot_password_signout';
+
 type AuthFormProps = {
-  initialStep?: 'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_name' | 'signup_dob' | 'signup_gender' | 'signup_location' | 'signup_profile' | 'signup_terms';
+  initialStep?: AuthStep;
   onSuccess?: () => void;
   isModal?: boolean;
 };
 
 export default function AuthForm({ initialStep = 'contact', onSuccess, isModal = false }: AuthFormProps) {
   const navigation = useNavigation<any>();
-  const [step, setStep] = useState<'contact' | 'verify' | 'contact_not_found' | 'password' | 'signup_otp' | 'signup_name' | 'signup_dob' | 'signup_gender' | 'signup_location' | 'signup_profile' | 'signup_terms'>(initialStep);
+  const [step, setStep] = useState<AuthStep>(initialStep);
   
   // States
   const [contact, setContact] = useState(''); // Email or Phone
@@ -68,6 +70,13 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
+  // Secure Recovery Flow States
+  const [failedPasswordAttempts, setFailedPasswordAttempts] = useState(0);
+  const [recoveryMethod, setRecoveryMethod] = useState<'email' | 'phone' | null>(null);
+  const [recoveryContact, setRecoveryContact] = useState('');
+  const [recoveryOTP, setRecoveryOTP] = useState('');
+  const [recoveryResetToken, setRecoveryResetToken] = useState('');
+  const [recoverySignoutAll, setRecoverySignoutAll] = useState(true);
   useEffect(() => {
     // Determine if contact is phone or email
     if (contact.startsWith('+') || /^\d+$/.test(contact)) {
@@ -188,7 +197,9 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     
     if (error) {
       setError(error.message);
+      setFailedPasswordAttempts(prev => prev + 1);
     } else {
+      setFailedPasswordAttempts(0);
       handleLoginSuccess(data.user);
     }
     setLoading(false);
@@ -294,6 +305,89 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     }
     setLoading(false);
   };
+
+  // --- RECOVERY HANDLERS ---
+  const handleForgotEmailSendOTP = async () => {
+    if (!recoveryContact) { setError('Please enter your recovery contact'); return; }
+    setLoading(true); setError('');
+    try {
+      const res = await apiClient.post('/api/auth/recovery/forgot-email/send-otp', { contact: recoveryContact });
+      if (res.data.status === 'success') { setStep('forgot_email_otp'); }
+    } catch (e: any) {
+      setError(e.response?.data || e.message || 'Error sending OTP');
+    }
+    setLoading(false);
+  };
+
+  const handleForgotEmailVerifyOTP = async () => {
+    if (recoveryOTP.length < 8) return;
+    setLoading(true); setError('');
+    try {
+      const res = await apiClient.post('/api/auth/recovery/forgot-email/verify-otp', { contact: recoveryContact, code: recoveryOTP });
+      if (res.data.email) {
+        setContact(res.data.email);
+        setStep('forgot_email_result');
+      }
+    } catch (e: any) {
+      setError(e.response?.data || e.message || 'Invalid code');
+    }
+    setLoading(false);
+  };
+
+  const initForgotPasswordFlow = async () => {
+     // User forgot password. If we already know their email, we can send to phone. If phone, send to email.
+     // In a real flow, we could ask which one to use. Let's ask them for the contact directly.
+     setStep('forgot_password_contact');
+  };
+
+  const handleForgotPasswordSendOTP = async () => {
+    if (!recoveryContact) { setError('Please enter your recovery contact'); return; }
+    setLoading(true); setError('');
+    try {
+      const res = await apiClient.post('/api/auth/recovery/forgot-password/send-otp', { contact: recoveryContact });
+      if (res.data.status === 'success') { setStep('forgot_password_otp'); }
+    } catch (e: any) {
+      setError(e.response?.data || e.message || 'Account not found');
+    }
+    setLoading(false);
+  };
+
+  const handleForgotPasswordVerifyOTP = async () => {
+    if (recoveryOTP.length < 8) return;
+    setLoading(true); setError('');
+    try {
+      const res = await apiClient.post('/api/auth/recovery/forgot-password/verify-otp', { contact: recoveryContact, code: recoveryOTP });
+      if (res.data.reset_token) {
+        setRecoveryResetToken(res.data.reset_token);
+        setStep('forgot_password_new');
+      }
+    } catch (e: any) {
+      setError(e.response?.data || e.message || 'Invalid code');
+    }
+    setLoading(false);
+  };
+
+  const handleForgotPasswordReset = async () => {
+    if (newPassword.length < 9 || passwordStrength === 'Weak') { setError('Password is too weak'); return; }
+    if (newPassword !== confirmNewPassword) { setError('Passwords do not match'); return; }
+    
+    setLoading(true); setError('');
+    try {
+      await apiClient.post('/api/auth/recovery/forgot-password/reset', { 
+        reset_token: recoveryResetToken, 
+        new_password: newPassword,
+        signout_all: recoverySignoutAll
+      });
+      // Success
+      setPassword('');
+      setFailedPasswordAttempts(0);
+      setStep('password');
+    } catch (e: any) {
+      setError(e.response?.data || e.message || 'Failed to reset password');
+    }
+    setLoading(false);
+  };
+  // -----------------------
 
   const handleDobChange = (text: string) => {
     const cleaned = text.replace(/\D/g, '');
@@ -485,7 +579,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             </View>
           ) : null}
 
-          <TouchableOpacity style={{ marginTop: 8 }} onPress={() => {}}>
+          <TouchableOpacity style={{ marginTop: 8 }} onPress={() => { setRecoveryContact(''); setStep('forgot_email_contact'); }}>
             <Text style={styles.linkText}>Forgot email?</Text>
           </TouchableOpacity>
 
@@ -578,9 +672,16 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           ) : null}
 
           <View style={[styles.actionRow, { marginTop: 40 }]}>
-            <TouchableOpacity onPress={() => setStep('contact')}>
-              <Text style={styles.linkText}>Back</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'column' }}>
+              <TouchableOpacity onPress={() => setStep('contact')} style={{ marginBottom: failedPasswordAttempts > 0 ? 16 : 0 }}>
+                <Text style={styles.linkText}>Back</Text>
+              </TouchableOpacity>
+              {failedPasswordAttempts > 0 && (
+                <TouchableOpacity onPress={initForgotPasswordFlow}>
+                  <Text style={[styles.linkText, { color: '#DC2626' }]}>Forgot password?</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <TouchableOpacity style={styles.primaryButton} onPress={handleLoginSubmit} disabled={loading}>
               {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Log in</Text>}
             </TouchableOpacity>
@@ -936,6 +1037,141 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         </View>
       );
     }
+
+    // --- RECOVERY UI STEPS ---
+    if (step === 'forgot_email_contact') {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Find your email</Text>
+          <Text style={styles.subtitle}>Enter your phone number or recovery email</Text>
+          <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
+            <TextInput style={styles.input} placeholder="Phone or Email" value={recoveryContact} onChangeText={(t) => {setRecoveryContact(t); setError('');}} autoCapitalize="none" autoFocus />
+          </View>
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+          <View style={styles.actionRow}>
+            <TouchableOpacity onPress={() => setStep('contact')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleForgotEmailSendOTP} disabled={loading}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Next</Text>}</TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    if (step === 'forgot_email_otp') {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Verify it's you</Text>
+          <Text style={styles.subtitle}>An 8-digit secure code was sent to {recoveryContact}</Text>
+          <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
+            <TextInput style={[styles.input, { letterSpacing: 8, textAlign: 'center', fontSize: 24, fontWeight: 'bold' }]} placeholder="00000000" keyboardType="number-pad" maxLength={8} value={recoveryOTP} onChangeText={(t) => {setRecoveryOTP(t); setError(''); if(t.length === 8) handleForgotEmailVerifyOTP();}} autoFocus />
+          </View>
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+          <View style={styles.actionRow}>
+            <TouchableOpacity onPress={() => setStep('forgot_email_contact')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleForgotEmailVerifyOTP} disabled={loading}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Verify</Text>}</TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    if (step === 'forgot_email_result') {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Account Found</Text>
+          <Text style={styles.subtitle}>Your primary login email is:</Text>
+          <View style={[styles.inputWrapper, { justifyContent: 'center', backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1E3A8A' }}>{contact}</Text>
+          </View>
+          <View style={[styles.actionRow, { justifyContent: 'center' }]}>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => setStep('password')}><Text style={styles.primaryButtonText}>Log In</Text></TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    if (step === 'forgot_password_contact') {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Account Recovery</Text>
+          <Text style={styles.subtitle}>To recover your password, enter your phone number or recovery email</Text>
+          <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
+            <TextInput style={styles.input} placeholder="Phone or Email" value={recoveryContact} onChangeText={(t) => {setRecoveryContact(t); setError('');}} autoCapitalize="none" autoFocus />
+          </View>
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+          <View style={styles.actionRow}>
+            <TouchableOpacity onPress={() => setStep('password')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleForgotPasswordSendOTP} disabled={loading}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Next</Text>}</TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    if (step === 'forgot_password_otp') {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Verification</Text>
+          <Text style={styles.subtitle}>An 8-digit code was sent to {recoveryContact}</Text>
+          <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
+            <TextInput style={[styles.input, { letterSpacing: 8, textAlign: 'center', fontSize: 24, fontWeight: 'bold' }]} placeholder="00000000" keyboardType="number-pad" maxLength={8} value={recoveryOTP} onChangeText={(t) => {setRecoveryOTP(t); setError(''); if(t.length === 8) handleForgotPasswordVerifyOTP();}} autoFocus />
+          </View>
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+          <View style={styles.actionRow}>
+            <TouchableOpacity onPress={() => setStep('forgot_password_contact')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleForgotPasswordVerifyOTP} disabled={loading}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Verify</Text>}</TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    if (step === 'forgot_password_new') {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.subtitle}>Create a strong, new password</Text>
+          <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
+            <Lock color="#4B5563" size={20} style={styles.inputIcon} />
+            <TextInput style={styles.input} placeholder="New Password" placeholderTextColor="#9CA3AF" secureTextEntry={!showPassword} value={newPassword} onChangeText={(t) => {setNewPassword(t); setPasswordStrength(checkPasswordStrength(t)); setError('');}} autoFocus />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>{showPassword ? <EyeOff color="#4B5563" size={20} /> : <Eye color="#4B5563" size={20} />}</TouchableOpacity>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: -8, marginBottom: 16, paddingLeft: 12 }}>
+             <Text style={{ fontSize: 12, color: passwordStrength === 'Strong' ? '#059669' : passwordStrength === 'Medium' ? '#D97706' : '#DC2626' }}>Strength: {passwordStrength || 'Weak'}</Text>
+          </View>
+          <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
+            <Lock color="#4B5563" size={20} style={styles.inputIcon} />
+            <TextInput style={styles.input} placeholder="Confirm Password" placeholderTextColor="#9CA3AF" secureTextEntry={!showPassword} value={confirmNewPassword} onChangeText={(t) => {setConfirmNewPassword(t); setError('');}} />
+          </View>
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+          <View style={styles.actionRow}>
+             <TouchableOpacity onPress={() => setStep('forgot_password_contact')}><Text style={styles.linkText}>Cancel</Text></TouchableOpacity>
+             <TouchableOpacity style={styles.primaryButton} onPress={() => { if(newPassword === confirmNewPassword && passwordStrength !== 'Weak') setStep('forgot_password_signout'); else setError('Passwords must match and be strong.'); }}><Text style={styles.primaryButtonText}>Next</Text></TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    if (step === 'forgot_password_signout') {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Security Check</Text>
+          <Text style={styles.subtitle}>Mandatory security measure: Sign out from all other devices globally.</Text>
+          <View style={{ backgroundColor: '#FEF2F2', padding: 16, borderRadius: 12, marginBottom: 24, borderWidth: 1, borderColor: '#FCA5A5' }}>
+             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+               <AlertCircle color="#DC2626" size={20} />
+               <Text style={{ marginLeft: 8, fontWeight: 'bold', color: '#991B1B' }}>Active Sessions Revocation</Text>
+             </View>
+             <Text style={{ color: '#991B1B', lineHeight: 20 }}>
+               By continuing, you will be instantly logged out from all mobile apps, web browsers, and other devices worldwide. You will need to log back in with your new password.
+             </Text>
+          </View>
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+          <View style={styles.actionRow}>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity style={styles.primaryButton} onPress={handleForgotPasswordReset} disabled={loading}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Confirm & Reset</Text>}</TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    return null;
   };
 
   const content = renderContent();

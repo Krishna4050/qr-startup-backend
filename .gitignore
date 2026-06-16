@@ -22,3 +22,4 @@ research paper on airbnb/
 005_push_tokens.sql
 firebase-service-account.json
 *.sql
+009_recovery_email.sql
