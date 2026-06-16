@@ -77,6 +77,9 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
   const [recoveryOTP, setRecoveryOTP] = useState('');
   const [recoveryResetToken, setRecoveryResetToken] = useState('');
   const [recoverySignoutAll, setRecoverySignoutAll] = useState(true);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
   useEffect(() => {
     // Determine if contact is phone or email
     if (contact.startsWith('+') || /^\d+$/.test(contact)) {
@@ -335,8 +338,8 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
   };
 
   const initForgotPasswordFlow = async () => {
-     // User forgot password. If we already know their email, we can send to phone. If phone, send to email.
-     // In a real flow, we could ask which one to use. Let's ask them for the contact directly.
+     setError('');
+     setRecoveryContact(contact);
      setStep('forgot_password_contact');
   };
 
@@ -1092,9 +1095,9 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       return (
         <View style={styles.stepContainer}>
           <Text style={styles.title}>Account Recovery</Text>
-          <Text style={styles.subtitle}>To recover your password, enter your phone number or recovery email</Text>
+          <Text style={styles.subtitle}>Enter your email or phone number to receive a recovery code</Text>
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
-            <TextInput style={styles.input} placeholder="Phone or Email" value={recoveryContact} onChangeText={(t) => {setRecoveryContact(t); setError('');}} autoCapitalize="none" autoFocus />
+            <TextInput style={styles.input} placeholder="Email or Phone" value={recoveryContact} onChangeText={(t) => {setRecoveryContact(t); setError('');}} autoCapitalize="none" autoFocus />
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
           <View style={styles.actionRow}>
