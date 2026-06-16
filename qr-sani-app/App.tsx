@@ -162,14 +162,15 @@ const AuthStack = () => (
 );
 
 const Router = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, blockRouting } = useAuth();
   
   if (isLoading) {
     // Optionally render a global splash screen here
     return null; 
   }
 
-  return user ? <AuthStack /> : <GuestStack />;
+  // Prevent routing to Dashboard if we are mid-signup (blockRouting is true)
+  return (user && !blockRouting) ? <AuthStack /> : <GuestStack />;
 };
 
 export default function App() {

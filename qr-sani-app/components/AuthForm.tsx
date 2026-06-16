@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Text, View, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, ScrollView, StyleSheet } from 'react-native';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, User, Users, Compass, Camera, Upload, Navigation, MapPin, Sparkles, Calendar, AtSign } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
+import { useAuth } from '../src/context/AuthContext';
 import { registerForPushNotificationsAsync } from '../src/utils/notifications';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
@@ -28,6 +29,7 @@ type AuthFormProps = {
 
 export default function AuthForm({ initialStep = 'contact', onSuccess, isModal = false }: AuthFormProps) {
   const navigation = useNavigation<any>();
+  const { setBlockRouting } = useAuth();
   const [step, setStep] = useState<AuthStep>(initialStep);
   
   // States
@@ -178,6 +180,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           isPhone ? { phone: contact } : { email: contact }
         );
         if (otpError) throw otpError;
+        setBlockRouting(true);
         setStep('signup_otp');
       }
     } catch (err: any) {
@@ -484,6 +487,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         const { error: profileErr } = await supabase_lucifer_core.from('profiles').update(profileData).eq('id', user.id);
         if (profileErr) throw profileErr;
 
+        setBlockRouting(false);
         handleLoginSuccess(user);
       }
     } catch (err: any) {

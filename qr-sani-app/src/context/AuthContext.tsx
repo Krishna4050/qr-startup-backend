@@ -10,13 +10,16 @@ type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   logout: () => Promise<void>;
+  blockRouting: boolean;
+  setBlockRouting: (val: boolean) => void;
 };
 
-const AuthContext = createContext<AuthContextType>({ session: null, user: null, isLoading: true, logout: async () => {} });
+const AuthContext = createContext<AuthContextType>({ session: null, user: null, isLoading: true, logout: async () => {}, blockRouting: false, setBlockRouting: () => {} });
 
 export const AuthProvider = ({ children }: any) => {
   const [mayalu_session, set_mayalu_session] = useState<Session | null>(null);
   const [is_sani_loading, set_is_sani_loading] = useState(true);
+  const [blockRouting, setBlockRouting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -120,7 +123,7 @@ export const AuthProvider = ({ children }: any) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session: mayalu_session, user: mayalu_session?.user || null, isLoading: is_sani_loading, logout }}>
+    <AuthContext.Provider value={{ session: mayalu_session, user: mayalu_session?.user || null, isLoading: is_sani_loading, logout, blockRouting, setBlockRouting }}>
       {children}
     </AuthContext.Provider>
   );
