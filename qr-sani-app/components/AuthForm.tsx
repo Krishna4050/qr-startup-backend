@@ -1036,7 +1036,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           ) : null}
 
           <View style={[styles.actionRow, { marginTop: 40 }]}>
-            <TouchableOpacity onPress={() => setStep('signup_profile')}>
+            <TouchableOpacity onPress={() => setStep('signup_password')}>
               <Text style={styles.linkText}>Back</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.primaryButton} onPress={handleTermsSubmit} disabled={loading}>
