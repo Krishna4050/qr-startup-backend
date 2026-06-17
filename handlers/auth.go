@@ -67,7 +67,10 @@ func CheckContactAndTurnstileHandler(w http.ResponseWriter, r *http.Request) {
 		FROM auth.users u
 		LEFT JOIN public.profiles p ON u.id = p.id
 		WHERE (u.email = $1 OR u.phone = $1) 
-		  AND (u.encrypted_password IS NOT NULL OR p.terms_agreed = true)
+		  AND (
+		    (u.encrypted_password IS NOT NULL AND u.encrypted_password != '') 
+		    OR p.terms_agreed = true
+		  )
 	`, req.Contact).Scan(&count)
 
 	if err != nil {
