@@ -123,7 +123,14 @@ export const AuthProvider = ({ children }: any) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session: mayalu_session, user: mayalu_session?.user || null, isLoading: is_sani_loading, logout, blockRouting, setBlockRouting }}>
+    <AuthContext.Provider value={{ 
+      session: blockRouting ? null : mayalu_session, 
+      user: blockRouting ? null : (mayalu_session?.user || null), 
+      isLoading: is_sani_loading, 
+      logout, 
+      blockRouting, 
+      setBlockRouting 
+    }}>
       {children}
     </AuthContext.Provider>
   );
