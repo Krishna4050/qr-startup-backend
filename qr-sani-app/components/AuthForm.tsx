@@ -534,8 +534,8 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     if (step === 'contact') {
       return (
         <View style={styles.stepContainer}>
-          <Text style={styles.title}>Sign in</Text>
-          <Text style={styles.subtitle}>Use your ATS Finland Account</Text>
+          <Text style={styles.title}>Welcome to ATS Finland</Text>
+          <Text style={styles.subtitle}>Enter your email or phone to sign in or register for a new account.</Text>
           
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
             <TextInput 
@@ -566,12 +566,9 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             </Text>
           </View>
 
-          <View style={styles.actionRow}>
-            <TouchableOpacity onPress={() => {}}>
-              <Text style={styles.linkText}>Create account</Text>
-            </TouchableOpacity>
+          <View style={[styles.actionRow, { justifyContent: 'flex-end' }]}>
             <TouchableOpacity style={styles.primaryButton} onPress={handleContactSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Next</Text>}
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Continue</Text>}
             </TouchableOpacity>
           </View>
 
