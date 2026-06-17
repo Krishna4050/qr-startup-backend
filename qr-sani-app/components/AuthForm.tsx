@@ -25,11 +25,12 @@ type AuthFormProps = {
   initialStep?: AuthStep;
   onSuccess?: () => void;
   isModal?: boolean;
+  forceRegistrationCompletion?: boolean;
 };
 
-export default function AuthForm({ initialStep = 'contact', onSuccess, isModal = false }: AuthFormProps) {
+export default function AuthForm({ initialStep = 'contact', onSuccess, isModal = false, forceRegistrationCompletion = false }: AuthFormProps) {
   const navigation = useNavigation<any>();
-  const { setBlockRouting } = useAuth();
+  const { logout, user } = useAuth();
   const [step, setStep] = useState<AuthStep>(initialStep);
   
   // States
@@ -40,6 +41,15 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (forceRegistrationCompletion && user) {
+      setStep('signup_password');
+      const contactVal = user.email || user.phone || '';
+      setContact(contactVal);
+      setIsPhone(!!user.phone);
+    }
+  }, [forceRegistrationCompletion, user]);
   
   // Signup States
   const [otp, setOtp] = useState('');
@@ -180,7 +190,6 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           isPhone ? { phone: contact } : { email: contact }
         );
         if (otpError) throw otpError;
-        setBlockRouting(true);
         setStep('signup_otp');
       }
     } catch (err: any) {
@@ -487,7 +496,6 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         const { error: profileErr } = await supabase_lucifer_core.from('profiles').update(profileData).eq('id', user.id);
         if (profileErr) throw profileErr;
 
-        setBlockRouting(false);
         handleLoginSuccess(user);
       }
     } catch (err: any) {
@@ -759,7 +767,13 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
 
           <View style={styles.actionRow}>
-            <TouchableOpacity onPress={() => setStep('signup_otp')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => {
+              if (forceRegistrationCompletion) {
+                logout();
+              } else {
+                setStep('signup_otp');
+              }
+            }}><Text style={styles.linkText}>{forceRegistrationCompletion ? 'Cancel' : 'Back'}</Text></TouchableOpacity>
             <TouchableOpacity style={styles.primaryButton} onPress={() => {
               if (passwordStrength === 'Weak' || password.length < 9) {
                 setError('Password is too weak. Must be at least 9 characters.');

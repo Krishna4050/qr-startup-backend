@@ -10,16 +10,15 @@ type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   logout: () => Promise<void>;
-  blockRouting: boolean;
-  setBlockRouting: (val: boolean) => void;
+  isFullyRegistered: boolean;
 };
 
-const AuthContext = createContext<AuthContextType>({ session: null, user: null, isLoading: true, logout: async () => {}, blockRouting: false, setBlockRouting: () => {} });
+const AuthContext = createContext<AuthContextType>({ session: null, user: null, isLoading: true, logout: async () => {}, isFullyRegistered: false });
 
 export const AuthProvider = ({ children }: any) => {
   const [mayalu_session, set_mayalu_session] = useState<Session | null>(null);
   const [is_sani_loading, set_is_sani_loading] = useState(true);
-  const [blockRouting, setBlockRouting] = useState(false);
+  const [is_fully_registered, set_is_fully_registered] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -38,7 +37,20 @@ export const AuthProvider = ({ children }: any) => {
 
     const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        set_mayalu_session(session); 
+        
+        let termsAgreed = false;
+        try {
+          const { data, error } = await supabase_lucifer_core.from('profiles').select('terms_agreed').eq('id', session.user.id).single();
+          if (!error && data) termsAgreed = data.terms_agreed;
+        } catch (e) {
+          console.warn("Failed to check terms_agreed", e);
+        }
+
+        if (isMounted) {
+          set_mayalu_session(session); 
+          set_is_fully_registered(termsAgreed);
+        }
+
         // Automatically ensure E2E keys exist and are synced to profile
         if (event === 'SIGNED_IN') {
           try {
@@ -52,7 +64,10 @@ export const AuthProvider = ({ children }: any) => {
           }
         }
       } else {
-        if (isMounted) set_mayalu_session(null);
+        if (isMounted) {
+          set_mayalu_session(null);
+          set_is_fully_registered(false);
+        }
       }
       if (isMounted) {
         set_is_sani_loading(false); // ALWAYS UNLOCK APP!
@@ -124,12 +139,11 @@ export const AuthProvider = ({ children }: any) => {
 
   return (
     <AuthContext.Provider value={{ 
-      session: blockRouting ? null : mayalu_session, 
-      user: blockRouting ? null : (mayalu_session?.user || null), 
+      session: mayalu_session, 
+      user: mayalu_session?.user || null, 
       isLoading: is_sani_loading, 
       logout, 
-      blockRouting, 
-      setBlockRouting 
+      isFullyRegistered: is_fully_registered 
     }}>
       {children}
     </AuthContext.Provider>

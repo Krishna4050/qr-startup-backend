@@ -15,6 +15,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import WebLayout from './src/components/WebLayout';
 import MainTabs from './src/navigation/MainTabs';
 import LoginScreen from './src/screens/LoginScreen';
+import RegistrationCompletionScreen from './src/screens/RegistrationCompletionScreen';
 
 if (Platform.OS === 'web') {
   document.title = 'ATS finland';
@@ -161,16 +162,28 @@ const AuthStack = () => (
   </Stack.Navigator>
 );
 
+const RegistrationCompletionStack = () => (
+  <Stack.Navigator>
+    <Stack.Screen name="RegistrationCompletion" component={RegistrationCompletionScreen} options={{ headerShown: false, gestureEnabled: false }} />
+  </Stack.Navigator>
+);
+
 const Router = () => {
-  const { user, isLoading, blockRouting } = useAuth();
+  const { user, isLoading, isFullyRegistered } = useAuth();
   
   if (isLoading) {
     // Optionally render a global splash screen here
     return null; 
   }
 
-  // Prevent routing to Dashboard if we are mid-signup (blockRouting is true)
-  return (user && !blockRouting) ? <AuthStack /> : <GuestStack />;
+  if (!user) return <GuestStack />;
+
+  // 🔒 HARDCORE SECURITY LOCKOUT
+  if (!isFullyRegistered) {
+    return <RegistrationCompletionStack />;
+  }
+
+  return <AuthStack />;
 };
 
 export default function App() {
