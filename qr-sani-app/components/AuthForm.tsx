@@ -1011,7 +1011,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     if (step === 'signup_terms') {
       return (
         <View style={styles.stepContainer}>
-          <Text style={styles.title}>Almost done</Text>
+          <Text style={styles.title}>Review & Agree</Text>
           
           <Text style={[styles.disclaimerText, { marginTop: 24 }]}>
             ATS will send you promotions such as deals and marketing notifications. You can opt out anytime via account settings or within marketing emails.
