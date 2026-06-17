@@ -57,36 +57,22 @@ func CheckContactAndTurnstileHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 2. Check if contact exists in public.profiles or auth.users
-	
+	// Attempt to query auth.users directly to see if they have an active password.
+	// If they don't have a password, we must return Exists: false so they go through the OTP flow,
+	// because they cannot possibly log in via the password screen.
 	var count int
-	// Attempt to query auth.users directly. We check if they have a password OR have completed their profile (terms_agreed).
-	// If they have neither, they abandoned signup before setting a password, so we treat them as a new user.
 	err := database.DB.QueryRow(`
 		SELECT COUNT(*) 
-		FROM auth.users u
-		LEFT JOIN public.profiles p ON u.id = p.id
-		WHERE (u.email = $1 OR u.phone = $1) 
-		  AND (
-		    (u.encrypted_password IS NOT NULL AND u.encrypted_password != '') 
-		    OR p.terms_agreed = true
-		  )
+		FROM auth.users
+		WHERE (email = $1 OR phone = $1) 
+		  AND encrypted_password IS NOT NULL 
+		  AND encrypted_password != ''
 	`, req.Contact).Scan(&count)
 
 	if err != nil {
-		// If auth.users is inaccessible (e.g. lack of permissions), fallback to just profiles
-		err = database.DB.QueryRow(`
-			SELECT COUNT(*) 
-			FROM public.profiles 
-			WHERE (email = $1 OR phone_number = $1) 
-			  AND terms_agreed = true
-		`, req.Contact).Scan(&count)
-
-		if err != nil {
-			log.Printf("Error checking contact: %v\n", err)
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
-		}
+		log.Printf("Error checking auth.users: %v\n", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
 	}
 
 	response := CheckContactResponse{
