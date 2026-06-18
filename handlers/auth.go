@@ -57,20 +57,19 @@ func CheckContactAndTurnstileHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Attempt to query auth.users directly to see if they have an active password.
-	// If they don't have a password, we must return Exists: false so they go through the OTP flow,
-	// because they cannot possibly log in via the password screen.
+	// According to our strict business logic: A user is ONLY considered an "existing user"
+	// (meaning they should be asked for a password) if they have fully completed registration
+	// and agreed to the terms and conditions. If they haven't agreed, we route them through OTP.
 	var count int
 	err := database.DB.QueryRow(`
 		SELECT COUNT(*) 
-		FROM auth.users
-		WHERE (email = $1 OR phone = $1) 
-		  AND encrypted_password IS NOT NULL 
-		  AND encrypted_password != ''
+		FROM public.profiles
+		WHERE (email = $1 OR phone_number = $1) 
+		  AND terms_agreed = true
 	`, req.Contact).Scan(&count)
 
 	if err != nil {
-		log.Printf("Error checking auth.users: %v\n", err)
+		log.Printf("Error checking public.profiles: %v\n", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
