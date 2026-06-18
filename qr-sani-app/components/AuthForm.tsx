@@ -476,7 +476,11 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     try {
       // 1. Update auth.users with the new password
       const { error: pwdError } = await supabase_lucifer_core.auth.updateUser({ password });
-      if (pwdError) throw pwdError;
+      // If the password was already saved during a previous attempt, Supabase will complain. 
+      // We can safely ignore this specific error and proceed!
+      if (pwdError && !pwdError.message.toLowerCase().includes('different from the old password')) {
+        throw pwdError;
+      }
 
       // 2. Update public.profiles with ONLY terms and verification data
       const { data: sessionData } = await supabase_lucifer_core.auth.getSession();
