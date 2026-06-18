@@ -63,9 +63,10 @@ func CheckContactAndTurnstileHandler(w http.ResponseWriter, r *http.Request) {
 	var count int
 	err := database.DB.QueryRow(`
 		SELECT COUNT(*) 
-		FROM public.profiles
-		WHERE (email = $1 OR phone_number = $1) 
-		  AND terms_agreed = true
+		FROM auth.users u
+		JOIN public.profiles p ON u.id = p.id
+		WHERE (u.email = $1 OR u.phone = $1) 
+		  AND p.terms_agreed = true
 	`, req.Contact).Scan(&count)
 
 	if err != nil {
