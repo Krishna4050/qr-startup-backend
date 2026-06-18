@@ -38,31 +38,36 @@ export const AuthProvider = ({ children }: any) => {
     const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         
-        let termsAgreed = false;
-        try {
-          const { data, error } = await supabase_lucifer_core.from('profiles').select('terms_agreed').eq('id', session.user.id).single();
-          if (!error && data) termsAgreed = data.terms_agreed;
-        } catch (e) {
-          console.warn("Failed to check terms_agreed", e);
-        }
-
-        if (isMounted) {
-          set_mayalu_session(session); 
-          set_is_fully_registered(termsAgreed);
-        }
-
-        // Automatically ensure E2E keys exist and are synced to profile
-        if (event === 'SIGNED_IN') {
+        // Wrap database calls in a non-blocking macro-task to prevent gotrue-js deadlock!
+        // When verifyOtp runs, it triggers onAuthStateChange. If we use supabase.from() here,
+        // it calls getSession() under the hood, deadlocking the client!
+        setTimeout(async () => {
+          let termsAgreed = false;
           try {
-            const keys = await getOrCreateKeyPair();
-            await supabase_lucifer_core
-              .from('profiles')
-              .update({ chat_public_key: keys.publicKey })
-              .eq('id', session.user.id);
+            const { data, error } = await supabase_lucifer_core.from('profiles').select('terms_agreed').eq('id', session.user.id).single();
+            if (!error && data) termsAgreed = data.terms_agreed;
           } catch (e) {
-            console.error("Failed to sync E2E keys on login:", e);
+            console.warn("Failed to check terms_agreed", e);
           }
-        }
+
+          if (isMounted) {
+            set_mayalu_session(session); 
+            set_is_fully_registered(termsAgreed);
+          }
+
+          // Automatically ensure E2E keys exist and are synced to profile
+          if (event === 'SIGNED_IN') {
+            try {
+              const keys = await getOrCreateKeyPair();
+              await supabase_lucifer_core
+                .from('profiles')
+                .update({ chat_public_key: keys.publicKey })
+                .eq('id', session.user.id);
+            } catch (e) {
+              console.error("Failed to sync E2E keys on login:", e);
+            }
+          }
+        }, 0);
       } else {
         if (isMounted) {
           set_mayalu_session(null);
