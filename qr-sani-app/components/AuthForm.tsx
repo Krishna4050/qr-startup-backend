@@ -496,7 +496,11 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         const { error: profileErr } = await supabase_lucifer_core.from('profiles').update(profileData).eq('id', user.id);
         if (profileErr) throw profileErr;
 
-        handleLoginSuccess(user);
+        await handleLoginSuccess(user);
+
+        // Crucial: Refresh session to trigger AuthContext to re-fetch terms_agreed = true
+        // This makes the Global Auth Guard securely and automatically route us to the Dashboard!
+        await supabase_lucifer_core.auth.refreshSession();
       }
     } catch (err: any) {
       setError(err.message);
@@ -523,7 +527,8 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         }).catch(() => {});
       }
     } catch (e) {}
-    navigation.replace('Dashboard'); 
+    // We strictly DO NOT manually navigate here. The Global Auth Guard (App Router) 
+    // handles switching from GuestStack/RegistrationStack to AuthStack automatically!
   };
 
   const handleGoogleLogin = async () => {
