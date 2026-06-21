@@ -312,17 +312,17 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
         {/* Full-screen Mobile Search Modal */}
         <Modal visible={showMobileSearchModal} animationType="slide" transparent={false}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: '#121212' }}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F7F7' }}>
             <View style={styles.mobileModalHeader}>
               <TouchableOpacity style={styles.mobileCloseBtn} onPress={() => setShowMobileSearchModal(false)}>
-                <X color="#FFFFFF" size={20} />
+                <X color="#E2E8F0" size={20} />
               </TouchableOpacity>
               <View style={styles.mobileServiceToggleRow}>
-                 <Text style={{fontSize: 18, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5}}>{selectedService}</Text>
+                 <Text style={{fontSize: 16, fontWeight: 'bold', color: '#FFF'}}>{selectedService}</Text>
               </View>
             </View>
 
-            <ScrollView style={{ padding: 20, backgroundColor: '#121212' }}>
+            <ScrollView style={{ padding: 20, backgroundColor: '#0B1120' }}>
 
 
               {/* Service Selection Card */}
@@ -335,7 +335,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                       onPress={() => setSelectedService(srv)}
                       style={[styles.mobileServicePill, selectedService === srv && styles.mobileServicePillActive]}
                     >
-                      <Text style={{ color: selectedService === srv ? '#000000' : '#A1A1AA', fontWeight: '600' }}>{srv}</Text>
+                      <Text style={{ color: selectedService === srv ? '#FFF' : '#E2E8F0', fontWeight: '500' }}>{srv}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -349,9 +349,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                     <TouchableOpacity 
                       key={loc}
                       onPress={() => setSelectedLocation(loc)}
-                      style={[styles.mobileLocBtn, selectedLocation === loc && { backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' }]}
+                      style={[styles.mobileLocBtn, selectedLocation === loc && { borderColor: '#00E5FF', borderWidth: 2 }]}
                     >
-                      <Text style={{ fontWeight: '600', color: selectedLocation === loc ? '#000000' : '#A1A1AA' }}>{loc}</Text>
+                      <Text style={{ fontWeight: selectedLocation === loc ? 'bold' : 'normal', color: '#E2E8F0' }}>{loc}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -375,11 +375,11 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
             <View style={styles.mobileFooterBar}>
               <TouchableOpacity onPress={() => setShowMobileSearchModal(false)}>
-                <Text style={{ fontSize: 16, fontWeight: '600', textDecorationLine: 'underline', color: '#A1A1AA' }}>Clear all</Text>
+                <Text style={{ fontSize: 16, fontWeight: '600', textDecorationLine: 'underline', color: '#E2E8F0' }}>Clear all</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.mobileSearchExecuteBtn} onPress={handleSearchExecute}>
-                <Search color="#000000" size={18} />
-                <Text style={{ color: '#000000', fontSize: 16, fontWeight: 'bold', marginLeft: 8 }}>Search</Text>
+                <Search color="#0A192F" size={18} />
+                <Text style={{ color: '#0A192F', fontSize: 16, fontWeight: 'bold', marginLeft: 8 }}>Search</Text>
               </TouchableOpacity>
             </View>
           </SafeAreaView>
@@ -1016,13 +1016,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#121212',
+    backgroundColor: '#0A192F',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   mobileCloseBtn: {
     position: 'absolute',
     left: 20,
     padding: 8,
-    backgroundColor: '#27272A',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 20,
   },
   mobileServiceToggleRow: {
@@ -1031,49 +1033,52 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   mobileCard: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 20,
-    padding: 24,
+    backgroundColor: '#111827',
+    borderRadius: 24,
+    padding: 20,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)'
   },
   mobileCardTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
+    color: '#F9FAFB',
   },
   mobileServicePill: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    backgroundColor: '#27272A',
-    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 20,
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   mobileServicePillActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#00E5FF',
+    borderColor: '#00E5FF',
   },
   mobileLocBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#3F3F46',
-    backgroundColor: '#27272A',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   mobileFooterBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#121212',
+    backgroundColor: '#0B1120',
     borderTopWidth: 1,
-    borderTopColor: '#27272A',
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
   mobileSearchExecuteBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 28,
+    backgroundColor: '#00E5FF',
+    paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 28,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
   },

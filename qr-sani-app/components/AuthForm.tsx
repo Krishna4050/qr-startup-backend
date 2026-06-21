@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, ScrollView, StyleSheet, Image } from 'react-native';
+import { Text, View, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, ScrollView, StyleSheet } from 'react-native';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, User, Users, Compass, Camera, Upload, Navigation, MapPin, Sparkles, Calendar, AtSign } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
 import { useAuth } from '../src/context/AuthContext';
@@ -551,8 +551,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     if (step === 'contact') {
       return (
         <View style={styles.stepContainer}>
-          <Image source={require('../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12, marginBottom: 24, alignSelf: 'center' }} />
-          <Text style={styles.title}>Welcome to ATS</Text>
+          <Text style={styles.title}>Welcome to ATS Finland</Text>
           <Text style={styles.subtitle}>Enter your email or phone to sign in or register for a new account.</Text>
           
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
@@ -1240,34 +1239,34 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000', width: '100%' }, // Dark background
-  innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  card: { backgroundColor: '#121212', borderRadius: 24, width: '100%', maxWidth: 448, maxHeight: '100%', flexShrink: 1, paddingHorizontal: 40, paddingTop: 48, paddingBottom: 36, shadowColor: '#00E5FF', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 32, elevation: 4, display: 'flex', flexDirection: 'column', borderWidth: 1, borderColor: '#27272A' },
+  container: { flex: 1, backgroundColor: '#E8F0FE', width: '100%' },
+  innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 24, width: '100%', maxWidth: 448, maxHeight: '100%', flexShrink: 1, paddingHorizontal: 24, paddingTop: 32, paddingBottom: 24, shadowColor: '#0A66C2', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.08, shadowRadius: 32, elevation: 4, display: 'flex', flexDirection: 'column' },
   stepContainer: { width: '100%', flexShrink: 1 },
-  title: { fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginBottom: 8, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto', letterSpacing: -0.5 },
-  subtitle: { fontSize: 16, color: '#A1A1AA', marginBottom: 32, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
-  helperText: { fontSize: 13, color: '#71717A', marginBottom: 16 },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#27272A', borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 16, backgroundColor: '#1E1E1E' },
-  inputError: { borderColor: '#EF4444', backgroundColor: '#3F1616', borderWidth: 1.5 },
-  inputIcon: { marginRight: 12, color: '#A1A1AA' },
-  input: { flex: 1, fontSize: 16, color: '#FFFFFF', outlineStyle: 'none' } as any,
+  title: { fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 8, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
+  subtitle: { fontSize: 16, color: '#6B7280', marginBottom: 32, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
+  helperText: { fontSize: 13, color: '#9CA3AF', marginBottom: 16 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 16, backgroundColor: '#F9FAFB' },
+  inputError: { borderColor: '#EF4444', backgroundColor: '#FEF2F2', borderWidth: 1.5 },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any,
   inlineErrorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, marginBottom: 8 },
-  inlineErrorText: { color: '#EF4444', fontSize: 12, marginLeft: 6 },
+  inlineErrorText: { color: '#DC2626', fontSize: 12, marginLeft: 6 },
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 32 },
-  linkText: { color: '#00E5FF', fontSize: 14, fontWeight: '600' },
-  primaryButton: { backgroundColor: '#00E5FF', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 28, alignItems: 'center', justifyContent: 'center', minWidth: 100 },
-  primaryButtonText: { color: '#0A192F', fontSize: 15, fontWeight: 'bold' },
-  chipWrapper: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderWidth: 1, borderColor: '#3F3F46', borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 8, backgroundColor: '#27272A' },
-  chipText: { fontSize: 14, color: '#E4E4E7', fontWeight: '500' },
+  linkText: { color: '#0A66C2', fontSize: 14, fontWeight: '600' },
+  primaryButton: { backgroundColor: '#0A66C2', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, alignItems: 'center', justifyContent: 'center', minWidth: 100 },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  chipWrapper: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 8 },
+  chipText: { fontSize: 14, color: '#374151', fontWeight: '500' },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#27272A' },
-  dividerText: { marginHorizontal: 16, color: '#71717A', fontSize: 12, fontWeight: '600' },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
+  dividerText: { marginHorizontal: 16, color: '#6B7280', fontSize: 12, fontWeight: '500' },
   socialRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  socialButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#3F3F46', borderRadius: 12, paddingVertical: 12, marginHorizontal: 4, backgroundColor: '#18181B' },
-  socialButtonText: { color: '#E4E4E7', fontSize: 14, fontWeight: '600' },
-  disclaimerText: { fontSize: 13, color: '#71717A', lineHeight: 20, textAlign: 'center' },
-  checkbox: { width: 20, height: 20, borderWidth: 1, borderColor: '#3F3F46', borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181B' },
-  checkboxChecked: { backgroundColor: '#00E5FF', borderColor: '#00E5FF' },
+  socialButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingVertical: 10, marginHorizontal: 4 },
+  socialButtonText: { color: '#374151', fontSize: 14, fontWeight: '600' },
+  disclaimerText: { fontSize: 12, color: '#6B7280', lineHeight: 18 },
+  checkbox: { width: 20, height: 20, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  checkboxChecked: { backgroundColor: '#0F2D4D', borderColor: '#0F2D4D' },
   genderCard: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 12, paddingVertical: 24, marginHorizontal: 4, backgroundColor: '#FFFFFF' },
   genderCardSelected: { borderColor: '#0A66C2', backgroundColor: '#F0F9FF' },
   genderText: { marginTop: 8, fontSize: 14, color: '#6B7280', fontWeight: '500' },
