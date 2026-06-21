@@ -20,6 +20,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   formWrapper: {
+    flex: 1,
     width: '100%',
     maxWidth: 480,
     paddingHorizontal: 24,

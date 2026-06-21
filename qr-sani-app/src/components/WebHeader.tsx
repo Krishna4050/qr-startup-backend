@@ -183,8 +183,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     }
   }, []);
 
-  const { user, logout } = useAuth();
-  const isGuest = !user;
+  const { user, logout, isFullyRegistered } = useAuth();
+  const isGuest = !user || !isFullyRegistered;
   const [profile, setProfile] = useState<any>(null);
   const todayDate = new Date().getDate();
   const currentMonth = new Date().getMonth() + 1;
