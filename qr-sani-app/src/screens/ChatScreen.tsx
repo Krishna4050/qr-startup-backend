@@ -62,7 +62,7 @@ export default function ChatScreen({ route, navigation, isEmbedded = false }: an
         const otherUserPresence = state[otherUserId];
         setIsOnline(!!otherUserPresence && otherUserPresence.length > 0);
         
-        if (otherUserPresence && otherUserPresence[0]?.typing) {
+        if (otherUserPresence && (otherUserPresence[0] as any)?.typing) {
           setIsTyping(true);
         } else {
           setIsTyping(false);

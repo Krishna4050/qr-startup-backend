@@ -1111,5 +1111,11 @@ const styles = StyleSheet.create({
   },
   primaryButtonBlock: {
     backgroundColor: '#0F2D4D', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center', width: '100%'
+  },
+  primaryButtonText: {
+    color: '#FFFFFF', fontSize: 16, fontWeight: 'bold'
+  },
+  linkText: {
+    color: '#3B82F6', fontSize: 14, fontWeight: '600'
   }
 });

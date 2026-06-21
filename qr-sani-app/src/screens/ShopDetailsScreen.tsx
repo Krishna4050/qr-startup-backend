@@ -140,7 +140,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
   const handleCall = async () => {
     ensureProfileComplete(async () => {
       try {
-        const { data: tags, error } = await supabase_lucifer_core.from('qr_tags').select('id').eq('owner_id', user.id).limit(1);
+        const { data: tags, error } = await supabase_lucifer_core.from('qr_tags').select('id').eq('owner_id', user!.id).limit(1);
         if (error) throw error;
 
         if (!tags || tags.length === 0) {
@@ -148,7 +148,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
           return;
         }
 
-        const { data: profile } = await supabase_lucifer_core.from('profiles').select('phone_number').eq('id', user.id).single();
+        const { data: profile } = await supabase_lucifer_core.from('profiles').select('phone_number').eq('id', user!.id).single();
         const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
         if (!backendUrl) throw new Error("Backend URL missing");
 
@@ -157,7 +157,7 @@ export default function ShopDetailsScreen({ route, navigation }: any) {
         await fetch(`${backendUrl}/api/call-shop`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shop_id: shopData.id, phone_number: profile.phone_number })
+          body: JSON.stringify({ shop_id: shopData.id, phone_number: profile?.phone_number })
         });
 
       } catch (err) {
