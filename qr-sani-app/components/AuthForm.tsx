@@ -742,7 +742,6 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
               importantForAutofill="no"
               // @ts-ignore
               autoFill="off"
-              autoFocus
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
               {showPassword ? <EyeOff color="#9CA3AF" size={20} /> : <Eye color="#9CA3AF" size={20} />}

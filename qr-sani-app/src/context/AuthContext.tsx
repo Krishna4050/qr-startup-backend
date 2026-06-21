@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }: any) => {
   const [mayalu_session, set_mayalu_session] = useState<Session | null>(null);
   const [is_sani_loading, set_is_sani_loading] = useState(true);
   const [is_fully_registered, set_is_fully_registered] = useState(false);
+  const isInitialCheck = useRef(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -51,7 +52,7 @@ export const AuthProvider = ({ children }: any) => {
           }
 
           if (!termsAgreed) {
-            if (event === 'INITIAL_SESSION') {
+            if (event === 'INITIAL_SESSION' || isInitialCheck.current) {
               // User did not complete registration. Log them out on fresh load.
               await supabase_lucifer_core.auth.signOut();
               if (isMounted) {
@@ -82,6 +83,10 @@ export const AuthProvider = ({ children }: any) => {
             } catch (e) {
               console.error("Failed to sync E2E keys on login:", e);
             }
+          }
+
+          if (isMounted) {
+            isInitialCheck.current = false;
           }
         }, 0);
       } else {
