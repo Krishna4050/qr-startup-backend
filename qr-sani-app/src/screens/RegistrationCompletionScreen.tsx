@@ -4,11 +4,11 @@ import AuthForm from '../../components/AuthForm';
 
 export default function RegistrationCompletionScreen() {
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.formWrapper}>
-        <AuthForm forceRegistrationCompletion={true} />
+        <AuthForm forceRegistrationCompletion={true} initialStep="signup_password" />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

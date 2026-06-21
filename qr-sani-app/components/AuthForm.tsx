@@ -793,7 +793,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
                 return;
               }
               setError('');
-              setStep('signup_terms');
+              setStep('signup_name');
             }}>
                <Text style={styles.primaryButtonText}>Continue</Text>
             </TouchableOpacity>
