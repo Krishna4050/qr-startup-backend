@@ -93,10 +93,10 @@ export default function MainTabs() {
         tabBarActiveTintColor: '#0F2D4D',
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarStyle: {
-          display: Platform.OS === 'web' && !isMobileWeb ? 'none' : 'flex',
-          backgroundColor: '#FFFFFF',
+          display: (Platform.OS === 'web' && !isMobileWeb) || !user ? 'none' : 'flex',
+          backgroundColor: '#0F0F0F', // Make it match the dark sleek theme
           borderTopWidth: 1,
-          borderTopColor: '#F3F4F6',
+          borderTopColor: '#1A1A1A',
           height: 85,
           paddingBottom: 25,
           paddingTop: 10,
