@@ -164,7 +164,7 @@ const AuthStack = () => (
 
 const RegistrationCompletionStack = () => (
   <Stack.Navigator>
-    <Stack.Screen name="RegistrationCompletion" component={RegistrationCompletionScreen} options={{ headerShown: false, gestureEnabled: false }} />
+    <Stack.Screen name="CompleteProfile" component={RegistrationCompletionScreen} options={{ headerShown: false, gestureEnabled: false }} />
   </Stack.Navigator>
 );
 

@@ -50,9 +50,25 @@ export const AuthProvider = ({ children }: any) => {
             console.warn("Failed to check terms_agreed", e);
           }
 
-          if (isMounted) {
-            set_mayalu_session(session); 
-            set_is_fully_registered(termsAgreed);
+          if (!termsAgreed) {
+            if (event === 'INITIAL_SESSION') {
+              // User did not complete registration. Log them out on fresh load.
+              await supabase_lucifer_core.auth.signOut();
+              if (isMounted) {
+                set_mayalu_session(null);
+                set_is_fully_registered(false);
+              }
+            } else {
+              if (isMounted) {
+                set_mayalu_session(session);
+                set_is_fully_registered(false);
+              }
+            }
+          } else {
+            if (isMounted) {
+              set_mayalu_session(session);
+              set_is_fully_registered(true);
+            }
           }
 
           // Automatically ensure E2E keys exist and are synced to profile
