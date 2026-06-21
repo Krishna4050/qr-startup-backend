@@ -551,7 +551,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     if (step === 'contact') {
       return (
         <View style={styles.stepContainer}>
-          <Image source={require('../../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12, marginBottom: 24, alignSelf: 'center' }} />
+          <Image source={require('../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12, marginBottom: 24, alignSelf: 'center' }} />
           <Text style={styles.title}>Welcome to ATS</Text>
           <Text style={styles.subtitle}>Enter your email or phone to sign in or register for a new account.</Text>
           
