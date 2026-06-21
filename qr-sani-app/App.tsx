@@ -101,7 +101,7 @@ const linking = {
 
 // --- DECLARATIVE ROUTING IMPLEMENTATION ---
 const GuestStack = () => (
-  <Stack.Navigator initialRouteName="Dashboard">
+  <Stack.Navigator initialRouteName="Login">
     <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
     <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false, gestureEnabled: false }} />
     <Stack.Screen name="Dashboard" component={MainTabs} options={{ headerShown: false, gestureEnabled: false }} />

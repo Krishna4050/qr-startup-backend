@@ -5,25 +5,7 @@ import AuthForm from '../../components/AuthForm';
 import ResponsiveWrapper from '../components/ResponsiveWrapper';
 
 export default function LoginScreen({ navigation }: any) {
-  if (Platform.OS === 'web') {
-    return <AuthForm />;
-  }
-
-  return (
-    <ResponsiveWrapper bg="#F3F4F6">
-      <KeyboardAvoidingView 
-        style={styles.container} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <GradientHeader />
-        
-        <View style={styles.formContainer}>
-          <AuthForm />
-        </View>
-
-      </KeyboardAvoidingView>
-    </ResponsiveWrapper>
-  );
+  return <AuthForm />;
 }
 
 const styles = StyleSheet.create({
