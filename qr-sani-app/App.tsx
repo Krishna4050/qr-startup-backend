@@ -1,7 +1,34 @@
-import React from 'react';
-import { Platform } from 'react-native';
+import React, { Component } from 'react';
+import { View, Text, ScrollView, Platform, LogBox } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+class GlobalErrorBoundary extends Component<any, { hasError: boolean; error: Error | null }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, backgroundColor: 'red', padding: 20, justifyContent: 'center' }}>
+          <Text style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>APP CRASHED!</Text>
+          <ScrollView>
+            <Text style={{ color: 'white', marginTop: 10 }}>{this.state.error?.toString()}</Text>
+            <Text style={{ color: 'white', marginTop: 10 }}>{this.state.error?.stack}</Text>
+          </ScrollView>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Conditionally require the URL polyfill so it doesn't break Web APIs
 if (Platform.OS !== 'web') {
   require('react-native-url-polyfill/auto');
@@ -195,7 +222,9 @@ export default function App() {
           }}
         >
           <WebLayout>
-            <Router />
+            <GlobalErrorBoundary>
+              <Router />
+            </GlobalErrorBoundary>
           </WebLayout>
         </NavigationContainer>
       </ContentProvider>
