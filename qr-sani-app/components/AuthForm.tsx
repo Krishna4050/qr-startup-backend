@@ -616,14 +616,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           <Text style={styles.title}>Security Check</Text>
           <Text style={styles.subtitle}>Please verify you are human</Text>
           <View style={{ marginVertical: 32 }}>
-            {Platform.OS === 'web' && Turnstile ? (
-              <Turnstile 
-                siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} 
-                onSuccess={(token: string) => handleVerificationComplete(token)}
-              />
-            ) : (
-              <ActivityIndicator size="large" color="#0F2D4D" />
-            )}
+            <ActivityIndicator size="large" color="#0F2D4D" />
           </View>
           {loading && <ActivityIndicator color="#0F2D4D" />}
         </View>
@@ -648,7 +641,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
               value={password} 
               onChangeText={(t) => {setPassword(t); setError('');}} 
               onSubmitEditing={handleLoginSubmit}
-              autoFocus
+              
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
               {showPassword ? <EyeOff color="#4B5563" size={20} /> : <Eye color="#4B5563" size={20} />}
@@ -697,7 +690,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
               value={otp} 
               onChangeText={(t) => {setOtp(t); setError('');}} 
               onSubmitEditing={handleOtpSubmit}
-              autoFocus
+              
             />
           </View>
 
@@ -847,7 +840,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           
           <View style={[styles.inputWrapper, { marginTop: 24, paddingLeft: 24 }]}>
             <Calendar color="#6B7280" size={24} style={[styles.inputIcon, { marginRight: 16 }]} />
-            <TextInput style={[styles.input, { letterSpacing: 4, fontSize: 24 }]} placeholder="YYYY-MM-DD" placeholderTextColor="#D1D5DB" keyboardType="number-pad" maxLength={10} value={dob} onChangeText={handleDobChange} autoFocus />
+            <TextInput style={[styles.input, { letterSpacing: 4, fontSize: 24 }]} placeholder="YYYY-MM-DD" placeholderTextColor="#D1D5DB" keyboardType="number-pad" maxLength={10} value={dob} onChangeText={handleDobChange}  />
           </View>
 
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
@@ -1073,7 +1066,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           <Text style={styles.title}>Find your email</Text>
           <Text style={styles.subtitle}>Enter your phone number or recovery email</Text>
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
-            <TextInput style={styles.input} placeholder="Phone or Email" value={recoveryContact} onChangeText={(t) => {setRecoveryContact(t); setError('');}} autoCapitalize="none" autoFocus />
+            <TextInput style={styles.input} placeholder="Phone or Email" value={recoveryContact} onChangeText={(t) => {setRecoveryContact(t); setError('');}} autoCapitalize="none"  />
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
           <View style={styles.actionRow}>
@@ -1090,7 +1083,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           <Text style={styles.title}>Verify it's you</Text>
           <Text style={styles.subtitle}>An 8-digit secure code was sent to {recoveryContact}</Text>
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
-            <TextInput style={[styles.input, { letterSpacing: 8, textAlign: 'center', fontSize: 24, fontWeight: 'bold' }]} placeholder="00000000" keyboardType="number-pad" maxLength={8} value={recoveryOTP} onChangeText={(t) => {setRecoveryOTP(t); setError(''); if(t.length === 8) handleForgotEmailVerifyOTP();}} autoFocus />
+            <TextInput style={[styles.input, { letterSpacing: 8, textAlign: 'center', fontSize: 24, fontWeight: 'bold' }]} placeholder="00000000" keyboardType="number-pad" maxLength={8} value={recoveryOTP} onChangeText={(t) => {setRecoveryOTP(t); setError(''); if(t.length === 8) handleForgotEmailVerifyOTP();}}  />
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
           <View style={styles.actionRow}>
@@ -1122,7 +1115,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           <Text style={styles.title}>Account Recovery</Text>
           <Text style={styles.subtitle}>Enter your email or phone number to receive a recovery code</Text>
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
-            <TextInput style={styles.input} placeholder="Email or Phone" value={recoveryContact} onChangeText={(t) => {setRecoveryContact(t); setError('');}} autoCapitalize="none" autoFocus />
+            <TextInput style={styles.input} placeholder="Email or Phone" value={recoveryContact} onChangeText={(t) => {setRecoveryContact(t); setError('');}} autoCapitalize="none"  />
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
           <View style={styles.actionRow}>
@@ -1139,7 +1132,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           <Text style={styles.title}>Verification</Text>
           <Text style={styles.subtitle}>An 8-digit code was sent to {recoveryContact}</Text>
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
-            <TextInput style={[styles.input, { letterSpacing: 8, textAlign: 'center', fontSize: 24, fontWeight: 'bold' }]} placeholder="00000000" keyboardType="number-pad" maxLength={8} value={recoveryOTP} onChangeText={(t) => {setRecoveryOTP(t); setError(''); if(t.length === 8) handleForgotPasswordVerifyOTP();}} autoFocus />
+            <TextInput style={[styles.input, { letterSpacing: 8, textAlign: 'center', fontSize: 24, fontWeight: 'bold' }]} placeholder="00000000" keyboardType="number-pad" maxLength={8} value={recoveryOTP} onChangeText={(t) => {setRecoveryOTP(t); setError(''); if(t.length === 8) handleForgotPasswordVerifyOTP();}}  />
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
           <View style={styles.actionRow}>
@@ -1157,7 +1150,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           <Text style={styles.subtitle}>Create a strong, new password</Text>
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
             <Lock color="#4B5563" size={20} style={styles.inputIcon} />
-            <TextInput style={styles.input} placeholder="New Password" placeholderTextColor="#9CA3AF" secureTextEntry={!showPassword} value={newPassword} onChangeText={(t) => {setNewPassword(t); setPasswordStrength(checkPasswordStrength(t)); setError('');}} autoFocus />
+            <TextInput style={styles.input} placeholder="New Password" placeholderTextColor="#9CA3AF" secureTextEntry={!showPassword} value={newPassword} onChangeText={(t) => {setNewPassword(t); setPasswordStrength(checkPasswordStrength(t)); setError('');}}  />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>{showPassword ? <EyeOff color="#4B5563" size={20} /> : <Eye color="#4B5563" size={20} />}</TouchableOpacity>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: -8, marginBottom: 16, paddingLeft: 12 }}>
@@ -1204,11 +1197,26 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
   const content = renderContent();
 
+  const renderTurnstile = () => {
+    if (Platform.OS === 'web' && Turnstile) {
+      return (
+        <View style={{ display: step === 'verify' ? 'flex' : 'none', alignItems: 'center', marginVertical: 32 }}>
+          <Turnstile 
+            siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} 
+            onSuccess={(token: string) => handleVerificationComplete(token)}
+          />
+        </View>
+      );
+    }
+    return null;
+  };
+
   if (isModal) {
     return (
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
          <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, width: '100%', maxWidth: 448, alignSelf: 'center' }}>
            {content}
+           {renderTurnstile()}
          </View>
       </KeyboardAvoidingView>
     );
@@ -1220,7 +1228,8 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         <View style={styles.container}>
           <View style={styles.innerContainer}>
             <View style={styles.card}>
-              {renderContent()}
+              {content}
+              {renderTurnstile()}
             </View>
           </View>
         </View>
@@ -1228,7 +1237,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         <View style={styles.container}>
           <View style={styles.innerContainer}>
             <View style={styles.card}>
-              {renderContent()}
+              {content}
             </View>
           </View>
         </View>
