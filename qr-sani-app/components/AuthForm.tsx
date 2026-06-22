@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Text, View, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, ScrollView, StyleSheet } from 'react-native';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, User, Users, Compass, Camera, Upload, Navigation, MapPin, Sparkles, Calendar, AtSign } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
@@ -1200,13 +1200,22 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
   const content = renderContent();
 
+  const handleVerificationCompleteRef = useRef(handleVerificationComplete);
+  useEffect(() => {
+    handleVerificationCompleteRef.current = handleVerificationComplete;
+  }, [handleVerificationComplete]);
+
+  const stableOnSuccess = useCallback((token: string) => {
+    handleVerificationCompleteRef.current(token);
+  }, []);
+
   const renderTurnstile = () => {
     if (Platform.OS === 'web' && Turnstile && turnstileReady) {
       return (
         <View style={{ display: step === 'verify' ? 'flex' : 'none', alignItems: 'center', marginVertical: 32 }}>
           <Turnstile 
             siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} 
-            onSuccess={(token: string) => handleVerificationComplete(token)}
+            onSuccess={stableOnSuccess}
           />
         </View>
       );
