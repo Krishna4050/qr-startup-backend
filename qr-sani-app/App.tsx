@@ -162,12 +162,6 @@ const AuthStack = () => (
   </Stack.Navigator>
 );
 
-const RegistrationCompletionStack = () => (
-  <Stack.Navigator>
-    <Stack.Screen name="CompleteProfile" component={RegistrationCompletionScreen} options={{ headerShown: false, gestureEnabled: false }} />
-  </Stack.Navigator>
-);
-
 const Router = () => {
   const { user, isLoading, isFullyRegistered } = useAuth();
   
@@ -176,11 +170,9 @@ const Router = () => {
     return null; 
   }
 
-  if (!user) return <GuestStack />;
-
-  // 🔒 HARDCORE SECURITY LOCKOUT
-  if (!isFullyRegistered) {
-    return <RegistrationCompletionStack />;
+  // 🔒 HARDCORE SECURITY LOCKOUT: Guests and incomplete registrations stay in GuestStack
+  if (!user || !isFullyRegistered) {
+    return <GuestStack />;
   }
 
   return <AuthStack />;

@@ -130,7 +130,7 @@ func main(){
 	mux.HandleFunc("GET /api/directory", middleware.RequireAuth(handlers.GetServicesDirectoryHandler))
 	
 	// Parking Aggregator API
-	mux.HandleFunc("GET /api/parking", middleware.RequireAuth(handlers.GetParkingLocations))
+	mux.HandleFunc("GET /api/parking", handlers.GetParkingLocations)
 
 	// CORS config
 	// Tag Manage API
