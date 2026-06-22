@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator, Alert, Image, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator, Alert, Image, TextInput, Modal } from 'react-native';
 import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle, ShieldAlert, LayoutGrid, Globe, Wrench, Bike, Car, Bed, BusFront, Train, Plane, X, CheckCircle, Mail, KeyRound, Smartphone } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -709,16 +709,16 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {showCompleteProfile && (
+      <Modal visible={showCompleteProfile} transparent={true} animationType="slide">
         <View style={styles.confirmAccountOverlay}>
-          <View style={[styles.confirmAccountModal, { width: 500, padding: 0, overflow: 'hidden' }, isMobileWeb && { width: '95%' }]}>
+          <View style={[styles.confirmAccountModal, { padding: 0, overflow: 'hidden' }, Platform.OS === 'web' && !isMobileWeb ? { width: 500, maxHeight: '90%' } : { width: '100%', flex: 1, borderRadius: 0, marginTop: Platform.OS === 'ios' ? 40 : 0 }]}>
             <View style={{ width: '100%', padding: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827' }}>Complete Your Profile</Text>
                <TouchableOpacity onPress={() => setShowCompleteProfile(false)}>
                   <X color="#6B7280" size={24} />
                </TouchableOpacity>
             </View>
-            <View style={{ width: '100%', height: 600 }}>
+            <View style={{ width: '100%', flex: 1 }}>
               <AuthForm 
                 initialStep="signup_name" 
                 isModal={true}
@@ -730,11 +730,11 @@ export default function DashboardScreen() {
             </View>
           </View>
         </View>
-      )}
+      </Modal>
 
-      {showConfirmAccount && !showCompleteProfile && profile && (
+      <Modal visible={showConfirmAccount && !showCompleteProfile && !!profile} transparent={true} animationType="fade">
         <View style={styles.confirmAccountOverlay}>
-          <View style={[styles.confirmAccountModal, isMobileWeb && { width: '90%' }]}>
+          <View style={[styles.confirmAccountModal, Platform.OS === 'web' && !isMobileWeb ? { width: 400 } : { width: '90%', maxWidth: 400, padding: 24 }]}>
              
              {verifyStep === 'success' ? (
                 <>
@@ -947,7 +947,7 @@ export default function DashboardScreen() {
              )}
           </View>
         </View>
-      )}
+      </Modal>
     </View>
   );
 }
