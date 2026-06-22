@@ -1211,8 +1211,9 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
   const renderTurnstile = () => {
     if (Platform.OS === 'web' && Turnstile && turnstileReady) {
+      const isVisible = step === 'verify';
       return (
-        <View style={{ display: step === 'verify' ? 'flex' : 'none', alignItems: 'center', marginVertical: 32 }}>
+        <View style={isVisible ? { alignItems: 'center', marginVertical: 32 } : { position: 'absolute', top: -9999, left: -9999, opacity: 0 }}>
           <Turnstile 
             siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} 
             onSuccess={stableOnSuccess}
@@ -1223,24 +1224,26 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     return null;
   };
 
+  const KeyboardWrapper = Platform.OS === 'web' ? View : KeyboardAvoidingView;
+
   if (isModal) {
     return (
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
+      <KeyboardWrapper behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
          <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, width: '100%', maxWidth: 448, alignSelf: 'center' }}>
-           {content}
+           <View key={step}>{content}</View>
            {renderTurnstile()}
          </View>
-      </KeyboardAvoidingView>
+      </KeyboardWrapper>
     );
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
+    <KeyboardWrapper behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
       {Platform.OS === 'web' ? (
         <View style={styles.container}>
           <View style={styles.innerContainer}>
             <View style={styles.card}>
-              {content}
+              <View key={step}>{content}</View>
               {renderTurnstile()}
             </View>
           </View>
@@ -1249,12 +1252,12 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         <View style={styles.container}>
           <View style={styles.innerContainer}>
             <View style={styles.card}>
-              {content}
+              <View key={step}>{content}</View>
             </View>
           </View>
         </View>
       )}
-    </KeyboardAvoidingView>
+    </KeyboardWrapper>
   );
 }
 
