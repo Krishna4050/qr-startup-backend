@@ -52,18 +52,9 @@ export const AuthProvider = ({ children }: any) => {
           }
 
           if (!termsAgreed) {
-            if (event === 'INITIAL_SESSION' || isInitialCheck.current) {
-              // User did not complete registration. Log them out on fresh load.
-              await supabase_lucifer_core.auth.signOut();
-              if (isMounted) {
-                set_mayalu_session(null);
-                set_is_fully_registered(false);
-              }
-            } else {
-              if (isMounted) {
-                set_mayalu_session(session);
-                set_is_fully_registered(false);
-              }
+            if (isMounted) {
+              set_mayalu_session(session);
+              set_is_fully_registered(false);
             }
           } else {
             if (isMounted) {

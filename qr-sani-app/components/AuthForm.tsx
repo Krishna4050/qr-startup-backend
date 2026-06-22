@@ -238,6 +238,11 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       if (verifyErr) throw verifyErr;
       if (data.user) {
         // OTP Verified, User created & session active!
+        if (data.session) {
+          await supabase_lucifer_core.auth.setSession({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
+        } else {
+          throw new Error('Session could not be established automatically. Please try logging in.');
+        }
         setStep('signup_password');
       }
     } catch (err: any) {
