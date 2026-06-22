@@ -804,7 +804,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
     if (step === 'signup_name') {
       return (
-        <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} showsVerticalScrollIndicator={false}>
           <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
             <Text style={styles.title}>Tell us about Yourself</Text>
             <Text style={styles.subtitle}>Let's get to know you better</Text>
@@ -829,7 +829,9 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
 
             <View style={[styles.actionRow, { marginTop: 40 }]}>
-              <TouchableOpacity onPress={() => setStep('signup_otp')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+              {(!isModal && !forceRegistrationCompletion) ? (
+                <TouchableOpacity onPress={() => setStep('signup_otp')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+              ) : <View />}
               <TouchableOpacity style={styles.primaryButton} onPress={() => {
                  if (!firstName || !lastName) setError('First and Last name are required');
                  else { setError(''); setStep('signup_dob'); }
@@ -1234,8 +1236,8 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
   if (isModal) {
     return (
       <KeyboardWrapper behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
-         <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, width: '100%', maxWidth: 448, alignSelf: 'center' }}>
-           <View key={step}>{content}</View>
+         <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, width: '100%', maxWidth: 448, alignSelf: 'center', justifyContent: 'center' }}>
+           <View key={step} style={{ flexShrink: 1, width: '100%' }}>{content}</View>
            {renderTurnstile()}
          </View>
       </KeyboardWrapper>
