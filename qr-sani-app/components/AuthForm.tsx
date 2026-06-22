@@ -92,6 +92,8 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
+  const [turnstileReady, setTurnstileReady] = useState(false);
+
   useEffect(() => {
     // Determine if contact is phone or email
     if (contact.startsWith('+') || /^\d+$/.test(contact)) {
@@ -153,6 +155,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       return;
     }
     setError('');
+    setTurnstileReady(true);
     setStep('verify');
 
     // If mobile, auto-complete verification (Turnstile is web-only for now)
@@ -1198,7 +1201,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
   const content = renderContent();
 
   const renderTurnstile = () => {
-    if (Platform.OS === 'web' && Turnstile) {
+    if (Platform.OS === 'web' && Turnstile && turnstileReady) {
       return (
         <View style={{ display: step === 'verify' ? 'flex' : 'none', alignItems: 'center', marginVertical: 32 }}>
           <Turnstile 
