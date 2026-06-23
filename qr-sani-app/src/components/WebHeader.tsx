@@ -9,7 +9,7 @@ import apiClient from '../utils/apiClient';
 
 const mockAirports: any[] = [];
 
-const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedDate, returnDate, flightType, setShowDateDropdown, setSelectedDate, setReturnDate, setShowGuestDropdown, styles }: any) => {
+const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedDate, returnDate, flightType, setShowDateDropdown, setSelectedDate, setReturnDate, setShowGuestDropdown, styles, isMobileOverride }: any) => {
   const [displayMonth, setDisplayMonth] = useState(currentMonth);
   const [displayYear, setDisplayYear] = useState(currentYear);
 
@@ -47,7 +47,7 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
   const daysArr = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
   return (
-    <View style={[styles.dropdownMenu, { top: 70, left: 0, width: 320, padding: 20 }]}>
+    <View style={isMobileOverride ? { width: '100%', paddingVertical: 10 } : [styles.dropdownMenu, { top: 70, left: 0, width: 320, padding: 20 }]}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 8 }} disabled={isPrevDisabled}>
           <Text style={{ color: isPrevDisabled ? '#334155' : '#00E5FF', fontSize: 18 }}>{'<'}</Text>
@@ -362,7 +362,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               {/* Service Selection Card */}
               <View style={{ marginBottom: 24 }}>
                 <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>What are you looking for?</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ overflow: 'visible' }}>
+                <ScrollView horizontal={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
                   {servicesList.map(srv => {
                     let IconComponent = Search;
                     if (srv === 'Vehicle Repair') IconComponent = Wrench;
@@ -419,9 +419,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                           if (val.length > 2) {
                             try {
                               setIsSearchingGlobalLocations(true);
-                              const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&addressdetails=1&limit=5`, {
-                                headers: { 'User-Agent': 'AtsFinlandApp/1.0' }
-                              });
+                              const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&addressdetails=1&limit=5&email=test@test.com`);
                               const data = await res.json();
                               setGlobalLocationSuggestions(data);
                             } catch (e) {
@@ -462,7 +460,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               <View style={{ backgroundColor: '#1E293B', borderRadius: 16, overflow: 'hidden', marginBottom: 12 }}>
                 <TouchableOpacity onPress={() => setShowDateDropdown(!showDateDropdown)} style={{ padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ color: '#94A3B8', fontSize: 13, fontWeight: 'bold', letterSpacing: 1 }}>WHEN</Text>
-                  {!showDateDropdown && <Text style={{ color: '#E2E8F0', fontSize: 16 }}>{selectedDate || 'Add dates'}</Text>}
+                  {!showDateDropdown && <Text style={{ color: '#E2E8F0', fontSize: 16 }}>{selectedDate ? (returnDate ? `${selectedDate} to ${returnDate}` : selectedDate) : 'Add dates'}</Text>}
                 </TouchableOpacity>
                 {showDateDropdown && (
                   <View style={{ paddingHorizontal: 20, paddingBottom: 20, alignItems: 'center' }}>
@@ -478,6 +476,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                       setReturnDate={setReturnDate}
                       setShowGuestDropdown={setShowGuestDropdown}
                       styles={styles}
+                      isMobileOverride={true}
                     />
                   </View>
                 )}
