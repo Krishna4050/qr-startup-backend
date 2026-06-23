@@ -1114,40 +1114,47 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     }
 
     if (step === 'signup_terms') {
-      return renderProfileLayout(
-        <View style={{ gap: 24 }}>
-          <View style={{ backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12 }}>
-            <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 22 }}>
-              ATS will send you promotions such as deals and marketing notifications. You can opt out anytime via account settings or within marketing emails.
-            </Text>
-            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 16 }} onPress={() => setPromotionsOptOut(!promotionsOptOut)}>
-               <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: promotionsOptOut ? 0 : 2, borderColor: '#D1D5DB', backgroundColor: promotionsOptOut ? '#5452F6' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2 }}>
-                 {promotionsOptOut && <CheckCircle color="#FFF" size={16} />}
-               </View>
-               <Text style={{ flex: 1, color: '#374151', fontSize: 14, fontWeight: '500' }}>I don’t want to receive ATS promotions.</Text>
-            </TouchableOpacity>
-          </View>
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Review & Agree</Text>
+          <Text style={styles.subtitle}>Please review the terms and policies before finalizing your account.</Text>
 
-          <View style={{ backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12 }}>
-            <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 22 }}>
-              By selecting "Agree and continue", I agree to ATS Terms of Service, Payments Terms of Service, and Nondiscrimination Policy, and acknowledge the Privacy Policy.
-            </Text>
+          <View style={{ gap: 24, marginTop: 16 }}>
+            <View style={{ backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12 }}>
+              <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 22 }}>
+                ATS will send you promotions such as deals and marketing notifications. You can opt out anytime via account settings or within marketing emails.
+              </Text>
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 16 }} onPress={() => setPromotionsOptOut(!promotionsOptOut)}>
+                 <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: promotionsOptOut ? 0 : 2, borderColor: '#D1D5DB', backgroundColor: promotionsOptOut ? '#006085' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2 }}>
+                   {promotionsOptOut && <CheckCircle color="#FFF" size={16} />}
+                 </View>
+                 <Text style={{ flex: 1, color: '#374151', fontSize: 14, fontWeight: '500' }}>I don’t want to receive ATS promotions.</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12 }}>
+              <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 22 }}>
+                By selecting "Agree and continue", I agree to ATS Terms of Service, Payments Terms of Service, and Nondiscrimination Policy, and acknowledge the Privacy Policy.
+              </Text>
+            </View>
           </View>
 
           {error ? (
-            <View style={styles.inlineErrorRow}>
+            <View style={[styles.inlineErrorRow, { marginTop: 16 }]}>
                <AlertCircle color="#DC2626" size={14} />
                <Text style={styles.inlineErrorText}>{error}</Text>
             </View>
           ) : null}
-        </View>,
-        "Review & Agree",
-        "Please review the terms and policies before finalizing your account.",
-        handleTermsSubmit,
-        () => setStep('signup_profile'),
-        false,
-        false,
-        "Agree and continue"
+
+          <View style={[styles.actionRow, { marginTop: 32 }]}>
+            <TouchableOpacity onPress={() => setStep('signup_password')}>
+              <Text style={styles.linkText}>Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleTermsSubmit} disabled={loading}>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Agree and continue</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
       );
     }
 
