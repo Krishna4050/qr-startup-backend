@@ -37,6 +37,9 @@ export const AuthProvider = ({ children }: any) => {
     }, 2000);
 
     const { data: { subscription } } = supabase_lucifer_core.auth.onAuthStateChange(async (event, session) => {
+      const wasInitial = isInitialCheck.current;
+      isInitialCheck.current = false;
+
       if (session?.user) {
         
         // Wrap database calls in a non-blocking macro-task to prevent gotrue-js deadlock!
@@ -52,6 +55,16 @@ export const AuthProvider = ({ children }: any) => {
           }
 
           if (!termsAgreed) {
+            if (wasInitial) {
+              console.log("[DEBUG] Initial load with incomplete registration. Forcing logout.");
+              await supabase_lucifer_core.auth.signOut();
+              if (isMounted) {
+                set_mayalu_session(null);
+                set_is_fully_registered(false);
+              }
+              return; // Stop processing
+            }
+
             if (isMounted) {
               set_mayalu_session(session);
               set_is_fully_registered(false);
@@ -76,9 +89,6 @@ export const AuthProvider = ({ children }: any) => {
             }
           }
 
-          if (isMounted) {
-            isInitialCheck.current = false;
-          }
         }, 0);
       } else {
         if (isMounted) {
