@@ -709,22 +709,45 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      <Modal visible={showCompleteProfile} transparent={true} animationType="slide">
-        <View style={styles.confirmAccountOverlay}>
-          <View style={[styles.confirmAccountModal, { padding: 0, overflow: 'hidden', backgroundColor: '#FFFFFF' }, Platform.OS === 'web' && !isMobileWeb ? { width: 500, maxHeight: '90%', borderRadius: 16 } : { width: '100%', flex: 1, borderRadius: 0, marginTop: Platform.OS === 'ios' ? 40 : 0 }]}>
-            <View style={{ width: '100%', flex: 1 }}>
-              <AuthForm 
-                initialStep="signup_name" 
-                isModal={true}
-                onSuccess={() => {
-                   setShowCompleteProfile(false);
-                   fetchDashboardData();
-                }} 
-              />
+      {showCompleteProfile && isFocused ? (
+        Platform.OS === 'web' ? (
+          <View style={[StyleSheet.absoluteFill, { zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+            <View style={styles.confirmAccountOverlay}>
+              <View style={[styles.confirmAccountModal, { padding: 0, overflow: 'hidden', backgroundColor: '#FFFFFF', width: 500, maxHeight: '90%', borderRadius: 16 }]}>
+                <View style={{ width: '100%', flex: 1 }}>
+                  <AuthForm 
+                    initialStep="signup_name" 
+                    isModal={true}
+                    onClose={() => setShowCompleteProfile(false)}
+                    onSuccess={() => {
+                       setShowCompleteProfile(false);
+                       fetchDashboardData();
+                    }} 
+                  />
+                </View>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        ) : (
+          <Modal visible={true} transparent={true} animationType="slide">
+            <View style={styles.confirmAccountOverlay}>
+              <View style={[styles.confirmAccountModal, { padding: 0, overflow: 'hidden', backgroundColor: '#FFFFFF', width: '100%', flex: 1, borderRadius: 0, marginTop: Platform.OS === 'ios' ? 40 : 0 }]}>
+                <View style={{ width: '100%', flex: 1 }}>
+                  <AuthForm 
+                    initialStep="signup_name" 
+                    isModal={true}
+                    onClose={() => setShowCompleteProfile(false)}
+                    onSuccess={() => {
+                       setShowCompleteProfile(false);
+                       fetchDashboardData();
+                    }} 
+                  />
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )
+      ) : null}
 
       <Modal visible={showConfirmAccount && !showCompleteProfile && !!profile} transparent={true} animationType="fade">
         <View style={styles.confirmAccountOverlay}>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Text, View, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, ScrollView, StyleSheet } from 'react-native';
-import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, User, Users, Compass, Camera, Upload, Navigation, MapPin, Sparkles, Calendar, AtSign, ArrowLeft, Shield } from 'lucide-react-native';
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, User, Users, Compass, Camera, Upload, Navigation, MapPin, Sparkles, Calendar, AtSign, ArrowLeft, Shield, X } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
 import { useAuth } from '../src/context/AuthContext';
 import { registerForPushNotificationsAsync } from '../src/utils/notifications';
@@ -26,9 +26,10 @@ type AuthFormProps = {
   onSuccess?: () => void;
   isModal?: boolean;
   forceRegistrationCompletion?: boolean;
+  onClose?: () => void;
 };
 
-export default function AuthForm({ initialStep = 'contact', onSuccess, isModal = false, forceRegistrationCompletion = false }: AuthFormProps) {
+export default function AuthForm({ initialStep = 'contact', onSuccess, isModal = false, forceRegistrationCompletion = false, onClose }: AuthFormProps) {
   const navigation = useNavigation<any>();
   const { logout, user } = useAuth();
   const [step, setStep] = useState<AuthStep>(initialStep);
@@ -870,6 +871,11 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
               </TouchableOpacity>
             )}
             <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#111827' }}>Profile completion</Text>
+            {isModal && onClose && (
+              <TouchableOpacity onPress={onClose} style={{ position: 'absolute', right: 16, padding: 8 }}>
+                <X color="#111827" size={24} />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Progress Bar */}
