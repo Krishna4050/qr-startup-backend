@@ -119,6 +119,60 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     }
   }, [initialStep]);
 
+  // --- NEW: Real-Time Username Checker ---
+  useEffect(() => {
+    if (!username || username.length < 3) {
+      setUsernameTaken(false);
+      setUsernameSuggestions([]);
+      setIsCheckingUsername(false);
+      return;
+    }
+
+    setIsCheckingUsername(true);
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const { data } = await apiClient.get(`/api/profile/check-username?username=${username.trim()}`);
+        if (data.taken) {
+          setUsernameTaken(true);
+          generateSmartSuggestions(username.trim());
+        } else {
+          setUsernameTaken(false);
+          setUsernameSuggestions([]);
+        }
+      } catch (err) {
+        setUsernameTaken(false);
+        setUsernameSuggestions([]);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [username]);
+
+  const generateSmartSuggestions = async (baseName: string) => {
+    const candidates = [
+      `${baseName}${Math.floor(Math.random() * 999)}`,
+      `${baseName}_${Math.floor(Math.random() * 99)}`,
+      `${baseName}HQ`,
+      `${baseName}Official`
+    ];
+
+    const takenNames: string[] = [];
+    
+    await Promise.all(candidates.map(async (name) => {
+      try {
+        const { data } = await apiClient.get(`/api/profile/check-username?username=${name}`);
+        if (data.taken) {
+          takenNames.push(name);
+        }
+      } catch (err) {}
+    }));
+    
+    const safeSuggestions = candidates.filter(name => !takenNames.includes(name));
+    setUsernameSuggestions(safeSuggestions.slice(0, 3));
+  };
+
   const checkPasswordStrength = (pwd: string) => {
     if (pwd.length < 9) return 'Weak';
     if (firstName && pwd.toLowerCase().includes(firstName.toLowerCase())) return 'Weak';

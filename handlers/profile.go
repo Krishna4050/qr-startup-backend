@@ -135,7 +135,7 @@ func CheckUsername(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var id string
-	err := database.DB.QueryRow(`SELECT id FROM public.profiles WHERE username = $1 LIMIT 1`, username).Scan(&id)
+	err := database.DB.QueryRow(`SELECT id FROM public.profiles WHERE LOWER(username) = LOWER($1) LIMIT 1`, username).Scan(&id)
 	
 	w.Header().Set("Content-Type", "application/json")
 	if err == nil {
