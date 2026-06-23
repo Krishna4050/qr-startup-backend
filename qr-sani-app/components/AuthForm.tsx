@@ -620,7 +620,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             <TextInput 
               style={styles.input} 
               placeholder="Email or phone" 
-              placeholderTextColor="#9CA3AF" 
+              placeholderTextColor="#5F6368" 
               keyboardType="email-address" 
               autoCapitalize="none" 
               value={contact} 
@@ -635,13 +635,21 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             </View>
           ) : null}
 
-          <TouchableOpacity style={{ marginTop: 8, marginBottom: 24 }} onPress={() => { setRecoveryContact(''); setStep('forgot_email_contact'); }}>
+          <TouchableOpacity style={{ marginTop: 8 }} onPress={() => { setRecoveryContact(''); setStep('forgot_email_contact'); }}>
             <Text style={styles.linkText}>Forgot email?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleContactSubmit} disabled={loading}>
-             {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Continue</Text>}
-          </TouchableOpacity>
+          <View style={{ marginTop: 32 }}>
+            <Text style={styles.disclaimerText}>
+              Not your computer? Use Guest mode to sign in privately.
+            </Text>
+          </View>
+
+          <View style={[styles.actionRow, { justifyContent: 'flex-end' }]}>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleContactSubmit} disabled={loading}>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Continue</Text>}
+            </TouchableOpacity>
+          </View>
 
           {/* Social Logins */}
           <View style={styles.divider}>
@@ -650,19 +658,15 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={[styles.socialButton, { marginBottom: 16 }]} onPress={handleGoogleLogin}>
-             <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style={{ width: 20, height: 20, marginRight: 8 }} />
-             <Text style={styles.socialButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton} onPress={handleAppleLogin}>
-             <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" style={{ width: 18, height: 20, marginRight: 8 }} />
-             <Text style={styles.socialButtonText}>Continue with Apple</Text>
-          </TouchableOpacity>
-
-          <View style={{ marginTop: 32, alignItems: 'center' }}>
-            <Text style={styles.disclaimerText}>
-              Not your computer? Use Guest mode to sign in privately.
-            </Text>
+          <View style={styles.socialRow}>
+            <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
+               <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style={{ width: 20, height: 20, marginRight: 8 }} />
+               <Text style={styles.socialButtonText}>Google</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} onPress={handleAppleLogin}>
+               <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" style={{ width: 18, height: 20, marginRight: 8 }} />
+               <Text style={styles.socialButtonText}>Apple</Text>
+            </TouchableOpacity>
           </View>
         </View>
       );
@@ -713,19 +717,20 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             </View>
           ) : null}
 
-          <TouchableOpacity style={[styles.primaryButton, { marginTop: 16 }]} onPress={handleLoginSubmit} disabled={loading}>
-            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Log in</Text>}
-          </TouchableOpacity>
-          
-          <View style={{ marginTop: 16, alignItems: 'center', gap: 12 }}>
-            <TouchableOpacity onPress={() => setStep('contact')}>
-              <Text style={[styles.linkText, { fontWeight: '500' }]}>Back to login</Text>
-            </TouchableOpacity>
-            {failedPasswordAttempts > 0 && (
-              <TouchableOpacity onPress={initForgotPasswordFlow}>
-                <Text style={[styles.linkText, { color: '#DC2626' }]}>Forgot password?</Text>
+          <View style={[styles.actionRow, { marginTop: 40 }]}>
+            <View style={{ flexDirection: 'column' }}>
+              <TouchableOpacity onPress={() => setStep('contact')} style={{ marginBottom: failedPasswordAttempts > 0 ? 16 : 0 }}>
+                <Text style={styles.linkText}>Back</Text>
               </TouchableOpacity>
-            )}
+              {failedPasswordAttempts > 0 && (
+                <TouchableOpacity onPress={initForgotPasswordFlow}>
+                  <Text style={[styles.linkText, { color: '#DC2626' }]}>Forgot password?</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleLoginSubmit} disabled={loading}>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Log in</Text>}
+            </TouchableOpacity>
           </View>
         </View>
       );
@@ -758,12 +763,14 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             </View>
           ) : null}
 
-          <TouchableOpacity style={[styles.primaryButton, { marginTop: 16 }]} onPress={handleOtpSubmit} disabled={loading || otp.length < 6}>
-            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Verify</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity style={{ marginTop: 16, alignSelf: 'center' }} onPress={() => setStep('contact')}>
-            <Text style={[styles.linkText, { fontWeight: '500' }]}>Back to login</Text>
-          </TouchableOpacity>
+          <View style={[styles.actionRow, { marginTop: 40 }]}>
+            <TouchableOpacity onPress={() => setStep('contact')}>
+              <Text style={styles.linkText}>Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleOtpSubmit} disabled={loading || otp.length < 6}>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Verify</Text>}
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -822,30 +829,29 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
 
-          <TouchableOpacity style={[styles.primaryButton, { marginTop: 16 }]} onPress={() => {
-            if (passwordStrength === 'Weak' || password.length < 9) {
-              setError('Password is too weak. Must be at least 9 characters.');
-              return;
-            }
-            if (password !== confirmPassword) {
-              setError('Passwords do not match.');
-              return;
-            }
-            setError('');
-            setStep('signup_terms');
-          }}>
-             <Text style={styles.primaryButtonText}>Continue</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={{ marginTop: 16, alignSelf: 'center' }} onPress={() => {
-            if (forceRegistrationCompletion) {
-              logout();
-            } else {
-              setStep('signup_otp');
-            }
-          }}>
-            <Text style={[styles.linkText, { fontWeight: '500' }]}>{forceRegistrationCompletion ? 'Cancel' : 'Back'}</Text>
-          </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <TouchableOpacity onPress={() => {
+              if (forceRegistrationCompletion) {
+                logout();
+              } else {
+                setStep('signup_otp');
+              }
+            }}><Text style={styles.linkText}>{forceRegistrationCompletion ? 'Cancel' : 'Back'}</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => {
+              if (passwordStrength === 'Weak' || password.length < 9) {
+                setError('Password is too weak. Must be at least 9 characters.');
+                return;
+              }
+              if (password !== confirmPassword) {
+                setError('Passwords do not match.');
+                return;
+              }
+              setError('');
+              setStep('signup_terms');
+            }}>
+               <Text style={styles.primaryButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -869,7 +875,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           {/* Progress Bar */}
           <View style={{ flexDirection: 'row', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24, gap: 8 }}>
             {PROFILE_STEPS.map((_, idx) => (
-              <View key={idx} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: idx <= profileStepIndex ? '#006085' : '#E5E7EB' }} />
+              <View key={idx} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: idx <= profileStepIndex ? '#5452F6' : '#E5E7EB' }} />
             ))}
           </View>
 
@@ -888,11 +894,11 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
               </View>
             )}
             <TouchableOpacity 
-              style={{ backgroundColor: isNextDisabled || loading ? '#9CA3AF' : '#006085', borderRadius: 16, paddingVertical: 16, alignItems: 'center' }}
+              style={{ backgroundColor: isNextDisabled || loading ? '#9CA3AF' : '#5452F6', borderRadius: 24, paddingVertical: 16, alignItems: 'center' }}
               onPress={onNext}
               disabled={isNextDisabled || loading}
             >
-              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' }}>{customNextText || 'Next'}</Text>}
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>{customNextText || 'Next'}</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -904,19 +910,19 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         <View style={{ gap: 16 }}>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>First name <Text style={{ color: '#DC2626' }}>*</Text></Text>
-            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="e.g. Jane" placeholderTextColor="#9CA3AF" value={firstName} onChangeText={(t) => {setFirstName(t); setError('');}} />
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="e.g. Jane" placeholderTextColor="#9CA3AF" value={firstName} onChangeText={(t) => {setFirstName(t); setError('');}} />
           </View>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Middle name (optional)</Text>
-            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="e.g. Marie" placeholderTextColor="#9CA3AF" value={middleName} onChangeText={setMiddleName} />
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="e.g. Marie" placeholderTextColor="#9CA3AF" value={middleName} onChangeText={setMiddleName} />
           </View>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Last name <Text style={{ color: '#DC2626' }}>*</Text></Text>
-            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="e.g. Doe" placeholderTextColor="#9CA3AF" value={lastName} onChangeText={(t) => {setLastName(t); setError('');}} />
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="e.g. Doe" placeholderTextColor="#9CA3AF" value={lastName} onChangeText={(t) => {setLastName(t); setError('');}} />
           </View>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Preferred name (optional)</Text>
-            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="What should we call you?" placeholderTextColor="#9CA3AF" value={preferredName} onChangeText={setPreferredName} />
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="What should we call you?" placeholderTextColor="#9CA3AF" value={preferredName} onChangeText={setPreferredName} />
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
         </View>,
@@ -937,7 +943,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         <View style={{ gap: 16 }}>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Date of birth</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 16, paddingHorizontal: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 8, paddingHorizontal: 16 }}>
               <Calendar color="#6B7280" size={20} style={{ marginRight: 12 }} />
               <TextInput style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827', letterSpacing: 2, outlineStyle: 'none' } as any} placeholder="YYYY-MM-DD" placeholderTextColor="#9CA3AF" keyboardType="number-pad" maxLength={10} value={dob} onChangeText={handleDobChange} />
             </View>
@@ -959,23 +965,23 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     if (step === 'signup_gender') {
       return renderProfileLayout(
         <View style={{ gap: 16 }}>
-          <TouchableOpacity onPress={() => setGender('Male')} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: gender === 'Male' ? "rgba(0, 96, 133, 0.1)" : '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: gender === 'Male' ? '#006085' : 'transparent' }}>
-             <User color={gender === 'Male' ? '#006085' : '#6B7280'} size={24} />
-             <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '500', color: gender === 'Male' ? '#006085' : '#374151' }}>Male</Text>
+          <TouchableOpacity onPress={() => setGender('Male')} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: gender === 'Male' ? 'rgba(84, 82, 246, 0.1)' : '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: gender === 'Male' ? '#5452F6' : 'transparent' }}>
+             <User color={gender === 'Male' ? '#5452F6' : '#6B7280'} size={24} />
+             <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '500', color: gender === 'Male' ? '#5452F6' : '#374151' }}>Male</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setGender('Female')} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: gender === 'Female' ? "rgba(0, 96, 133, 0.1)" : '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: gender === 'Female' ? '#006085' : 'transparent' }}>
-             <User color={gender === 'Female' ? '#006085' : '#6B7280'} size={24} />
-             <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '500', color: gender === 'Female' ? '#006085' : '#374151' }}>Female</Text>
+          <TouchableOpacity onPress={() => setGender('Female')} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: gender === 'Female' ? 'rgba(84, 82, 246, 0.1)' : '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: gender === 'Female' ? '#5452F6' : 'transparent' }}>
+             <User color={gender === 'Female' ? '#5452F6' : '#6B7280'} size={24} />
+             <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '500', color: gender === 'Female' ? '#5452F6' : '#374151' }}>Female</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setGender('Other')} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: gender === 'Other' ? "rgba(0, 96, 133, 0.1)" : '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: gender === 'Other' ? '#006085' : 'transparent' }}>
-             <Sparkles color={gender === 'Other' ? '#006085' : '#6B7280'} size={24} />
-             <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '500', color: gender === 'Other' ? '#006085' : '#374151' }}>Other</Text>
+          <TouchableOpacity onPress={() => setGender('Other')} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: gender === 'Other' ? 'rgba(84, 82, 246, 0.1)' : '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: gender === 'Other' ? '#5452F6' : 'transparent' }}>
+             <Sparkles color={gender === 'Other' ? '#5452F6' : '#6B7280'} size={24} />
+             <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '500', color: gender === 'Other' ? '#5452F6' : '#374151' }}>Other</Text>
           </TouchableOpacity>
 
           {gender === 'Other' && (
             <View style={{ marginTop: 8 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Specify gender (optional)</Text>
-              <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Non-binary" placeholderTextColor="#9CA3AF" value={customGender} onChangeText={setCustomGender} />
+              <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Non-binary" placeholderTextColor="#9CA3AF" value={customGender} onChangeText={setCustomGender} />
             </View>
           )}
         </View>,
@@ -995,7 +1001,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       if (!manualLocation) {
         return renderProfileLayout(
           <View style={{ alignItems: 'center', marginVertical: 32 }}>
-             <MapPin color="#006085" size={64} style={{ marginBottom: 24, opacity: 0.9 }} />
+             <MapPin color="#5452F6" size={64} style={{ marginBottom: 24, opacity: 0.9 }} />
              <TouchableOpacity style={{ backgroundColor: '#F3F4F6', borderRadius: 24, paddingVertical: 12, paddingHorizontal: 24 }} onPress={() => setManualLocation(true)}>
                 <Text style={{ color: '#6B7280', fontSize: 14, fontWeight: '600' }}>Enter location manually instead</Text>
              </TouchableOpacity>
@@ -1014,23 +1020,23 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         <View style={{ gap: 16 }}>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Country <Text style={{ color: '#DC2626' }}>*</Text></Text>
-            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Finland" placeholderTextColor="#9CA3AF" value={country} onChangeText={setCountry} />
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Finland" placeholderTextColor="#9CA3AF" value={country} onChangeText={setCountry} />
           </View>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>State / Region</Text>
-            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Uusimaa" placeholderTextColor="#9CA3AF" value={stateName} onChangeText={setStateName} />
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Uusimaa" placeholderTextColor="#9CA3AF" value={stateName} onChangeText={setStateName} />
           </View>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>City <Text style={{ color: '#DC2626' }}>*</Text></Text>
-            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Helsinki" placeholderTextColor="#9CA3AF" value={city} onChangeText={setCity} />
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Helsinki" placeholderTextColor="#9CA3AF" value={city} onChangeText={setCity} />
           </View>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Street</Text>
-            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="Street address" placeholderTextColor="#9CA3AF" value={street} onChangeText={setStreet} />
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="Street address" placeholderTextColor="#9CA3AF" value={street} onChangeText={setStreet} />
           </View>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Zip Code</Text>
-            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="Postal code" placeholderTextColor="#9CA3AF" value={zipCode} onChangeText={setZipCode} />
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="Postal code" placeholderTextColor="#9CA3AF" value={zipCode} onChangeText={setZipCode} />
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
         </View>,
@@ -1064,10 +1070,10 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Username <Text style={{ color: '#DC2626' }}>*</Text></Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 16, paddingHorizontal: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 8, paddingHorizontal: 16 }}>
               <AtSign color="#6B7280" size={16} style={{ marginRight: 8 }} />
               <TextInput style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="Choose a unique username" placeholderTextColor="#9CA3AF" value={username} onChangeText={(t) => {setUsername(t); setError('');}} autoCapitalize="none" />
-              {isCheckingUsername ? <ActivityIndicator size="small" color="#006085" /> : (username.length > 2 && !usernameTaken ? <CheckCircle color="#10B981" size={20} /> : null)}
+              {isCheckingUsername ? <ActivityIndicator size="small" color="#5452F6" /> : (username.length > 2 && !usernameTaken ? <CheckCircle color="#10B981" size={20} /> : null)}
             </View>
           </View>
 
@@ -1086,7 +1092,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>About you</Text>
-            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 16, padding: 16, fontSize: 16, color: '#111827', height: 120, outlineStyle: 'none' } as any} placeholder="Tell us a little bit about yourself..." placeholderTextColor="#9CA3AF" multiline value={bio} onChangeText={setBio} maxLength={500} />
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', height: 120, outlineStyle: 'none' } as any} placeholder="Tell us a little bit about yourself..." placeholderTextColor="#9CA3AF" multiline value={bio} onChangeText={setBio} maxLength={500} />
             <Text style={{ alignSelf: 'flex-end', fontSize: 12, color: '#9CA3AF', marginTop: 8 }}>{bio.length}/500</Text>
           </View>
 
@@ -1109,7 +1115,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
               ATS will send you promotions such as deals and marketing notifications. You can opt out anytime via account settings or within marketing emails.
             </Text>
             <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 16 }} onPress={() => setPromotionsOptOut(!promotionsOptOut)}>
-               <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: promotionsOptOut ? 0 : 2, borderColor: '#D1D5DB', backgroundColor: promotionsOptOut ? '#006085' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2 }}>
+               <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: promotionsOptOut ? 0 : 2, borderColor: '#D1D5DB', backgroundColor: promotionsOptOut ? '#5452F6' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2 }}>
                  {promotionsOptOut && <CheckCircle color="#FFF" size={16} />}
                </View>
                <Text style={{ flex: 1, color: '#374151', fontSize: 14, fontWeight: '500' }}>I don’t want to receive ATS promotions.</Text>
@@ -1198,12 +1204,10 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             <TextInput style={styles.input} placeholder="Email or Phone" value={recoveryContact} onChangeText={(t) => {setRecoveryContact(t); setError('');}} autoCapitalize="none"  />
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
-          <TouchableOpacity style={[styles.primaryButton, { marginTop: 16 }]} onPress={handleForgotPasswordSendOTP} disabled={loading}>
-            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Next</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity style={{ marginTop: 16, alignSelf: 'center' }} onPress={() => setStep('password')}>
-            <Text style={[styles.linkText, { fontWeight: '500' }]}>Back</Text>
-          </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <TouchableOpacity onPress={() => setStep('password')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleForgotPasswordSendOTP} disabled={loading}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Next</Text>}</TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -1217,12 +1221,10 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             <TextInput style={[styles.input, { letterSpacing: 8, textAlign: 'center', fontSize: 24, fontWeight: 'bold' }]} placeholder="00000000" keyboardType="number-pad" maxLength={8} value={recoveryOTP} onChangeText={(t) => {setRecoveryOTP(t); setError(''); if(t.length === 8) handleForgotPasswordVerifyOTP();}}  />
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
-          <TouchableOpacity style={[styles.primaryButton, { marginTop: 16 }]} onPress={handleForgotPasswordVerifyOTP} disabled={loading}>
-            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Verify</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity style={{ marginTop: 16, alignSelf: 'center' }} onPress={() => setStep('forgot_password_contact')}>
-            <Text style={[styles.linkText, { fontWeight: '500' }]}>Back</Text>
-          </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <TouchableOpacity onPress={() => setStep('forgot_password_contact')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleForgotPasswordVerifyOTP} disabled={loading}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Verify</Text>}</TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -1245,12 +1247,10 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             <TextInput style={styles.input} placeholder="Confirm Password" placeholderTextColor="#9CA3AF" secureTextEntry={!showPassword} value={confirmNewPassword} onChangeText={(t) => {setConfirmNewPassword(t); setError('');}} />
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
-          <TouchableOpacity style={[styles.primaryButton, { marginTop: 16 }]} onPress={() => { if(newPassword === confirmNewPassword && passwordStrength !== 'Weak') setStep('forgot_password_signout'); else setError('Passwords must match and be strong.'); }}>
-            <Text style={styles.primaryButtonText}>Next</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={{ marginTop: 16, alignSelf: 'center' }} onPress={() => setStep('forgot_password_contact')}>
-            <Text style={[styles.linkText, { fontWeight: '500' }]}>Cancel</Text>
-          </TouchableOpacity>
+          <View style={styles.actionRow}>
+             <TouchableOpacity onPress={() => setStep('forgot_password_contact')}><Text style={styles.linkText}>Cancel</Text></TouchableOpacity>
+             <TouchableOpacity style={styles.primaryButton} onPress={() => { if(newPassword === confirmNewPassword && passwordStrength !== 'Weak') setStep('forgot_password_signout'); else setError('Passwords must match and be strong.'); }}><Text style={styles.primaryButtonText}>Next</Text></TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -1270,9 +1270,10 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
              </Text>
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
-          <TouchableOpacity style={[styles.primaryButton, { marginTop: 16 }]} onPress={handleForgotPasswordReset} disabled={loading}>
-            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Confirm & Reset</Text>}
-          </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity style={styles.primaryButton} onPress={handleForgotPasswordReset} disabled={loading}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Confirm & Reset</Text>}</TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -1344,32 +1345,32 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#006085', width: '100%', justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end' },
-  innerContainer: { width: '100%', alignItems: 'center', flex: Platform.OS === 'web' ? 1 : 0, justifyContent: 'flex-end' },
-  card: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, borderBottomLeftRadius: Platform.OS === 'web' ? 32 : 0, borderBottomRightRadius: Platform.OS === 'web' ? 32 : 0, width: '100%', maxWidth: 500, flexShrink: 1, paddingHorizontal: 24, paddingTop: 40, paddingBottom: Platform.OS === 'ios' ? 40 : 24, display: 'flex', flexDirection: 'column' },
+  container: { flex: 1, backgroundColor: '#E8F0FE', width: '100%' },
+  innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 24, width: '100%', maxWidth: 448, maxHeight: '100%', flexShrink: 1, paddingHorizontal: 24, paddingTop: 32, paddingBottom: 24, shadowColor: '#0A66C2', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.08, shadowRadius: 32, elevation: 4, display: 'flex', flexDirection: 'column' },
   stepContainer: { width: '100%', flexShrink: 1 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#111827', marginBottom: 8, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
-  subtitle: { fontSize: 15, color: '#6B7280', marginBottom: 32, textAlign: 'center', lineHeight: 22, fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
+  title: { fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 8, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
+  subtitle: { fontSize: 16, color: '#6B7280', marginBottom: 32, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
   helperText: { fontSize: 13, color: '#9CA3AF', marginBottom: 16 },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 16, backgroundColor: '#F3F4F6' },
-  inputError: { borderWidth: 1.5, borderColor: '#EF4444', backgroundColor: '#FEF2F2' },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 16, backgroundColor: '#F9FAFB' },
+  inputError: { borderColor: '#EF4444', backgroundColor: '#FEF2F2', borderWidth: 1.5 },
   inputIcon: { marginRight: 12 },
   input: { flex: 1, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any,
   inlineErrorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, marginBottom: 8 },
   inlineErrorText: { color: '#DC2626', fontSize: 12, marginLeft: 6 },
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 32 },
-  linkText: { color: '#006085', fontSize: 14, fontWeight: 'bold' },
-  primaryButton: { backgroundColor: '#006085', paddingVertical: 16, borderRadius: 16, alignItems: 'center', justifyContent: 'center', width: '100%' },
-  primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  linkText: { color: '#0A66C2', fontSize: 14, fontWeight: '600' },
+  primaryButton: { backgroundColor: '#0A66C2', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, alignItems: 'center', justifyContent: 'center', minWidth: 100 },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
   chipWrapper: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 8 },
   chipText: { fontSize: 14, color: '#374151', fontWeight: '500' },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
-  dividerText: { marginHorizontal: 16, color: '#9CA3AF', fontSize: 12, fontWeight: '500' },
+  dividerText: { marginHorizontal: 16, color: '#6B7280', fontSize: 12, fontWeight: '500' },
   socialRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  socialButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 16, paddingVertical: 14, width: '100%' },
-  socialButtonText: { color: '#374151', fontSize: 15, fontWeight: '600' },
-  disclaimerText: { fontSize: 12, color: '#9CA3AF', lineHeight: 18, textAlign: 'center' },
+  socialButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingVertical: 10, marginHorizontal: 4 },
+  socialButtonText: { color: '#374151', fontSize: 14, fontWeight: '600' },
+  disclaimerText: { fontSize: 12, color: '#6B7280', lineHeight: 18 },
   checkbox: { width: 20, height: 20, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   checkboxChecked: { backgroundColor: '#0F2D4D', borderColor: '#0F2D4D' },
   genderCard: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 12, paddingVertical: 24, marginHorizontal: 4, backgroundColor: '#FFFFFF' },
