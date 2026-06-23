@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, Modal, useWindowDimensions, ScrollView, SafeAreaView, TextInput, DeviceEventEmitter, ActivityIndicator, Linking } from 'react-native';
-import { Search, Globe, Menu, User, Building2, ChevronDown, Plus, Minus, X, ArrowLeft, ArrowLeftRight, MapPin, Plane } from 'lucide-react-native';
+import { Search, Globe, Menu, User, Building2, ChevronDown, Plus, Minus, X, ArrowLeft, ArrowLeftRight, MapPin, Plane, Wrench, Bike, Car, Bed, BusFront, Train, CheckCircle } from 'lucide-react-native';
 import { useNavigation, useLinkTo } from '@react-navigation/native';
 import WebLink from './WebLink';
 import { useAuth } from '../context/AuthContext';
@@ -312,74 +312,155 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
         {/* Full-screen Mobile Search Modal */}
         <Modal visible={showMobileSearchModal} animationType="slide" transparent={false}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F7F7' }}>
-            <View style={styles.mobileModalHeader}>
-              <TouchableOpacity style={styles.mobileCloseBtn} onPress={() => setShowMobileSearchModal(false)}>
-                <X color="#E2E8F0" size={20} />
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#0F172A' }}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingBottom: 10 }}>
+              <TouchableOpacity onPress={() => setShowMobileSearchModal(false)} style={{ padding: 4 }}>
+                <X color="#E2E8F0" size={24} />
               </TouchableOpacity>
-              <View style={styles.mobileServiceToggleRow}>
-                 <Text style={{fontSize: 16, fontWeight: 'bold', color: '#FFF'}}>{selectedService}</Text>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFF' }}>Find Service</Text>
+              <TouchableOpacity onPress={() => { setSelectedLocation(''); setAdults(1); setSelectedDate(null); }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#00E5FF' }}>Clear all</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Top Global Search (Optional) */}
+            <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E293B', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12 }}>
+                <Search color="#94A3B8" size={20} />
+                <TextInput 
+                  style={{ flex: 1, color: '#FFF', fontSize: 16, marginLeft: 12, outlineStyle: 'none' } as any}
+                  placeholder="Search services, cities..."
+                  placeholderTextColor="#94A3B8"
+                />
               </View>
             </View>
 
-            <ScrollView style={{ padding: 20, backgroundColor: '#0B1120' }}>
-
-
+            <ScrollView style={{ flex: 1, paddingHorizontal: 20, backgroundColor: '#0F172A' }}>
               {/* Service Selection Card */}
-              <View style={styles.mobileCard}>
-                <Text style={styles.mobileCardTitle}>What are you looking for?</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
-                  {servicesList.map(srv => (
-                    <TouchableOpacity 
-                      key={srv} 
-                      onPress={() => setSelectedService(srv)}
-                      style={[styles.mobileServicePill, selectedService === srv && styles.mobileServicePillActive]}
-                    >
-                      <Text style={{ color: selectedService === srv ? '#FFF' : '#E2E8F0', fontWeight: '500' }}>{srv}</Text>
-                    </TouchableOpacity>
-                  ))}
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>What are you looking for?</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ overflow: 'visible' }}>
+                  {servicesList.map(srv => {
+                    let IconComponent = Search;
+                    if (srv === 'Vehicle Repair') IconComponent = Wrench;
+                    if (srv === 'Bike Repair') IconComponent = Bike;
+                    if (srv === 'Pay Parking') IconComponent = Car;
+                    if (srv === 'Hotels & Stays') IconComponent = Bed;
+                    if (srv === 'City Transit') IconComponent = BusFront;
+                    if (srv === 'Train Tickets') IconComponent = Train;
+                    if (srv === 'Flights') IconComponent = Plane;
+
+                    const isSelected = selectedService === srv;
+                    
+                    return (
+                      <TouchableOpacity 
+                        key={srv} 
+                        onPress={() => setSelectedService(srv)}
+                        style={{ 
+                          width: 100, height: 100, backgroundColor: isSelected ? 'rgba(0, 229, 255, 0.1)' : '#1E293B', 
+                          borderRadius: 12, padding: 12, marginRight: 12, justifyContent: 'space-between', 
+                          borderWidth: 2, borderColor: isSelected ? '#00E5FF' : 'transparent', position: 'relative' 
+                        }}
+                      >
+                        <IconComponent color={isSelected ? '#00E5FF' : '#94A3B8'} size={24} />
+                        {isSelected && (
+                          <View style={{ position: 'absolute', top: 8, right: 8 }}>
+                            <CheckCircle color="#00E5FF" size={16} />
+                          </View>
+                        )}
+                        <Text style={{ color: isSelected ? '#00E5FF' : '#94A3B8', fontSize: 13, fontWeight: '600' }}>{srv}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
               </View>
 
-              {/* Location Selection Card */}
-              <View style={styles.mobileCard}>
-                <Text style={styles.mobileCardTitle}>{isTravel ? 'Where to?' : 'Select City'}</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
-                  {['Helsinki', 'Espoo', 'Vantaa', 'Tampere', 'Turku'].map(loc => (
-                    <TouchableOpacity 
-                      key={loc}
-                      onPress={() => setSelectedLocation(loc)}
-                      style={[styles.mobileLocBtn, selectedLocation === loc && { borderColor: '#00E5FF', borderWidth: 2 }]}
-                    >
-                      <Text style={{ fontWeight: selectedLocation === loc ? 'bold' : 'normal', color: '#E2E8F0' }}>{loc}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Guests Card */}
-              {requiresGuests && (
-                <View style={styles.mobileCard}>
-                  <Text style={styles.mobileCardTitle}>Who's coming?</Text>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
-                    <Text style={{ fontSize: 16, color: '#E2E8F0' }}>Adults</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                      <TouchableOpacity onPress={() => setAdults(Math.max(0, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
-                      <Text style={{ fontSize: 16, minWidth: 20, textAlign: 'center', color: '#E2E8F0' }}>{adults}</Text>
-                      <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
+              {/* WHERE Section */}
+              <View style={{ backgroundColor: '#1E293B', borderRadius: 16, overflow: 'hidden', marginBottom: 12 }}>
+                <TouchableOpacity onPress={() => setShowLocationDropdown(!showLocationDropdown)} style={{ padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: '#94A3B8', fontSize: 13, fontWeight: 'bold', letterSpacing: 1 }}>WHERE</Text>
+                  {!showLocationDropdown && <Text style={{ color: '#E2E8F0', fontSize: 16 }}>{selectedLocation || 'Search destinations'}</Text>}
+                </TouchableOpacity>
+                {showLocationDropdown && (
+                  <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0F172A', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12 }}>
+                      <Search color="#00E5FF" size={20} />
+                      <TextInput 
+                        style={{ flex: 1, color: '#FFF', fontSize: 16, marginLeft: 12, outlineStyle: 'none' } as any}
+                        placeholder="Search destinations"
+                        placeholderTextColor="#94A3B8"
+                        value={selectedLocation}
+                        onChangeText={setSelectedLocation}
+                      />
+                    </View>
+                    <View style={{ marginTop: 12 }}>
+                      {['Helsinki', 'Espoo', 'Vantaa', 'Tampere', 'Turku', 'Oulu', 'Lahti', 'Kuopio'].filter(l => l.toLowerCase().includes(selectedLocation.toLowerCase())).map(loc => (
+                        <TouchableOpacity key={loc} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#334155' }} onPress={() => { setSelectedLocation(loc); setShowLocationDropdown(false); setShowDateDropdown(true); }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <MapPin color="#94A3B8" size={18} />
+                            <Text style={{ color: '#E2E8F0', fontSize: 16, marginLeft: 12 }}>{loc}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
                     </View>
                   </View>
+                )}
+              </View>
+
+              {/* WHEN Section */}
+              <View style={{ backgroundColor: '#1E293B', borderRadius: 16, overflow: 'hidden', marginBottom: 12 }}>
+                <TouchableOpacity onPress={() => setShowDateDropdown(!showDateDropdown)} style={{ padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: '#94A3B8', fontSize: 13, fontWeight: 'bold', letterSpacing: 1 }}>WHEN</Text>
+                  {!showDateDropdown && <Text style={{ color: '#E2E8F0', fontSize: 16 }}>{selectedDate || 'Add dates'}</Text>}
+                </TouchableOpacity>
+                {showDateDropdown && (
+                  <View style={{ paddingHorizontal: 20, paddingBottom: 20, alignItems: 'center' }}>
+                    <DateDropdownComponent 
+                      currentMonth={currentMonth}
+                      currentYear={currentYear}
+                      todayDate={todayDate}
+                      selectedDate={selectedDate}
+                      returnDate={returnDate}
+                      flightType={flightType}
+                      setShowDateDropdown={setShowDateDropdown}
+                      setSelectedDate={setSelectedDate}
+                      setReturnDate={setReturnDate}
+                      setShowGuestDropdown={setShowGuestDropdown}
+                      styles={styles}
+                    />
+                  </View>
+                )}
+              </View>
+
+              {/* WHO / VEHICLES Section */}
+              {!['Vehicle Repair', 'Bike Repair'].includes(selectedService) && (
+                <View style={{ backgroundColor: '#1E293B', borderRadius: 16, overflow: 'hidden', marginBottom: 24 }}>
+                  <TouchableOpacity onPress={() => setShowGuestDropdown(!showGuestDropdown)} style={{ padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ color: '#94A3B8', fontSize: 13, fontWeight: 'bold', letterSpacing: 1 }}>{selectedService === 'Pay Parking' ? 'VEHICLES' : 'WHO'}</Text>
+                    {!showGuestDropdown && <Text style={{ color: '#E2E8F0', fontSize: 16 }}>{adults > 1 ? `${adults} ${selectedService === 'Pay Parking' ? 'vehicles' : 'guests'}` : (selectedService === 'Pay Parking' ? 'Add vehicles' : 'Add guests')}</Text>}
+                  </TouchableOpacity>
+                  {showGuestDropdown && (
+                    <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{selectedService === 'Pay Parking' ? 'Vehicles' : 'Adults'}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                          <TouchableOpacity onPress={() => setAdults(Math.max(1, adults - 1))} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#94A3B8', justifyContent: 'center', alignItems: 'center' }}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
+                          <Text style={{ fontSize: 16, minWidth: 20, textAlign: 'center', color: '#E2E8F0' }}>{adults}</Text>
+                          <TouchableOpacity onPress={() => setAdults(adults + 1)} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#94A3B8', justifyContent: 'center', alignItems: 'center' }}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  )}
                 </View>
               )}
             </ScrollView>
 
-            <View style={styles.mobileFooterBar}>
-              <TouchableOpacity onPress={() => setShowMobileSearchModal(false)}>
-                <Text style={{ fontSize: 16, fontWeight: '600', textDecorationLine: 'underline', color: '#E2E8F0' }}>Clear all</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.mobileSearchExecuteBtn} onPress={handleSearchExecute}>
-                <Search color="#0A192F" size={18} />
-                <Text style={{ color: '#0A192F', fontSize: 16, fontWeight: 'bold', marginLeft: 8 }}>Search</Text>
+            {/* Bottom Fixed Search Button */}
+            <View style={{ padding: 20, backgroundColor: '#0F172A', borderTopWidth: 1, borderTopColor: '#1E293B' }}>
+              <TouchableOpacity style={{ backgroundColor: '#00E5FF', borderRadius: 12, paddingVertical: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }} onPress={handleSearchExecute}>
+                <Search color="#0A192F" size={20} />
+                <Text style={{ color: '#0A192F', fontSize: 18, fontWeight: 'bold', marginLeft: 8 }}>Search</Text>
               </TouchableOpacity>
             </View>
           </SafeAreaView>
