@@ -19,7 +19,7 @@ import { useResponsive } from '../hooks/useResponsive';
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused(); 
-  const { user, session, isLoading: isAuthLoading } = useAuth();
+  const { user, session, isLoading: isAuthLoading, isFullyRegistered } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
