@@ -419,7 +419,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                           if (val.length > 2) {
                             try {
                               setIsSearchingGlobalLocations(true);
-                              const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&addressdetails=1&limit=5&email=test@test.com`);
+                              const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&addressdetails=1&limit=5&email=${process.env.EXPO_PUBLIC_NOMINATIM_EMAIL || 'request@krishnaadhikari.com'}`);
                               const data = await res.json();
                               setGlobalLocationSuggestions(data);
                             } catch (e) {
