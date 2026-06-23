@@ -716,7 +716,8 @@ export default function DashboardScreen() {
               <View style={[styles.confirmAccountModal, { padding: 0, overflow: 'hidden', backgroundColor: '#FFFFFF', width: 500, maxHeight: '90%', borderRadius: 16 }]}>
                 <View style={{ width: '100%', flex: 1 }}>
                   <AuthForm 
-                    initialStep="signup_name" 
+                    initialStep={!isFullyRegistered ? "signup_password" : "signup_name"} 
+                    forceRegistrationCompletion={!isFullyRegistered}
                     isModal={true}
                     onClose={() => setShowCompleteProfile(false)}
                     onSuccess={() => {
@@ -734,7 +735,8 @@ export default function DashboardScreen() {
               <View style={[styles.confirmAccountModal, { padding: 0, overflow: 'hidden', backgroundColor: '#FFFFFF', width: '100%', flex: 1, borderRadius: 0, marginTop: Platform.OS === 'ios' ? 40 : 0 }]}>
                 <View style={{ width: '100%', flex: 1 }}>
                   <AuthForm 
-                    initialStep="signup_name" 
+                    initialStep={!isFullyRegistered ? "signup_password" : "signup_name"} 
+                    forceRegistrationCompletion={!isFullyRegistered}
                     isModal={true}
                     onClose={() => setShowCompleteProfile(false)}
                     onSuccess={() => {
