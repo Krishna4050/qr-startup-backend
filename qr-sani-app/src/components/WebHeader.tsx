@@ -13,7 +13,13 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
   const [displayMonth, setDisplayMonth] = useState(currentMonth);
   const [displayYear, setDisplayYear] = useState(currentYear);
 
+  const today = new Date();
+  const currentM = today.getMonth() + 1;
+  const currentY = today.getFullYear();
+  const isPrevDisabled = parseInt(displayYear) === currentY && parseInt(displayMonth) === currentM;
+
   const handlePrevMonth = () => {
+    if (isPrevDisabled) return;
     let newM = parseInt(displayMonth) - 1;
     let newY = parseInt(displayYear);
     if (newM < 1) { newM = 12; newY -= 1; }
@@ -43,8 +49,8 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
   return (
     <View style={[styles.dropdownMenu, { top: 70, left: 0, width: 320, padding: 20 }]}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 8 }}>
-          <Text style={{ color: '#00E5FF', fontSize: 18 }}>{'<'}</Text>
+        <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 8 }} disabled={isPrevDisabled}>
+          <Text style={{ color: isPrevDisabled ? '#334155' : '#00E5FF', fontSize: 18 }}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={{ color: '#F8FAFC', fontWeight: 'bold', fontSize: 16 }}>{mName} {displayYear}</Text>
         <TouchableOpacity onPress={handleNextMonth} style={{ padding: 8 }}>
@@ -58,15 +64,19 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
         {blankArr.map((_, i) => <View key={`e-${i}`} style={{ width: 35, height: 35 }} />)}
         {daysArr.map(d => {
           const dStr = `${displayYear}-${displayMonth.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
-          // Calculate today string correctly
-          const today = new Date();
+          
           const tStr = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
           
           const isToday = dStr === tStr;
           const isSelected = selectedDate === dStr || returnDate === dStr;
+          
+          const cellDate = new Date(parseInt(displayYear), mIndex, d);
+          const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const isPast = cellDate < todayOnly;
+
           const bg = isSelected ? '#00E5FF' : isToday ? 'rgba(0, 229, 255, 0.1)' : 'transparent';
           const bw = isToday && !isSelected ? 1 : 0;
-          const txtColor = isSelected ? '#0A192F' : isToday ? '#00E5FF' : '#E2E8F0';
+          const txtColor = isPast ? '#334155' : isSelected ? '#0A192F' : isToday ? '#00E5FF' : '#E2E8F0';
           const fw = isToday ? 'bold' : 'normal';
           
           let priceColor = '#F59E0B'; 
@@ -76,6 +86,7 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
           return (
             <TouchableOpacity 
               key={d} 
+              disabled={isPast}
               onPress={() => {
                 if (flightType === 'one-way') {
                   setSelectedDate(dStr);
@@ -96,7 +107,7 @@ const DateDropdownComponent = ({ currentMonth, currentYear, todayDate, selectedD
               }}
             >
               <Text style={{ color: txtColor, fontWeight: fw as 'bold' | 'normal' }}>{d}</Text>
-              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: priceColor, marginTop: 2 }} />
+              {!isPast && <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: priceColor, marginTop: 2 }} />}
             </TouchableOpacity>
           )
         })}
@@ -125,6 +136,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const [destinationSuggestions, setDestinationSuggestions] = useState<any[]>([]);
   const [isSearchingAirports, setIsSearchingAirports] = useState(false);
   const [showMobileSearchModal, setShowMobileSearchModal] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [globalLocationSuggestions, setGlobalLocationSuggestions] = useState<any[]>([]);
+  const [isSearchingGlobalLocations, setIsSearchingGlobalLocations] = useState(false);
 
   const [selectedService, setSelectedService] = useState(defaultService);
   const [selectedLocation, setSelectedLocation] = useState('Helsinki');
@@ -209,6 +223,14 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   const isTravel = ['Flights', 'City Transit', 'Train Tickets'].includes(selectedService);
   
   const handleSearchExecute = () => {
+    if (!['Vehicle Repair', 'Bike Repair', 'Pay Parking'].includes(selectedService)) {
+      if (!selectedLocation || selectedLocation.trim() === '') {
+        setSearchError('Please select a destination to continue.');
+        return;
+      }
+    }
+    
+    setSearchError('');
     setShowServiceDropdown(false);
     setShowLocationDropdown(false);
     setShowDateDropdown(false);
@@ -391,18 +413,46 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                         placeholder="Search destinations"
                         placeholderTextColor="#94A3B8"
                         value={selectedLocation}
-                        onChangeText={setSelectedLocation}
+                        onChangeText={async (val) => {
+                          setSelectedLocation(val);
+                          setSearchError('');
+                          if (val.length > 2) {
+                            try {
+                              setIsSearchingGlobalLocations(true);
+                              const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&addressdetails=1&limit=5`, {
+                                headers: { 'User-Agent': 'AtsFinlandApp/1.0' }
+                              });
+                              const data = await res.json();
+                              setGlobalLocationSuggestions(data);
+                            } catch (e) {
+                              console.error(e);
+                            } finally {
+                              setIsSearchingGlobalLocations(false);
+                            }
+                          } else {
+                            setGlobalLocationSuggestions([]);
+                          }
+                        }}
                       />
                     </View>
                     <View style={{ marginTop: 12 }}>
-                      {['Helsinki', 'Espoo', 'Vantaa', 'Tampere', 'Turku', 'Oulu', 'Lahti', 'Kuopio'].filter(l => l.toLowerCase().includes(selectedLocation.toLowerCase())).map(loc => (
-                        <TouchableOpacity key={loc} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#334155' }} onPress={() => { setSelectedLocation(loc); setShowLocationDropdown(false); setShowDateDropdown(true); }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <MapPin color="#94A3B8" size={18} />
-                            <Text style={{ color: '#E2E8F0', fontSize: 16, marginLeft: 12 }}>{loc}</Text>
-                          </View>
-                        </TouchableOpacity>
-                      ))}
+                      {isSearchingGlobalLocations ? (
+                        <ActivityIndicator color="#00E5FF" style={{ marginTop: 16 }} />
+                      ) : globalLocationSuggestions.length > 0 ? (
+                        globalLocationSuggestions.map((loc, idx) => (
+                          <TouchableOpacity key={idx} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#334155' }} onPress={() => { setSelectedLocation(loc.display_name.split(',')[0]); setShowLocationDropdown(false); setShowDateDropdown(true); }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                              <MapPin color="#94A3B8" size={18} />
+                              <View style={{ marginLeft: 12, flex: 1 }}>
+                                <Text style={{ color: '#E2E8F0', fontSize: 16 }}>{loc.display_name.split(',')[0]}</Text>
+                                <Text style={{ color: '#94A3B8', fontSize: 13 }} numberOfLines={1}>{loc.display_name}</Text>
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        ))
+                      ) : selectedLocation.length > 2 ? (
+                         <Text style={{ color: '#94A3B8', padding: 12 }}>No matches found.</Text>
+                      ) : null}
                     </View>
                   </View>
                 )}
@@ -438,18 +488,38 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 <View style={{ backgroundColor: '#1E293B', borderRadius: 16, overflow: 'hidden', marginBottom: 24 }}>
                   <TouchableOpacity onPress={() => setShowGuestDropdown(!showGuestDropdown)} style={{ padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ color: '#94A3B8', fontSize: 13, fontWeight: 'bold', letterSpacing: 1 }}>{selectedService === 'Pay Parking' ? 'VEHICLES' : 'WHO'}</Text>
-                    {!showGuestDropdown && <Text style={{ color: '#E2E8F0', fontSize: 16 }}>{adults > 1 ? `${adults} ${selectedService === 'Pay Parking' ? 'vehicles' : 'guests'}` : (selectedService === 'Pay Parking' ? 'Add vehicles' : 'Add guests')}</Text>}
+                    {!showGuestDropdown && (
+                      <Text style={{ color: '#E2E8F0', fontSize: 16 }}>
+                        {(adults + childrenCount) > 0 
+                          ? `${adults + childrenCount} ${selectedService === 'Pay Parking' ? ((adults + childrenCount) === 1 ? 'vehicle' : 'vehicles') : ((adults + childrenCount) === 1 ? 'guest' : 'guests')}` 
+                          : (selectedService === 'Pay Parking' ? 'Add vehicles' : 'Add guests')}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                   {showGuestDropdown && (
                     <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{selectedService === 'Pay Parking' ? 'Vehicles' : 'Adults'}</Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: selectedService === 'Pay Parking' ? 0 : 20 }}>
+                        <Text style={{ fontSize: 16, color: '#E2E8F0', fontWeight: '500' }}>{selectedService === 'Pay Parking' ? 'Vehicles' : 'Adults'}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
                           <TouchableOpacity onPress={() => setAdults(Math.max(1, adults - 1))} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#94A3B8', justifyContent: 'center', alignItems: 'center' }}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
                           <Text style={{ fontSize: 16, minWidth: 20, textAlign: 'center', color: '#E2E8F0' }}>{adults}</Text>
                           <TouchableOpacity onPress={() => setAdults(adults + 1)} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#94A3B8', justifyContent: 'center', alignItems: 'center' }}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
                         </View>
                       </View>
+                      
+                      {selectedService !== 'Pay Parking' && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <View>
+                            <Text style={{ fontSize: 16, color: '#E2E8F0', fontWeight: '500' }}>Children</Text>
+                            <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 2 }}>Ages 2-12</Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                            <TouchableOpacity onPress={() => setChildrenCount(Math.max(0, childrenCount - 1))} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: childrenCount === 0 ? '#334155' : '#94A3B8', justifyContent: 'center', alignItems: 'center' }}><Minus size={16} color={childrenCount === 0 ? '#334155' : '#94A3B8'} /></TouchableOpacity>
+                            <Text style={{ fontSize: 16, minWidth: 20, textAlign: 'center', color: '#E2E8F0' }}>{childrenCount}</Text>
+                            <TouchableOpacity onPress={() => setChildrenCount(childrenCount + 1)} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#94A3B8', justifyContent: 'center', alignItems: 'center' }}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>
@@ -458,6 +528,9 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
             {/* Bottom Fixed Search Button */}
             <View style={{ padding: 20, backgroundColor: '#0F172A', borderTopWidth: 1, borderTopColor: '#1E293B' }}>
+              {searchError ? (
+                <Text style={{ color: '#EF4444', marginBottom: 12, textAlign: 'center', fontWeight: 'bold' }}>{searchError}</Text>
+              ) : null}
               <TouchableOpacity style={{ backgroundColor: '#00E5FF', borderRadius: 12, paddingVertical: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }} onPress={handleSearchExecute}>
                 <Search color="#0A192F" size={20} />
                 <Text style={{ color: '#0A192F', fontSize: 18, fontWeight: 'bold', marginLeft: 8 }}>Search</Text>
