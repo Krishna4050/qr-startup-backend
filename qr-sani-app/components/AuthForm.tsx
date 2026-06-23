@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Text, View, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, ScrollView, StyleSheet } from 'react-native';
-import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, User, Users, Compass, Camera, Upload, Navigation, MapPin, Sparkles, Calendar, AtSign } from 'lucide-react-native';
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, User, Users, Compass, Camera, Upload, Navigation, MapPin, Sparkles, Calendar, AtSign, ArrowLeft, Shield } from 'lucide-react-native';
 import { supabase_lucifer_core } from '../src/utils/supabase';
 import { useAuth } from '../src/context/AuthContext';
 import { registerForPushNotificationsAsync } from '../src/utils/notifications';
@@ -802,253 +802,277 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       );
     }
 
-    if (step === 'signup_name') {
+    const PROFILE_STEPS: AuthStep[] = ['signup_name', 'signup_dob', 'signup_gender', 'signup_location', 'signup_profile', 'signup_terms'];
+    const profileStepIndex = PROFILE_STEPS.indexOf(step);
+
+    const renderProfileLayout = (children: React.ReactNode, title: string, subtitle?: string, onNext?: () => void, onBack?: () => void, isNextDisabled?: boolean, showShield?: boolean, customNextText?: string) => {
       return (
-        <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} showsVerticalScrollIndicator={false}>
-          <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
-            <Text style={styles.title}>Tell us about Yourself</Text>
-            <Text style={styles.subtitle}>Let's get to know you better</Text>
-            
-            <View style={[styles.inputWrapper, error && !firstName ? styles.inputError : null]}>
-              <User color="#6B7280" size={20} style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="First name" placeholderTextColor="#9CA3AF" value={firstName} onChangeText={(t) => {setFirstName(t); setError('');}} />
-            </View>
-            <View style={styles.inputWrapper}>
-              <User color="#6B7280" size={20} style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Middle name (optional)" placeholderTextColor="#9CA3AF" value={middleName} onChangeText={setMiddleName} />
-            </View>
-            <View style={[styles.inputWrapper, error && !lastName ? styles.inputError : null]}>
-              <User color="#6B7280" size={20} style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Last name" placeholderTextColor="#9CA3AF" value={lastName} onChangeText={(t) => {setLastName(t); setError('');}} />
-            </View>
-            <View style={styles.inputWrapper}>
-              <User color="#6B7280" size={20} style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Preferred name (optional)" placeholderTextColor="#9CA3AF" value={preferredName} onChangeText={setPreferredName} />
-            </View>
-
-            {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
-
-            <View style={[styles.actionRow, { marginTop: 40 }]}>
-              {(!isModal && !forceRegistrationCompletion) ? (
-                <TouchableOpacity onPress={() => setStep('signup_otp')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
-              ) : <View />}
-              <TouchableOpacity style={styles.primaryButton} onPress={() => {
-                 if (!firstName || !lastName) setError('First and Last name are required');
-                 else { setError(''); setStep('signup_dob'); }
-              }}><Text style={styles.primaryButtonText}>Next</Text></TouchableOpacity>
-            </View>
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          {/* Header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', position: 'relative' }}>
+            {profileStepIndex > 0 && onBack && (
+              <TouchableOpacity onPress={onBack} style={{ position: 'absolute', left: 16, padding: 8 }}>
+                <ArrowLeft color="#111827" size={24} />
+              </TouchableOpacity>
+            )}
+            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#111827' }}>Profile completion</Text>
           </View>
-        </ScrollView>
+
+          {/* Progress Bar */}
+          <View style={{ flexDirection: 'row', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24, gap: 8 }}>
+            {PROFILE_STEPS.map((_, idx) => (
+              <View key={idx} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: idx <= profileStepIndex ? '#5452F6' : '#E5E7EB' }} />
+            ))}
+          </View>
+
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#111827', marginBottom: 8 }}>{title}</Text>
+            {subtitle && <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 24, lineHeight: 20 }}>{subtitle}</Text>}
+            
+            {children}
+          </ScrollView>
+
+          <View style={{ padding: 24, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+            {showShield && (
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
+                <Shield color="#6B7280" size={16} style={{ marginTop: 2, marginRight: 8 }} />
+                <Text style={{ flex: 1, fontSize: 12, color: '#6B7280', lineHeight: 18 }}>All information you provide is secure and will only be used to create your profile</Text>
+              </View>
+            )}
+            <TouchableOpacity 
+              style={{ backgroundColor: isNextDisabled || loading ? '#9CA3AF' : '#5452F6', borderRadius: 24, paddingVertical: 16, alignItems: 'center' }}
+              onPress={onNext}
+              disabled={isNextDisabled || loading}
+            >
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>{customNextText || 'Next'}</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    };
+
+    if (step === 'signup_name') {
+      return renderProfileLayout(
+        <View style={{ gap: 16 }}>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>First name <Text style={{ color: '#DC2626' }}>*</Text></Text>
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="e.g. Jane" placeholderTextColor="#9CA3AF" value={firstName} onChangeText={(t) => {setFirstName(t); setError('');}} />
+          </View>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Middle name (optional)</Text>
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="e.g. Marie" placeholderTextColor="#9CA3AF" value={middleName} onChangeText={setMiddleName} />
+          </View>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Last name <Text style={{ color: '#DC2626' }}>*</Text></Text>
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="e.g. Doe" placeholderTextColor="#9CA3AF" value={lastName} onChangeText={(t) => {setLastName(t); setError('');}} />
+          </View>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Preferred name (optional)</Text>
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="What should we call you?" placeholderTextColor="#9CA3AF" value={preferredName} onChangeText={setPreferredName} />
+          </View>
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+        </View>,
+        "What is your name?",
+        "Please provide us with your real name and surname as it is necessary for your contract creation.",
+        () => {
+          if (!firstName || !lastName) setError('First and Last name are required');
+          else { setError(''); setStep('signup_dob'); }
+        },
+        undefined,
+        false,
+        true
       );
     }
 
     if (step === 'signup_dob') {
-      return (
-        <View style={styles.stepContainer}>
-          <Text style={styles.title}>When were you born?</Text>
-          <Text style={styles.subtitle}>You must be at least 18 years old.</Text>
-          
-          <View style={[styles.inputWrapper, { marginTop: 24, paddingLeft: 24 }]}>
-            <Calendar color="#6B7280" size={24} style={[styles.inputIcon, { marginRight: 16 }]} />
-            <TextInput style={[styles.input, { letterSpacing: 4, fontSize: 24 }]} placeholder="YYYY-MM-DD" placeholderTextColor="#D1D5DB" keyboardType="number-pad" maxLength={10} value={dob} onChangeText={handleDobChange}  />
+      return renderProfileLayout(
+        <View style={{ gap: 16 }}>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Date of birth</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 8, paddingHorizontal: 16 }}>
+              <Calendar color="#6B7280" size={20} style={{ marginRight: 12 }} />
+              <TextInput style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827', letterSpacing: 2, outlineStyle: 'none' } as any} placeholder="YYYY-MM-DD" placeholderTextColor="#9CA3AF" keyboardType="number-pad" maxLength={10} value={dob} onChangeText={handleDobChange} />
+            </View>
           </View>
-
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
-
-          <View style={[styles.actionRow, { marginTop: 40 }]}>
-            <TouchableOpacity onPress={() => setStep('signup_name')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.primaryButton} onPress={() => {
-               if (dob.length < 10) setError('Please enter a valid date (YYYY-MM-DD)');
-               else { setError(''); setStep('signup_gender'); }
-            }}><Text style={styles.primaryButtonText}>Next</Text></TouchableOpacity>
-          </View>
-        </View>
+        </View>,
+        "When were you born?",
+        "You must be at least 18 years old.",
+        () => {
+          if (dob.length < 10) setError('Please enter a valid date (YYYY-MM-DD)');
+          else { setError(''); setStep('signup_gender'); }
+        },
+        () => setStep('signup_name'),
+        false,
+        false
       );
     }
 
     if (step === 'signup_gender') {
-      return (
-        <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-          <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
-            <Text style={styles.title}>Which gender best describes you?</Text>
-            <Text style={styles.subtitle}>This helps us personalize your experience.</Text>
-            
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
-              <TouchableOpacity style={[styles.genderCard, gender === 'Male' && styles.genderCardSelected]} onPress={() => setGender('Male')}>
-                 <User color={gender === 'Male' ? '#0A66C2' : '#6B7280'} size={32} />
-                 <Text style={[styles.genderText, gender === 'Male' && styles.genderTextSelected]}>Male</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.genderCard, gender === 'Female' && styles.genderCardSelected]} onPress={() => setGender('Female')}>
-                 <User color={gender === 'Female' ? '#0A66C2' : '#6B7280'} size={32} />
-                 <Text style={[styles.genderText, gender === 'Female' && styles.genderTextSelected]}>Female</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.genderCard, gender === 'Other' && styles.genderCardSelected]} onPress={() => setGender('Other')}>
-                 <Sparkles color={gender === 'Other' ? '#0A66C2' : '#6B7280'} size={32} />
-                 <Text style={[styles.genderText, gender === 'Other' && styles.genderTextSelected]}>Other</Text>
-              </TouchableOpacity>
-            </View>
+      return renderProfileLayout(
+        <View style={{ gap: 16 }}>
+          <TouchableOpacity onPress={() => setGender('Male')} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: gender === 'Male' ? 'rgba(84, 82, 246, 0.1)' : '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: gender === 'Male' ? '#5452F6' : 'transparent' }}>
+             <User color={gender === 'Male' ? '#5452F6' : '#6B7280'} size={24} />
+             <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '500', color: gender === 'Male' ? '#5452F6' : '#374151' }}>Male</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setGender('Female')} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: gender === 'Female' ? 'rgba(84, 82, 246, 0.1)' : '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: gender === 'Female' ? '#5452F6' : 'transparent' }}>
+             <User color={gender === 'Female' ? '#5452F6' : '#6B7280'} size={24} />
+             <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '500', color: gender === 'Female' ? '#5452F6' : '#374151' }}>Female</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setGender('Other')} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: gender === 'Other' ? 'rgba(84, 82, 246, 0.1)' : '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: gender === 'Other' ? '#5452F6' : 'transparent' }}>
+             <Sparkles color={gender === 'Other' ? '#5452F6' : '#6B7280'} size={24} />
+             <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '500', color: gender === 'Other' ? '#5452F6' : '#374151' }}>Other</Text>
+          </TouchableOpacity>
 
-            {gender === 'Other' && (
-              <View style={[styles.inputWrapper, { marginTop: 24 }]}>
-                <TextInput style={styles.input} placeholder="Specify your gender (optional)" value={customGender} onChangeText={setCustomGender} />
-              </View>
-            )}
-
-            <View style={[styles.actionRow, { marginTop: 40 }]}>
-              <TouchableOpacity onPress={() => setStep('signup_dob')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.primaryButton} onPress={() => {
-                 if (!gender) setGender('Other'); // Default to other if blank
-                 setStep('signup_location');
-              }}><Text style={styles.primaryButtonText}>Next</Text></TouchableOpacity>
+          {gender === 'Other' && (
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Specify gender (optional)</Text>
+              <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Non-binary" placeholderTextColor="#9CA3AF" value={customGender} onChangeText={setCustomGender} />
             </View>
-          </View>
-        </ScrollView>
+          )}
+        </View>,
+        "Which gender best describes you?",
+        "This helps us personalize your experience.",
+        () => {
+           if (!gender) setGender('Other'); // Default
+           setStep('signup_location');
+        },
+        () => setStep('signup_dob'),
+        false,
+        false
       );
     }
 
     if (step === 'signup_location') {
       if (!manualLocation) {
-        return (
-          <View style={[styles.stepContainer, { alignItems: 'center' }]}>
-             <MapPin color="#0A66C2" size={64} style={{ marginBottom: 24, opacity: 0.8 }} />
-             <Text style={styles.title}>Enable your location</Text>
-             <Text style={styles.subtitle}>You'll need to enable your location in order to find the best local features.</Text>
-
-             <TouchableOpacity style={[styles.primaryButton, { width: '100%', paddingVertical: 16, marginTop: 40, borderRadius: 32 }]} onPress={handleLocationToggle} disabled={loading}>
-               {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[styles.primaryButtonText, { fontSize: 16 }]}>Enable location</Text>}
+        return renderProfileLayout(
+          <View style={{ alignItems: 'center', marginVertical: 32 }}>
+             <MapPin color="#5452F6" size={64} style={{ marginBottom: 24, opacity: 0.9 }} />
+             <TouchableOpacity style={{ backgroundColor: '#F3F4F6', borderRadius: 24, paddingVertical: 12, paddingHorizontal: 24 }} onPress={() => setManualLocation(true)}>
+                <Text style={{ color: '#6B7280', fontSize: 14, fontWeight: '600' }}>Enter location manually instead</Text>
              </TouchableOpacity>
-
-             <TouchableOpacity style={{ marginTop: 24 }} onPress={() => setManualLocation(true)}>
-                <Text style={[styles.linkText, { color: '#6B7280' }]}>Enter location manually?</Text>
-             </TouchableOpacity>
-
-             <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0 }} onPress={() => setStep('signup_gender')}>
-               <Text style={styles.linkText}>Back</Text>
-             </TouchableOpacity>
-          </View>
+          </View>,
+          "Enable your location",
+          "You'll need to enable your location in order to find the best local features.",
+          handleLocationToggle,
+          () => setStep('signup_gender'),
+          false,
+          false,
+          "Enable location"
         );
       }
 
-      return (
-        <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-          <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
-            <Text style={styles.title}>Confirm your location</Text>
-            
-            <View style={[styles.inputWrapper, { marginTop: 16 }]}><MapPin color="#9CA3AF" size={20} style={styles.inputIcon} /><TextInput style={styles.input} placeholder="Country" placeholderTextColor="#9CA3AF" value={country} onChangeText={setCountry} /></View>
-            <View style={styles.inputWrapper}><MapPin color="#9CA3AF" size={20} style={styles.inputIcon} /><TextInput style={styles.input} placeholder="State" placeholderTextColor="#9CA3AF" value={stateName} onChangeText={setStateName} /></View>
-            <View style={styles.inputWrapper}><MapPin color="#9CA3AF" size={20} style={styles.inputIcon} /><TextInput style={styles.input} placeholder="City" placeholderTextColor="#9CA3AF" value={city} onChangeText={setCity} /></View>
-            <View style={styles.inputWrapper}><Navigation color="#9CA3AF" size={20} style={styles.inputIcon} /><TextInput style={styles.input} placeholder="Street" placeholderTextColor="#9CA3AF" value={street} onChangeText={setStreet} /></View>
-            <View style={styles.inputWrapper}><Navigation color="#9CA3AF" size={20} style={styles.inputIcon} /><TextInput style={styles.input} placeholder="Zip Code" placeholderTextColor="#9CA3AF" value={zipCode} onChangeText={setZipCode} /></View>
-
-            {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
-
-            <View style={[styles.actionRow, { marginTop: 40 }]}>
-              <TouchableOpacity onPress={() => setManualLocation(false)}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.primaryButton} onPress={() => {
-                 if (!country || !city) setError('Country and City are required');
-                 else { setError(''); setStep('signup_profile'); }
-              }}><Text style={styles.primaryButtonText}>Next</Text></TouchableOpacity>
-            </View>
+      return renderProfileLayout(
+        <View style={{ gap: 16 }}>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Country <Text style={{ color: '#DC2626' }}>*</Text></Text>
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Finland" placeholderTextColor="#9CA3AF" value={country} onChangeText={setCountry} />
           </View>
-        </ScrollView>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>State / Region</Text>
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Uusimaa" placeholderTextColor="#9CA3AF" value={stateName} onChangeText={setStateName} />
+          </View>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>City <Text style={{ color: '#DC2626' }}>*</Text></Text>
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="E.g. Helsinki" placeholderTextColor="#9CA3AF" value={city} onChangeText={setCity} />
+          </View>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Street</Text>
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="Street address" placeholderTextColor="#9CA3AF" value={street} onChangeText={setStreet} />
+          </View>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Zip Code</Text>
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="Postal code" placeholderTextColor="#9CA3AF" value={zipCode} onChangeText={setZipCode} />
+          </View>
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+        </View>,
+        "Confirm your location",
+        "Please provide your accurate location details.",
+        () => {
+           if (!country || !city) setError('Country and City are required');
+           else { setError(''); setStep('signup_profile'); }
+        },
+        () => setManualLocation(false),
+        false,
+        false
       );
     }
 
     if (step === 'signup_profile') {
-      return (
-        <ScrollView style={{ flexShrink: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-          <View style={[styles.stepContainer, { paddingBottom: 16 }]}>
-            <Text style={styles.title}>Upload Profile</Text>
-            <Text style={styles.subtitle}>Personalize your profile with a photo and a brief bio.</Text>
-
-            <View style={{ alignItems: 'center', marginBottom: 24 }}>
-               <TouchableOpacity style={styles.avatarUploadBlock} onPress={pickImage}>
-                 {avatarUrl ? (
-                   <img src={avatarUrl} style={{ width: 120, height: 120, borderRadius: 60, objectFit: 'cover' }} />
-                 ) : (
-                   <View style={styles.avatarPlaceholder}>
-                     <Camera color="#6B7280" size={32} />
-                     <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 8 }}>Upload picture</Text>
-                   </View>
-                 )}
-               </TouchableOpacity>
-            </View>
-
-            <Text style={[styles.subtitle, { textAlign: 'left', marginBottom: 12, fontWeight: 'bold' }]}>Account Credentials</Text>
-            
-            <View style={styles.inputWrapper}>
-              <AtSign color="#6B7280" size={20} style={styles.inputIcon} />
-              <TextInput 
-                style={styles.input} 
-                placeholder="Username" 
-                placeholderTextColor="#9CA3AF" 
-                value={username} 
-                onChangeText={(t) => {setUsername(t); setError('');}} 
-                autoCapitalize="none" 
-                autoComplete="off"
-                autoCorrect={false}
-                spellCheck={false}
-                textContentType="none"
-                importantForAutofill="no"
-                // @ts-ignore
-                autoFill="off"
-              />
-              {isCheckingUsername ? <ActivityIndicator size="small" color="#0A66C2" /> : (username.length > 2 && !usernameTaken ? <CheckCircle color="#059669" size={20} /> : null)}
-            </View>
-            
-            {usernameTaken && (
-              <View style={{ marginBottom: 16 }}>
-                 <Text style={{ color: '#DC2626', fontSize: 12, marginBottom: 8 }}>Username is taken. Try these:</Text>
-                 <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                   {usernameSuggestions.map(sug => (
-                      <TouchableOpacity key={sug} style={styles.suggestionChip} onPress={() => setUsername(sug)}>
-                        <Text style={{ color: '#0A66C2', fontSize: 12 }}>{sug}</Text>
-                      </TouchableOpacity>
-                   ))}
+      return renderProfileLayout(
+        <View style={{ gap: 24 }}>
+          <View style={{ alignItems: 'center' }}>
+             <TouchableOpacity style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', borderWidth: 2, borderColor: '#E5E7EB', borderStyle: 'dashed' }} onPress={pickImage}>
+               {avatarUrl ? (
+                 <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+               ) : (
+                 <View style={{ alignItems: 'center' }}>
+                   <Camera color="#9CA3AF" size={32} />
+                   <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 8 }}>Upload photo</Text>
                  </View>
-              </View>
-            )}
+               )}
+             </TouchableOpacity>
+          </View>
 
-
-
-            <Text style={[styles.subtitle, { textAlign: 'left', marginBottom: 8, marginTop: 16, fontWeight: 'bold' }]}>Let your personality shine through.</Text>
-            <View style={[styles.inputWrapper, { height: 100, alignItems: 'flex-start', paddingTop: 12 }]}>
-              <TextInput style={[styles.input, { height: '100%', outlineStyle: 'none' } as any]} placeholder="Tell us about yourself" multiline value={bio} onChangeText={setBio} maxLength={500} />
-            </View>
-            <Text style={{ alignSelf: 'flex-end', fontSize: 12, color: '#9CA3AF', marginTop: -8 }}>{bio.length}/500</Text>
-
-            {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
-
-            <View style={[styles.actionRow, { marginTop: 40 }]}>
-              <TouchableOpacity onPress={() => setStep('signup_location')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.primaryButton} onPress={handleFinalizeProfile} disabled={loading || isCheckingUsername}>
-                 {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Continue</Text>}
-              </TouchableOpacity>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Username <Text style={{ color: '#DC2626' }}>*</Text></Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 8, paddingHorizontal: 16 }}>
+              <AtSign color="#6B7280" size={16} style={{ marginRight: 8 }} />
+              <TextInput style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827', outlineStyle: 'none' } as any} placeholder="Choose a unique username" placeholderTextColor="#9CA3AF" value={username} onChangeText={(t) => {setUsername(t); setError('');}} autoCapitalize="none" />
+              {isCheckingUsername ? <ActivityIndicator size="small" color="#5452F6" /> : (username.length > 2 && !usernameTaken ? <CheckCircle color="#10B981" size={20} /> : null)}
             </View>
           </View>
-        </ScrollView>
+
+          {usernameTaken && (
+            <View style={{ backgroundColor: '#FEF2F2', padding: 12, borderRadius: 8 }}>
+               <Text style={{ color: '#DC2626', fontSize: 12, marginBottom: 8, fontWeight: '600' }}>Username is taken. Try these:</Text>
+               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                 {usernameSuggestions.map(sug => (
+                    <TouchableOpacity key={sug} style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: '#FCA5A5' }} onPress={() => setUsername(sug)}>
+                      <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '500' }}>{sug}</Text>
+                    </TouchableOpacity>
+                 ))}
+               </View>
+            </View>
+          )}
+
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>About you</Text>
+            <TextInput style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, fontSize: 16, color: '#111827', height: 120, outlineStyle: 'none' } as any} placeholder="Tell us a little bit about yourself..." placeholderTextColor="#9CA3AF" multiline value={bio} onChangeText={setBio} maxLength={500} />
+            <Text style={{ alignSelf: 'flex-end', fontSize: 12, color: '#9CA3AF', marginTop: 8 }}>{bio.length}/500</Text>
+          </View>
+
+          {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
+        </View>,
+        "Upload Profile",
+        "Personalize your profile with a photo and a brief bio.",
+        handleFinalizeProfile,
+        () => setStep('signup_location'),
+        isCheckingUsername || loading,
+        false
       );
     }
 
     if (step === 'signup_terms') {
-      return (
-        <View style={styles.stepContainer}>
-          <Text style={styles.title}>Review & Agree</Text>
-          
-          <Text style={[styles.disclaimerText, { marginTop: 24 }]}>
-            ATS will send you promotions such as deals and marketing notifications. You can opt out anytime via account settings or within marketing emails.
-          </Text>
+      return renderProfileLayout(
+        <View style={{ gap: 24 }}>
+          <View style={{ backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12 }}>
+            <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 22 }}>
+              ATS will send you promotions such as deals and marketing notifications. You can opt out anytime via account settings or within marketing emails.
+            </Text>
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 16 }} onPress={() => setPromotionsOptOut(!promotionsOptOut)}>
+               <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: promotionsOptOut ? 0 : 2, borderColor: '#D1D5DB', backgroundColor: promotionsOptOut ? '#5452F6' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2 }}>
+                 {promotionsOptOut && <CheckCircle color="#FFF" size={16} />}
+               </View>
+               <Text style={{ flex: 1, color: '#374151', fontSize: 14, fontWeight: '500' }}>I don’t want to receive ATS promotions.</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16 }} onPress={() => setPromotionsOptOut(!promotionsOptOut)}>
-             <View style={[styles.checkbox, promotionsOptOut && styles.checkboxChecked]}>
-               {promotionsOptOut && <CheckCircle color="#FFF" size={14} />}
-             </View>
-             <Text style={{ marginLeft: 8, color: '#374151', flex: 1 }}>I don’t want to receive ATS promotions.</Text>
-          </TouchableOpacity>
-
-          <Text style={[styles.disclaimerText, { marginTop: 32 }]}>
-            By selecting Agree and continue, I agree to ATS Terms of Service, Payments Terms of Service, and Nondiscrimination Policy, and acknowledge the Privacy Policy.
-          </Text>
+          <View style={{ backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12 }}>
+            <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 22 }}>
+              By selecting "Agree and continue", I agree to ATS Terms of Service, Payments Terms of Service, and Nondiscrimination Policy, and acknowledge the Privacy Policy.
+            </Text>
+          </View>
 
           {error ? (
             <View style={styles.inlineErrorRow}>
@@ -1056,16 +1080,14 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
                <Text style={styles.inlineErrorText}>{error}</Text>
             </View>
           ) : null}
-
-          <View style={[styles.actionRow, { marginTop: 40 }]}>
-            <TouchableOpacity onPress={() => setStep('signup_password')}>
-              <Text style={styles.linkText}>Back</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleTermsSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Agree and continue</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
+        </View>,
+        "Review & Agree",
+        "Please review the terms and policies before finalizing your account.",
+        handleTermsSubmit,
+        () => setStep('signup_profile'),
+        false,
+        false,
+        "Agree and continue"
       );
     }
 

@@ -711,13 +711,7 @@ export default function DashboardScreen() {
 
       <Modal visible={showCompleteProfile} transparent={true} animationType="slide">
         <View style={styles.confirmAccountOverlay}>
-          <View style={[styles.confirmAccountModal, { padding: 0, overflow: 'hidden' }, Platform.OS === 'web' && !isMobileWeb ? { width: 500, maxHeight: '90%' } : { width: '100%', flex: 1, borderRadius: 0, marginTop: Platform.OS === 'ios' ? 40 : 0 }]}>
-            <View style={{ width: '100%', padding: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-               <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827' }}>Complete Your Profile</Text>
-               <TouchableOpacity onPress={() => setShowCompleteProfile(false)}>
-                  <X color="#6B7280" size={24} />
-               </TouchableOpacity>
-            </View>
+          <View style={[styles.confirmAccountModal, { padding: 0, overflow: 'hidden', backgroundColor: '#FFFFFF' }, Platform.OS === 'web' && !isMobileWeb ? { width: 500, maxHeight: '90%', borderRadius: 16 } : { width: '100%', flex: 1, borderRadius: 0, marginTop: Platform.OS === 'ios' ? 40 : 0 }]}>
             <View style={{ width: '100%', flex: 1 }}>
               <AuthForm 
                 initialStep="signup_name" 
