@@ -219,7 +219,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
   };
 
   const isFlight = selectedService === 'Flights';
-  const requiresGuests = ['Hotels & Stays', 'Train Tickets', 'Flights'].includes(selectedService);
+  const requiresGuests = !['Vehicle Repair', 'Bike Repair'].includes(selectedService);
   const isTravel = ['Flights', 'City Transit', 'Train Tickets'].includes(selectedService);
   
   const handleSearchExecute = () => {
@@ -1038,8 +1038,10 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   onPress={() => { setShowGuestDropdown(!showGuestDropdown); setShowDateDropdown(false); setShowServiceDropdown(false); setShowFlightOriginDropdown(false); setShowFlightDestinationDropdown(false); }}
                 >
                   <View>
-                    <Text style={styles.searchTitle} numberOfLines={1}>Travelers and cabin</Text>
-                    <Text style={styles.searchSub} numberOfLines={1}>{adults + childrenCount} Pax, {cabinClass}</Text>
+                    <Text style={styles.searchTitle} numberOfLines={1}>{selectedService === 'Pay Parking' ? 'Vehicle' : 'Who'}</Text>
+                    <Text style={styles.searchSub} numberOfLines={1}>
+                      {adults + childrenCount} {selectedService === 'Pay Parking' ? ((adults + childrenCount) === 1 ? 'vehicle' : 'vehicles') : ((adults + childrenCount) === 1 ? 'guest' : 'guests')}
+                    </Text>
                   </View>
                 </TouchableOpacity>
                 </>
@@ -1053,6 +1055,10 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               </View>
             </View>
           )}
+
+          {searchError ? (
+            <Text style={{ color: '#EF4444', marginTop: 12, textAlign: 'center', fontWeight: 'bold', fontSize: 15, zIndex: 10 }}>{searchError}</Text>
+          ) : null}
 
           {/* Absolute Service Dropdown */}
           {showServiceDropdown && (
@@ -1080,8 +1086,8 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
             <View style={[styles.dropdownMenu, { right: 120, left: 'auto', width: 320, padding: 24 }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <View>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Adults</Text>
-                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 16 or above</Text>
+                  <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>{selectedService === 'Pay Parking' ? 'Vehicles' : 'Adults'}</Text>
+                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>{selectedService === 'Pay Parking' ? 'Number of vehicles' : 'Ages 16 or above'}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
                   <TouchableOpacity onPress={() => setAdults(Math.max(1, adults - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
@@ -1089,17 +1095,19 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                   <TouchableOpacity onPress={() => setAdults(adults + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <View>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Children</Text>
-                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 0-15</Text>
+              {selectedService !== 'Pay Parking' && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                  <View>
+                    <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E2E8F0' }}>Children</Text>
+                    <Text style={{ color: '#94A3B8', fontSize: 14 }}>Ages 0-15</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                    <TouchableOpacity onPress={() => setChildrenCount(Math.max(0, childrenCount - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
+                    <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{childrenCount}</Text>
+                    <TouchableOpacity onPress={() => setChildrenCount(childrenCount + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
+                  </View>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                  <TouchableOpacity onPress={() => setChildrenCount(Math.max(0, childrenCount - 1))} style={styles.circleBtn}><Minus size={16} color="#94A3B8" /></TouchableOpacity>
-                  <Text style={{ fontSize: 16, color: '#E2E8F0' }}>{childrenCount}</Text>
-                  <TouchableOpacity onPress={() => setChildrenCount(childrenCount + 1)} style={styles.circleBtn}><Plus size={16} color="#94A3B8" /></TouchableOpacity>
-                </View>
-              </View>
+              )}
 
               {isFlight && (
                 <>
