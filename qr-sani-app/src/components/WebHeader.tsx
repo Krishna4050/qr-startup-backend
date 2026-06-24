@@ -935,25 +935,77 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
               
               <View style={styles.divider} />
               
-              <TouchableOpacity 
-                style={[styles.searchSection, showLocationDropdown && styles.activeSection]}
-                onPress={() => { setShowLocationDropdown(!showLocationDropdown); setShowServiceDropdown(false); setShowDateDropdown(false); setShowGuestDropdown(false); }}
-              >
-                <View>
-                  <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Destination' : 'Where'}</Text>
-                  <Text style={styles.searchSub} numberOfLines={1}>{selectedLocation}</Text>
-                </View>
-              </TouchableOpacity>
+              <View style={[styles.searchSection, showLocationDropdown && styles.activeSection, { position: 'relative' }]}>
+                <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Destination' : 'Where'}</Text>
+                <TextInput 
+                  style={[styles.searchSub, { padding: 0, margin: 0, outlineStyle: 'none' }] as any}
+                  value={selectedLocation}
+                  onChangeText={async (val) => { 
+                    setSelectedLocation(val);
+                    setSearchError('');
+                    setShowLocationDropdown(true);
+                    if (val.length > 2) {
+                      try {
+                        setIsSearchingGlobalLocations(true);
+                        const apiUrl = process.env.EXPO_PUBLIC_NOMINATIM_URL || 'https://nominatim.openstreetmap.org/search';
+                        const res = await fetch(`${apiUrl}?q=${encodeURIComponent(val)}&format=json&addressdetails=1&limit=5&email=${process.env.EXPO_PUBLIC_NOMINATIM_EMAIL || 'request@krishnaadhikari.com'}`);
+                        const data = await res.json();
+                        setGlobalLocationSuggestions(data);
+                      } catch (e) {
+                        console.error(e);
+                      } finally {
+                        setIsSearchingGlobalLocations(false);
+                      }
+                    } else {
+                      setGlobalLocationSuggestions([]);
+                    }
+                  }}
+                  placeholder="Search destinations"
+                  placeholderTextColor="#94A3B8"
+                />
+                {showLocationDropdown && globalLocationSuggestions && (
+                  <View style={[styles.dropdownMenu, { top: 70, left: 0, maxHeight: 350, backgroundColor: '#FFFFFF', padding: 0, borderRadius: 16, overflow: 'hidden', minWidth: 280 }]}>
+                    <ScrollView keyboardShouldPersistTaps="handled">
+                      <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B', marginVertical: 12, paddingHorizontal: 16 }}>SUGGESTIONS</Text>
+                      {isSearchingGlobalLocations ? (
+                        <ActivityIndicator color="#00E5FF" style={{ padding: 16 }} />
+                      ) : globalLocationSuggestions.length > 0 ? (
+                        globalLocationSuggestions.map((loc, idx) => (
+                          <TouchableOpacity 
+                            key={idx} 
+                            style={{ paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}
+                            onPress={() => { 
+                              setSelectedLocation(loc.display_name.split(',')[0]); 
+                              setShowLocationDropdown(false); 
+                              setShowDateDropdown(true); 
+                            }}
+                          >
+                            <View style={{ width: 32, alignItems: 'center' }}>
+                              <MapPin color="#64748B" size={20} />
+                            </View>
+                            <View style={{ marginLeft: 8, flex: 1 }}>
+                              <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0F172A' }}>{loc.display_name.split(',')[0]}</Text>
+                              <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }} numberOfLines={1}>{loc.display_name}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))
+                      ) : (
+                        <Text style={{ padding: 16, color: '#64748B' }}>No matches found</Text>
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
               
               <View style={styles.divider} />
               
               <TouchableOpacity 
-                style={[styles.searchSection, showDateDropdown && styles.activeSection]}
+                style={[styles.searchSection, showDateDropdown && styles.activeSection, { position: 'relative' }]}
                 onPress={() => { setShowDateDropdown(!showDateDropdown); setShowServiceDropdown(false); setShowLocationDropdown(false); setShowGuestDropdown(false); }}
               >
                 <View>
                   <Text style={styles.searchTitle} numberOfLines={1}>{isTravel ? 'Departure' : 'When'}</Text>
-                  <Text style={styles.searchSub} numberOfLines={1}>
+                  <Text style={[styles.searchSub, !selectedDate && { color: '#94A3B8' }]} numberOfLines={1}>
                     {selectedDate ? (() => {
                       const [y, m, d] = selectedDate.split('-');
                       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -961,6 +1013,21 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                     })() : 'Add dates'}
                   </Text>
                 </View>
+                {showDateDropdown && (
+                  <DateDropdownComponent 
+                    currentMonth={currentMonth}
+                    currentYear={currentYear}
+                    todayDate={todayDate}
+                    selectedDate={selectedDate}
+                    returnDate={returnDate}
+                    flightType={flightType}
+                    setShowDateDropdown={setShowDateDropdown}
+                    setSelectedDate={setSelectedDate}
+                    setReturnDate={setReturnDate}
+                    setShowGuestDropdown={setShowGuestDropdown}
+                    styles={styles}
+                  />
+                )}
               </TouchableOpacity>
               
               {requiresGuests && (
@@ -1004,20 +1071,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
           {/* Kept other absolute dropdowns (Guest, Service, Location) unchanged below */}
 
-          {/* Absolute Location Dropdown */}
-          {showLocationDropdown && (
-            <View style={[styles.dropdownMenu, { left: 160 }]}>
-              {['Helsinki', 'Espoo', 'Vantaa', 'Tampere', 'Turku'].map((loc, idx) => (
-                <TouchableOpacity 
-                  key={idx} 
-                  style={[styles.dropdownItem, selectedLocation === loc && styles.dropdownItemActive]}
-                  onPress={() => { setSelectedLocation(loc); setShowLocationDropdown(false); setShowDateDropdown(true); }}
-                >
-                  <Text style={[styles.dropdownItemText, selectedLocation === loc && styles.dropdownItemTextActive]}>{loc}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+          {/* Removed old absolute Location Dropdown */}
 
           {/* Removed old absolute Date Dropdown */}
 
