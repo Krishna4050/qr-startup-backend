@@ -196,6 +196,15 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     setError('');
   };
 
+  const handleGoBack = () => {
+    setStep('contact');
+    setError('');
+    setPassword('');
+    setOtp('');
+    setTurnstileReady(false);
+    setTurnstileToken(null);
+  };
+
   const handleContactSubmit = () => {
     if (!contact) {
       setError('Please enter an email or phone number.');
@@ -234,7 +243,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       
       if (!res.ok) {
         setError('Verification failed. Please try again.');
-        setStep('contact');
+        handleGoBack();
         setLoading(false);
         return;
       }
@@ -252,7 +261,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       }
     } catch (err: any) {
       setError(err.message || 'Network error. Please try again.');
-      setStep('contact');
+      handleGoBack();
     }
     setLoading(false);
   };
@@ -690,7 +699,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       return (
         <View style={styles.stepContainer}>
           <Text style={styles.title}>Welcome back</Text>
-          <TouchableOpacity style={styles.chipWrapper} onPress={() => setStep('contact')}>
+          <TouchableOpacity style={styles.chipWrapper} onPress={handleGoBack}>
             <Text style={styles.chipText}>{contact}</Text>
           </TouchableOpacity>
           
@@ -720,7 +729,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
           <View style={[styles.actionRow, { marginTop: 40 }]}>
             <View style={{ flexDirection: 'column' }}>
-              <TouchableOpacity onPress={() => setStep('contact')} style={{ marginBottom: failedPasswordAttempts > 0 ? 16 : 0 }}>
+              <TouchableOpacity onPress={handleGoBack} style={{ marginBottom: failedPasswordAttempts > 0 ? 16 : 0 }}>
                 <Text style={styles.linkText}>Back</Text>
               </TouchableOpacity>
               {failedPasswordAttempts > 0 && (
@@ -765,7 +774,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           ) : null}
 
           <View style={[styles.actionRow, { marginTop: 40 }]}>
-            <TouchableOpacity onPress={() => setStep('contact')}>
+            <TouchableOpacity onPress={handleGoBack}>
               <Text style={styles.linkText}>Back</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.primaryButton} onPress={handleOtpSubmit} disabled={loading || otp.length < 6}>
@@ -1169,7 +1178,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           </View>
           {error ? <View style={styles.inlineErrorRow}><AlertCircle color="#DC2626" size={14} /><Text style={styles.inlineErrorText}>{error}</Text></View> : null}
           <View style={styles.actionRow}>
-            <TouchableOpacity onPress={() => setStep('contact')}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity onPress={handleGoBack}><Text style={styles.linkText}>Back</Text></TouchableOpacity>
             <TouchableOpacity style={styles.primaryButton} onPress={handleForgotEmailSendOTP} disabled={loading}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Next</Text>}</TouchableOpacity>
           </View>
         </View>
