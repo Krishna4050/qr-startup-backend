@@ -23,3 +23,4 @@ research paper on airbnb/
 firebase-service-account.json
 *.sql
 009_recovery_email.sql
+database/otp_email_template.html
