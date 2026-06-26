@@ -82,6 +82,17 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
   const [passwordStrength, setPasswordStrength] = useState('');
 
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (resendCountdown > 0) {
+      interval = setInterval(() => {
+        setResendCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendCountdown]);
 
   // Secure Recovery Flow States
   const [failedPasswordAttempts, setFailedPasswordAttempts] = useState(0);
@@ -249,6 +260,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
       }
       
       const data = await res.json();
+      setTurnstileReady(false); // Stop Turnstile from auto-refreshing
       if (data.exists) {
         setStep('password'); // Login flow
       } else {
@@ -258,10 +270,27 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         );
         if (otpError) throw otpError;
         setStep('signup_otp');
+        setResendCountdown(60);
       }
     } catch (err: any) {
       setError(err.message || 'Network error. Please try again.');
       handleGoBack();
+    }
+    setLoading(false);
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCountdown > 0) return;
+    setLoading(true);
+    setError('');
+    try {
+      const { error: otpError } = await supabase_lucifer_core.auth.signInWithOtp(
+        isPhone ? { phone: contact } : { email: contact }
+      );
+      if (otpError) throw otpError;
+      setResendCountdown(60);
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend OTP.');
     }
     setLoading(false);
   };
@@ -772,6 +801,14 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
                <Text style={styles.inlineErrorText}>{error}</Text>
             </View>
           ) : null}
+
+          <View style={{ alignItems: 'center', marginTop: 16 }}>
+            <TouchableOpacity onPress={handleResendOtp} disabled={resendCountdown > 0 || loading}>
+              <Text style={[styles.linkText, { fontSize: 14, color: resendCountdown > 0 ? '#9CA3AF' : '#007AFF' }]}>
+                {resendCountdown > 0 ? `Resend code in ${resendCountdown}s` : 'Resend code'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={[styles.actionRow, { marginTop: 40 }]}>
             <TouchableOpacity onPress={handleGoBack}>
