@@ -109,7 +109,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
     padding: 40,
-    minHeight: '80vh',
     backgroundColor: '#FFFFFF',
     marginTop: 40,
     marginBottom: 40,
