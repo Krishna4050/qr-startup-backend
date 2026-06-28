@@ -38,6 +38,7 @@ const SCREEN_URL_MAP: Record<string, (params?: any) => string> = {
   HostMessages: () => '/host/messages',
   PartnerOnboardingIntro: () => '/partner/start',
   Settings: () => '/settings',
+  Legal: (p) => `/legal/${p?.type || 'terms'}`,
 };
 
 function getHref(screen: string, params?: any): string {
