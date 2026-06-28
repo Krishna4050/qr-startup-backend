@@ -44,9 +44,9 @@ export default function WebFooter() {
 
           <View style={styles.column}>
             <Text style={styles.columnHeader}>Legal</Text>
-            <WebLink screen="Home" style={styles.link}><Text style={styles.linkText}>Privacy Policy</Text></WebLink>
-            <WebLink screen="Home" style={styles.link}><Text style={styles.linkText}>Terms of Service</Text></WebLink>
-            <WebLink screen="Home" style={styles.link}><Text style={styles.linkText}>Cookie Policy</Text></WebLink>
+            <WebLink screen="Legal" params={{ type: 'privacy' }} style={styles.link}><Text style={styles.linkText}>Privacy Policy</Text></WebLink>
+            <WebLink screen="Legal" params={{ type: 'terms' }} style={styles.link}><Text style={styles.linkText}>Terms of Service</Text></WebLink>
+            <WebLink screen="Legal" params={{ type: 'cookies' }} style={styles.link}><Text style={styles.linkText}>Cookie Policy</Text></WebLink>
           </View>
         </View>
 

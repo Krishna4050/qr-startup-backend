@@ -80,6 +80,7 @@ import PartnerOnboardingStep3Screen from './src/screens/PartnerOnboardingStep3Sc
 import PartnerOnboardingStep4Screen from './src/screens/PartnerOnboardingStep4Screen';
 import HostDashboardScreen from './src/screens/HostDashboardScreen';
 import PricingScreen from './src/screens/PricingScreen';
+import LegalScreen from './src/screens/LegalScreen';
 
 // Chat Screens
 import ChatScreen from './src/screens/ChatScreen';
@@ -122,6 +123,7 @@ const linking = {
       PartnerOnboardingIntro: 'partner/start',
       Settings: 'settings',
       Pricing: 'pricing',
+      Legal: 'legal/:type',
     }
   }
 };
@@ -145,6 +147,7 @@ const GuestStack = () => (
     <Stack.Screen name="ShopDetails" component={ShopDetailsScreen} options={{ headerShown: false }} />
     <Stack.Screen name="PartnerOnboardingIntro" component={PartnerOnboardingIntroScreen} options={{ headerShown: false }} />
     <Stack.Screen name="Pricing" component={PricingScreen} options={{ headerShown: false }} />
+    <Stack.Screen name="Legal" component={LegalScreen} options={{ headerShown: false }} />
   </Stack.Navigator>
 );
 
@@ -186,6 +189,7 @@ const AuthStack = () => (
     <Stack.Screen name="UserMessages" component={UserMessagesScreen} options={{ headerShown: false }} />
     <Stack.Screen name="HostMessages" component={HostMessagesScreen} options={{ headerShown: false }} />
     <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
+    <Stack.Screen name="Legal" component={LegalScreen} options={{ headerShown: false }} />
   </Stack.Navigator>
 );
 

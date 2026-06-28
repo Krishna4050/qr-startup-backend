@@ -24,3 +24,5 @@ firebase-service-account.json
 *.sql
 009_recovery_email.sql
 database/otp_email_template.html
+
+database/create_legal_docs.sql

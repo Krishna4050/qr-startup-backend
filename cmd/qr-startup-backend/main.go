@@ -99,6 +99,8 @@ func main(){
 	mux.HandleFunc("POST /api/admin/communicate", handlers.AdminCommunicateHandler)
 	mux.HandleFunc("GET /api/admin/flight-settings", handlers.GetFlightSettingsHandler)
 	mux.HandleFunc("POST /api/admin/flight-settings", handlers.UpdateFlightSettingsHandler)
+	mux.HandleFunc("GET /api/legal-documents", handlers.GetLegalDocumentHandler)
+	mux.HandleFunc("POST /api/admin/legal-documents", handlers.AdminUpdateLegalDocumentHandler)
 	mux.HandleFunc("GET /api/public/shops", handlers.GetPublicDirectoryHandler)
 	mux.HandleFunc("POST /api/call-shop", handlers.CallShop)
 	mux.HandleFunc("POST /api/call-shop-webhook", handlers.CallShopWebhook)
