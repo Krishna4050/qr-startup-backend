@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Krishna4050/qr-startup-backend/database"
@@ -113,6 +114,7 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
+		fmt.Printf("Failed to update profile: %v\n", err)
 		http.Error(w, "Failed to update profile", http.StatusInternalServerError)
 		return
 	}
