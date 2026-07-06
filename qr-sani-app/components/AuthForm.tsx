@@ -1371,10 +1371,10 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
   if (isModal) {
     return (
       <KeyboardWrapper behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
-         <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, width: '100%', maxWidth: 448, alignSelf: 'center', justifyContent: 'center' }}>
-           <View key={step} style={{ flexShrink: 1, width: '100%' }}>{content}</View>
+         <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, width: '100%', maxWidth: 448, alignSelf: 'center', justifyContent: 'center' }}>
+           <View key={step} style={{ flexShrink: 1, width: '100%', backgroundColor: '#FFFFFF', borderRadius: 24, overflow: 'hidden' }}>{content}</View>
            {renderTurnstile()}
-         </View>
+         </ScrollView>
       </KeyboardWrapper>
     );
   }
@@ -1382,22 +1382,18 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
   return (
     <KeyboardWrapper behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, width: '100%' }}>
       {Platform.OS === 'web' ? (
-        <View style={styles.container}>
-          <View style={styles.innerContainer}>
-            <View style={styles.card}>
-              <View key={step}>{content}</View>
-              {renderTurnstile()}
-            </View>
+        <ScrollView style={styles.container} contentContainerStyle={styles.innerContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.card}>
+            <View key={step} style={{ flexShrink: 1, width: '100%' }}>{content}</View>
+            {renderTurnstile()}
           </View>
-        </View>
+        </ScrollView>
       ) : (
-        <View style={styles.container}>
-          <View style={styles.innerContainer}>
-            <View style={styles.card}>
-              <View key={step}>{content}</View>
-            </View>
+        <ScrollView style={styles.container} contentContainerStyle={styles.innerContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.card}>
+            <View key={step} style={{ flexShrink: 1, width: '100%' }}>{content}</View>
           </View>
-        </View>
+        </ScrollView>
       )}
     </KeyboardWrapper>
   );
@@ -1405,8 +1401,8 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#E8F0FE', width: '100%' },
-  innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 24, width: '100%', maxWidth: 448, maxHeight: '100%', flexShrink: 1, paddingHorizontal: 24, paddingTop: 32, paddingBottom: 24, shadowColor: '#0A66C2', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.08, shadowRadius: 32, elevation: 4, display: 'flex', flexDirection: 'column' },
+  innerContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 24, width: '100%', maxWidth: 448, flexShrink: 1, paddingHorizontal: 24, paddingTop: 32, paddingBottom: 24, shadowColor: '#0A66C2', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.08, shadowRadius: 32, elevation: 4, display: 'flex', flexDirection: 'column' },
   stepContainer: { width: '100%', flexShrink: 1 },
   title: { fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 8, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
   subtitle: { fontSize: 16, color: '#6B7280', marginBottom: 32, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto' },
