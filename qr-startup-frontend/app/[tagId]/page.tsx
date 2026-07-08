@@ -118,12 +118,15 @@ export default function FinderPage() {
         }),
       });
 
-      if (!response.ok) throw new Error("Invalid Code");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Invalid Code");
+      }
 
       setStep('success');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Invalid verification code. Please try again.");
+      alert(error.message || "Invalid verification code. Please try again.");
     } finally {
       setIsLoading(false);
     }
