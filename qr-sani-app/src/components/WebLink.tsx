@@ -65,9 +65,19 @@ type WebLinkProps = {
 
 export default function WebLink({ screen, params, style, children, activeOpacity = 0.7, onPress }: WebLinkProps) {
   const navigation = useNavigation<any>();
+  const linkTo = useLinkTo<any>();
+  const href = getHref(screen, params);
 
   const handleNavigate = () => {
-    navigation.navigate(screen, params);
+    try {
+      if (Platform.OS === 'web') {
+        linkTo(href);
+      } else {
+        navigation.navigate(screen, params);
+      }
+    } catch (e) {
+      navigation.navigate(screen, params);
+    }
     if (onPress) {
       setTimeout(() => onPress(), 50); // delay unmount so navigation triggers first!
     }
@@ -82,7 +92,6 @@ export default function WebLink({ screen, params, style, children, activeOpacity
     );
   }
 
-  const href = getHref(screen, params);
   const flatStyle = StyleSheet.flatten(style) || {};
 
   const webProps = Platform.OS === 'web' ? {
