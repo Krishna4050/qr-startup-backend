@@ -45,7 +45,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegistrationCompletionScreen from './src/screens/RegistrationCompletionScreen';
 
 if (Platform.OS === 'web') {
-  document.title = 'ATS finland';
+  document.title = 'Aicrett';
 }
 
 import SettingsScreen from './src/screens/SettingsScreen';
@@ -222,7 +222,7 @@ export default function App() {
           linking={linking} 
           onReady={handleNavigationReady}
           documentTitle={{
-            formatter: (options, route) => options?.title ?? 'ATS finland'
+            formatter: (options, route) => options?.title ?? 'Aicrett'
           }}
         >
           <WebLayout>

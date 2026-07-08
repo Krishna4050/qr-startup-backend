@@ -14,7 +14,7 @@ export default function WebFooter() {
           <View style={styles.column}>
             <View style={styles.brandRow}>
               <Building2 color="#E11D48" size={28} />
-              <Text style={styles.brandText}>ATS finland</Text>
+              <Text style={styles.brandText}>Aicrett</Text>
             </View>
             <Text style={styles.description}>
               Protecting your most valuable belongings with smart, community-driven QR tags.

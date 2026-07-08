@@ -270,7 +270,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, zIndex: 9999 }}>
             <WebLink style={styles.logoSection} screen="Dashboard">
               <Image source={require('../../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12 }} />
-              <Text style={[styles.logoText, { fontSize: 24 }]}>ATS finland</Text>
+              <Text style={[styles.logoText, { fontSize: 24 }]}>Aicrett</Text>
             </WebLink>
             <View style={{ position: 'relative' }}>
               {isGuest ? (
@@ -567,7 +567,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
         {/* Left: Logo */}
         <WebLink style={styles.logoSection} screen="Dashboard">
           <Image source={require('../../assets/icon.png')} style={{ width: 56, height: 56, borderRadius: 14 }} />
-          <Text style={[styles.logoText, { fontSize: 28 }]}>ATS finland</Text>
+          <Text style={[styles.logoText, { fontSize: 28 }]}>Aicrett</Text>
         </WebLink>
 
         {/* Center: Top Tabs */}

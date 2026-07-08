@@ -352,7 +352,7 @@ export default function DashboardScreen() {
               <View style={styles.headerContent}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.greetingText}>Welcome to</Text>
-                  <Text style={styles.userNameText}>ATS finland</Text>
+                  <Text style={styles.userNameText}>Aicrett</Text>
                 </View>
                 <TouchableOpacity 
                   style={{ backgroundColor: '#10B981', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}
@@ -409,7 +409,7 @@ export default function DashboardScreen() {
               {/* Hero Section */}
               <View style={[styles.heroCard, Platform.OS === 'web' && { padding: 48 }]}>
             <ShieldCheck color="#2563EB" size={Platform.OS === 'web' ? 64 : 48} style={{ marginBottom: 16 }} />
-            <Text style={[styles.heroTitle, Platform.OS === 'web' && { fontSize: 36 }]}>Welcome to ATS finland</Text>
+            <Text style={[styles.heroTitle, Platform.OS === 'web' && { fontSize: 36 }]}>Welcome to Aicrett</Text>
             <Text style={[styles.heroSubtitle, Platform.OS === 'web' && { fontSize: 18, maxWidth: 600 }]}>
               Explore our comprehensive vehicle and transportation services.
             </Text>
@@ -421,9 +421,9 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Why ATS Finland? */}
+          {/* Why Aicrett? */}
           <View>
-            <Text style={styles.sectionTitle}>Why ATS finland?</Text>
+            <Text style={styles.sectionTitle}>Why Aicrett?</Text>
             <View style={Platform.OS === 'web' ? [styles.webGridContainer, { paddingHorizontal: 0, marginTop: 16 }] : { gap: 16, marginTop: 16 }}>
               {[
                 { title: "Comprehensive Services", desc: "Everything you need from parking to flights.", icon: <User color="#2563EB" size={32} /> },

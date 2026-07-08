@@ -652,7 +652,7 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
     if (step === 'contact') {
       return (
         <View style={styles.stepContainer}>
-          <Text style={styles.title}>Welcome to ATS Finland</Text>
+          <Text style={styles.title}>Welcome to Aicrett</Text>
           <Text style={styles.subtitle}>Enter your email or phone to sign in or register for a new account.</Text>
           
           <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
@@ -1168,19 +1168,19 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
           <View style={{ gap: 24, marginTop: 16 }}>
             <View style={{ backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12 }}>
               <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 22 }}>
-                ATS will send you promotions such as deals and marketing notifications. You can opt out anytime via account settings or within marketing emails.
+                Aicrett will send you promotions such as deals and marketing notifications. You can opt out anytime via account settings or within marketing emails.
               </Text>
               <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 16 }} onPress={() => setPromotionsOptOut(!promotionsOptOut)}>
                  <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: promotionsOptOut ? 0 : 2, borderColor: '#D1D5DB', backgroundColor: promotionsOptOut ? '#006085' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2 }}>
                    {promotionsOptOut && <CheckCircle color="#FFF" size={16} />}
                  </View>
-                 <Text style={{ flex: 1, color: '#374151', fontSize: 14, fontWeight: '500' }}>I don’t want to receive ATS promotions.</Text>
+                 <Text style={{ flex: 1, color: '#374151', fontSize: 14, fontWeight: '500' }}>I don’t want to receive Aicrett promotions.</Text>
               </TouchableOpacity>
             </View>
 
             <View style={{ backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12 }}>
               <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 22 }}>
-                By selecting "Agree and continue", I agree to ATS Terms of Service, Payments Terms of Service, and Nondiscrimination Policy, and acknowledge the Privacy Policy.
+                By selecting "Agree and continue", I agree to Aicrett Terms of Service, Payments Terms of Service, and Nondiscrimination Policy, and acknowledge the Privacy Policy.
               </Text>
             </View>
           </View>
