@@ -41,6 +41,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 // Screens
 import WebLayout from './src/components/WebLayout';
 import MainTabs from './src/navigation/MainTabs';
+import CookieConsentModal from './components/CookieConsentModal';
 import LoginScreen from './src/screens/LoginScreen';
 import RegistrationCompletionScreen from './src/screens/RegistrationCompletionScreen';
 
@@ -228,6 +229,7 @@ export default function App() {
           <WebLayout>
             <GlobalErrorBoundary>
               <Router />
+              <CookieConsentModal />
             </GlobalErrorBoundary>
           </WebLayout>
         </NavigationContainer>
