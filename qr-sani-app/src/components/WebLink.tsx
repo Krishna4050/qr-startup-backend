@@ -97,13 +97,14 @@ export default function WebLink({ screen, params, style, children, activeOpacity
   const webProps = Platform.OS === 'web' ? {
     href,
     accessibilityRole: 'link',
-    // We override onClick on web to prevent full page reload on normal left clicks,
+    // We use onPress on web because TouchableOpacity ignores onClick,
     // while letting Cmd+Click / middle-click pass through to the <a> tag natively.
-    onClick: (e: any) => {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+    onPress: (e: any) => {
+      const ne = e?.nativeEvent || {};
+      if (ne.metaKey || ne.ctrlKey || ne.shiftKey || ne.button === 1) {
         return; // Let browser handle it
       }
-      e.preventDefault();
+      if (e?.preventDefault) e.preventDefault();
       handleNavigate();
     },
     style: {
