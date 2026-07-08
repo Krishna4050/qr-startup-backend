@@ -194,7 +194,7 @@ export default function DashboardScreen() {
       setProfile(data.profile || { display_name: user.user_metadata?.username });
       
       if (data.profile) {
-        if (!data.profile.first_name || !data.profile.username) {
+        if (!data.profile.first_name || !data.profile.last_name) {
           // User verified OTP but hasn't completed their profile details yet
           setShowCompleteProfile(true);
         } else if (!user?.email_confirmed_at || !user?.phone_confirmed_at) {
