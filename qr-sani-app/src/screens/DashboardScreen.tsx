@@ -547,7 +547,7 @@ export default function DashboardScreen() {
         </LinearGradient>
       )}
 
-      <RefreshableScroll onRefreshAction={fetchDashboardData} style={styles.scrollContainer} contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }} showsVerticalScrollIndicator={false} alwaysBounceVertical={true}>
+      <RefreshableScroll onRefreshAction={fetchDashboardData} style={styles.scrollContainer} contentContainerStyle={{ flexGrow: 1, paddingBottom: Platform.OS === 'web' ? 0 : 100 }} showsVerticalScrollIndicator={false} alwaysBounceVertical={true}>
         <View style={[styles.webMaxWidth, { flex: 1 }]}>
         
         {Platform.OS === 'web' && user && !isGuest && (

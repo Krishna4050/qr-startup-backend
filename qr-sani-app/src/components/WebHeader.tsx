@@ -565,7 +565,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     <View style={styles.headerContainer}>
       <View style={[styles.headerContent, { zIndex: 9999 }]}>
         {/* Left: Logo */}
-        <WebLink style={styles.logoSection} screen="Dashboard">
+        <WebLink style={styles.logoSection} screen={isGuest ? "Onboarding" : "Home"}>
           <Image source={require('../../assets/icon.png')} style={{ width: 56, height: 56, borderRadius: 14 }} />
           <Text style={[styles.logoText, { fontSize: 28 }]}>Aicrett</Text>
         </WebLink>
