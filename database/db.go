@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 	_ "github.com/lib/pq" // This underscore tells GO: load this behind the scenes so database/sql can use it
 )
@@ -20,6 +21,11 @@ func ConnectDB(){
 		log.Println("Warning: Database URL is missing from .env file. Database will be disabled.")
 		return
 	}
+
+	// If the URL uses port 6543 (Supabase transaction pooler), the Go pq driver will sporadically fail
+	// with weird errors because it uses prepared statements by default, which PgBouncer transaction mode breaks.
+	// We MUST rewrite it to port 5432 (direct connection) since we are managing our own pool anyway.
+	dsn = strings.Replace(dsn, ":6543", ":5432", 1)
 
 	// Open the connection
 	var err error
