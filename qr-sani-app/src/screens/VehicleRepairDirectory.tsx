@@ -266,36 +266,38 @@ export default function VehicleRepairDirectory() {
           <ActivityIndicator size="large" color="#4A00E0" />
         </View>
       ) : (
-        <RefreshableScroll onRefreshAction={fetchShops} style={styles.listContent} showsVerticalScrollIndicator={false}>
-          {filteredShops.length === 0 ? (
-            <View style={styles.centerScreen}>
-              <Text style={styles.emptyText}>No {targetService.toLowerCase()} found.</Text>
-            </View>
-          ) : activeFilter === 'All' ? (
-            <View>
-              {Object.keys(groupedShops).map((city) => (
-                <View key={city} style={styles.citySection}>
-                  <Text style={styles.citySectionTitle}>{city} Shops</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalCityScroll}>
-                    {groupedShops[city].map((item) => (
-                      <WebLink key={item.id} screen="ShopDetails" params={{ id: item.id }} style={{ marginRight: 24 }}>
-                        <ShopCard item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={isMobileWeb ? dynamicCardWidth : 300} />
-                      </WebLink>
-                    ))}
-                  </ScrollView>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <View style={Platform.OS === 'web' ? [styles.webGridContainer, isMobileWeb && { justifyContent: 'space-between', gap: 12 }] : {}}>
-              {filteredShops.map((item) => (
-                <WebLink key={item.id} screen="ShopDetails" params={{ id: item.id }} style={Platform.OS === 'web' ? { width: dynamicCardWidth } : {}}>
-                  <ShopCard item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={dynamicCardWidth} />
-                </WebLink>
-              ))}
-            </View>
-          )}
-          <View style={{ height: 60 }} />
+        <RefreshableScroll onRefreshAction={fetchShops} style={styles.listContent} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+          <View style={{ flex: 1 }}>
+            {filteredShops.length === 0 ? (
+              <View style={styles.centerScreen}>
+                <Text style={styles.emptyText}>No {targetService.toLowerCase()} found.</Text>
+              </View>
+            ) : activeFilter === 'All' ? (
+              <View>
+                {Object.keys(groupedShops).map((city) => (
+                  <View key={city} style={styles.citySection}>
+                    <Text style={styles.citySectionTitle}>{city} Shops</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalCityScroll}>
+                      {groupedShops[city].map((item) => (
+                        <WebLink key={item.id} screen="ShopDetails" params={{ id: item.id }} style={{ marginRight: 24 }}>
+                          <ShopCard item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={isMobileWeb ? dynamicCardWidth : 300} />
+                        </WebLink>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={Platform.OS === 'web' ? [styles.webGridContainer, isMobileWeb && { justifyContent: 'space-between', gap: 12 }] : {}}>
+                {filteredShops.map((item) => (
+                  <WebLink key={item.id} screen="ShopDetails" params={{ id: item.id }} style={Platform.OS === 'web' ? { width: dynamicCardWidth } : {}}>
+                    <ShopCard item={item} onPress={() => navigation.navigate('ShopDetails', { id: item.id })} cardWidth={dynamicCardWidth} />
+                  </WebLink>
+                ))}
+              </View>
+            )}
+            <View style={{ height: 60 }} />
+          </View>
           <WebFooter />
         </RefreshableScroll>
       )}

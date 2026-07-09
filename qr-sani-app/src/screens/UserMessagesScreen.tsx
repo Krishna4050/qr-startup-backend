@@ -27,9 +27,14 @@ export default function UserMessagesScreen({ route }: any) {
   }, [user?.id, session?.access_token]);
 
   const fetchConversations = async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      // Find all messages involving this user to get unique shops
+      const profileRes = await apiClient.get('/api/profile');
+      if (!profileRes.data.first_name || !profileRes.data.last_name) {
+        navigation.navigate('Dashboard');
+        return;
+      }
       const { data } = await apiClient.get('/api/messages');
 
       const uniqueShops = new Map();

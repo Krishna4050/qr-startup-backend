@@ -35,6 +35,10 @@ export default function ProfileScreen({ route }: any) {
     try {
       if (!user) return;
       const { data } = await apiClient.get('/api/profile');
+      if (!data.first_name || !data.last_name) {
+        navigation.navigate('Dashboard');
+        return;
+      }
       setProfileData(data);
       calculateCompletion(data);
     } catch (error) {

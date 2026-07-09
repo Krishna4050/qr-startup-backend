@@ -28,6 +28,10 @@ export default function HostDashboardScreen() {
     setLoading(true);
     try {
       const res = await apiClient.get('/api/host/dashboard');
+      if (!res.data.first_name) {
+        navigation.navigate('Dashboard');
+        return;
+      }
       setUserName(res.data.first_name || 'Partner');
       setMyShops(res.data.shops || []);
     } catch (err) {

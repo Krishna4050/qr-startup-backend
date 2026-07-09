@@ -199,7 +199,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
   const { user, logout, isFullyRegistered } = useAuth();
   const isGuest = !user || !isFullyRegistered;
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<any>({ avatar_url: user?.user_metadata?.avatar_url || null });
   const todayDate = new Date().getDate();
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -268,7 +268,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
       <>
         <View style={[styles.headerContainer, { paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 24 : 0 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, zIndex: 9999 }}>
-            <WebLink style={styles.logoSection} screen="Dashboard">
+            <WebLink style={styles.logoSection} screen="Home">
               <Image source={require('../../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12 }} />
               <Text style={[styles.logoText, { fontSize: 24 }]}>Aicrett</Text>
             </WebLink>
@@ -565,7 +565,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     <View style={styles.headerContainer}>
       <View style={[styles.headerContent, { zIndex: 9999 }]}>
         {/* Left: Logo */}
-        <WebLink style={styles.logoSection} screen="Dashboard">
+        <WebLink style={styles.logoSection} screen="Home">
           <Image source={require('../../assets/icon.png')} style={{ width: 56, height: 56, borderRadius: 14 }} />
           <Text style={[styles.logoText, { fontSize: 28 }]}>Aicrett</Text>
         </WebLink>
@@ -618,16 +618,24 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
                 {/* Profile Dropdown */}
                 {showProfileDropdown && (
                   <View style={[styles.dropdownMenu, { top: 50, right: 0, left: 'auto', width: 240, padding: 8, zIndex: 999 }]}>
-                    <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}>
-                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages</Text>
-                    </WebLink>
-                    <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
-                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
-                    </WebLink>
-                    <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}>
-                      <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
-                    </WebLink>
-                    <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
+                    {isFullyRegistered && profile?.first_name && profile?.last_name ? (
+                      <>
+                        <WebLink style={styles.dropdownItem} screen="UserMessages" onPress={() => setShowProfileDropdown(false)}>
+                          <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Messages</Text>
+                        </WebLink>
+                        <WebLink style={styles.dropdownItem} screen="Profile" onPress={() => setShowProfileDropdown(false)}>
+                          <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Profile</Text>
+                        </WebLink>
+                        <WebLink style={styles.dropdownItem} screen="HostDashboard" onPress={() => setShowProfileDropdown(false)}>
+                          <Text style={[styles.dropdownItemText, { fontWeight: '600' }]}>Host Dashboard</Text>
+                        </WebLink>
+                        <View style={{ height: 1, backgroundColor: '#EBEBEB', marginVertical: 8 }} />
+                      </>
+                    ) : (
+                      <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('Dashboard'); }}>
+                        <Text style={[styles.dropdownItemText, { fontWeight: '600', color: '#EF4444' }]}>Complete Profile First</Text>
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity style={styles.dropdownItem} onPress={handleSignOut}>
                       <Text style={[styles.dropdownItemText, { color: '#E11D48' }]}>Sign Out</Text>
                     </TouchableOpacity>

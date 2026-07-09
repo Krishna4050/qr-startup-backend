@@ -69,7 +69,7 @@ export default function ServicesScreen() {
   };
 
   const services = [
-    { id: 'repair', title: 'Vehicle Repair', desc: 'Find trusted mechanics', icon: <Wrench color="#3B82F6" size={28} />, color: '#EFF6FF', route: 'VehicleRepairDirectory' },
+    { id: 'repair', title: 'Vehicle Repair', desc: 'Find trusted mechanics', icon: <Wrench color="#3B82F6" size={28} />, color: '#EFF6FF', route: 'ServiceDirectory' },
     { id: 'bike', title: 'Bike Repair', desc: 'Quick fixes nearby', icon: <Bike color="#10B981" size={28} />, color: '#ECFDF5', route: 'BikeRepairDirectory' },
     { id: 'parking', title: 'Pay Parking', desc: 'Secure city parking', icon: <Car color="#F59E0B" size={28} />, color: '#FFFBEB', route: 'ParkingMap' },
     { id: 'hotel', title: 'Hotels & Stays', desc: 'Book your perfect stay', icon: <Bed color="#8B5CF6" size={28} />, color: '#F5F3FF', route: 'HotelSearch' },
