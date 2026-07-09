@@ -89,6 +89,8 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 
 	if errProfile != nil {
 		fmt.Println("Error fetching profile for dashboard:", errProfile)
+		http.Error(w, "Error fetching profile", http.StatusInternalServerError)
+		return
 	}
 
 	// 2. Fetch My Tags

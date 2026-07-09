@@ -88,11 +88,13 @@ export default function DashboardScreen() {
     fetchDashboardData();
   }, [user?.id, session?.access_token, isAuthLoading]);
 
-  useEffect(() => {
-    if (isFocused && user) {
-      fetchDashboardData();
-    }
-  }, [isFocused, user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        fetchDashboardData();
+      }
+    }, [user?.id])
+  );
 
   const [isNotificationsBlocked, setIsNotificationsBlocked] = useState(false);
 
