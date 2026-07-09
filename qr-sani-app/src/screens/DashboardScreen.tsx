@@ -191,6 +191,7 @@ export default function DashboardScreen() {
       const res = await apiClient.get(`/api/dashboard?t=${Date.now()}`);
       const data = res.data;
 
+      console.log("[DEBUG] /api/dashboard response:", data);
       setProfile(data.profile || { display_name: user.user_metadata?.username });
       
       if (data.profile) {
@@ -226,6 +227,7 @@ export default function DashboardScreen() {
 
       try {
         const flightRes = await apiClient.get(`/api/flights/orders?user_id=${user.id}&email=${encodeURIComponent(user.email || '')}`);
+        console.log("[DEBUG] /api/flights/orders response:", flightRes.data);
         setFlightOrders(flightRes.data || []);
       } catch (e) {
         console.error("Failed to fetch flight orders", e);
