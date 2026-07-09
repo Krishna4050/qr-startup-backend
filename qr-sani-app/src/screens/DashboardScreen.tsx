@@ -85,7 +85,6 @@ export default function DashboardScreen() {
     }
 
     setIsGuest(false);
-    fetchDashboardData();
   }, [user?.id, session?.access_token, isAuthLoading]);
 
   useFocusEffect(
@@ -93,7 +92,7 @@ export default function DashboardScreen() {
       if (user?.id) {
         fetchDashboardData();
       }
-    }, [user?.id])
+    }, [user?.id, session?.access_token])
   );
 
   const [isNotificationsBlocked, setIsNotificationsBlocked] = useState(false);
