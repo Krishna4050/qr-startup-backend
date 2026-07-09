@@ -192,6 +192,7 @@ export default function DashboardScreen() {
       const data = res.data;
 
       console.log("[DEBUG] /api/dashboard response:", data);
+      console.log("[DEBUG] PROFILE JSON STRINGIFIED:", JSON.stringify(data.profile));
       setProfile(data.profile || { display_name: user.user_metadata?.username });
       
       if (data.profile) {
