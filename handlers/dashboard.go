@@ -89,7 +89,7 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 
 	if errProfile != nil {
 		fmt.Println("Error fetching profile for dashboard:", errProfile)
-		http.Error(w, "Error fetching profile", http.StatusInternalServerError)
+		http.Error(w, "Error fetching profile: "+errProfile.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -115,7 +115,7 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		fmt.Println("Error fetching qr_tags:", err)
-		http.Error(w, "Error fetching qr_tags", http.StatusInternalServerError)
+		http.Error(w, "Error fetching qr_tags: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -144,7 +144,7 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		fmt.Println("Error fetching shared_tags:", err)
-		http.Error(w, "Error fetching shared_tags", http.StatusInternalServerError)
+		http.Error(w, "Error fetching shared_tags: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -170,7 +170,7 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		fmt.Println("Error fetching alerts:", err)
-		http.Error(w, "Error fetching alerts", http.StatusInternalServerError)
+		http.Error(w, "Error fetching alerts: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -180,7 +180,7 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 	`, userID).Scan(&response.UnreadNotifications)
 	if errUnread != nil {
 		fmt.Println("Error fetching unread notifications:", errUnread)
-		http.Error(w, "Error fetching unread notifications", http.StatusInternalServerError)
+		http.Error(w, "Error fetching unread notifications: "+errUnread.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -199,7 +199,7 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 	}
 	if errNetwork != nil {
 		fmt.Println("Error fetching network members:", errNetwork)
-		http.Error(w, "Error fetching network members", http.StatusInternalServerError)
+		http.Error(w, "Error fetching network members: "+errNetwork.Error(), http.StatusInternalServerError)
 		return
 	}
 

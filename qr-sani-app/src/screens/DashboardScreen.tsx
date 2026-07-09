@@ -241,8 +241,11 @@ export default function DashboardScreen() {
     try {
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Network request timed out')), 20000));
       await Promise.race([fetchPromise(), timeoutPromise]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("[DEBUG] Error fetching dashboard:", error);
+      if (error.response) {
+        console.error("[DEBUG] Dashboard Backend Error Data:", error.response.data);
+      }
     } finally {
       console.log("[DEBUG] Calling setLoading(false)");
       setLoading(false);
