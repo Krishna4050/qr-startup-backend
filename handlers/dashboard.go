@@ -115,6 +115,8 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		fmt.Println("Error fetching qr_tags:", err)
+		http.Error(w, "Error fetching qr_tags", http.StatusInternalServerError)
+		return
 	}
 
 	// 3. Fetch Shared Tags
@@ -142,6 +144,8 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		fmt.Println("Error fetching shared_tags:", err)
+		http.Error(w, "Error fetching shared_tags", http.StatusInternalServerError)
+		return
 	}
 
 	// 4. Fetch Alerts (limit 5)
@@ -166,24 +170,37 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		fmt.Println("Error fetching alerts:", err)
+		http.Error(w, "Error fetching alerts", http.StatusInternalServerError)
+		return
 	}
 
 	// 5. Fetch Unread Notifications
-	database.DB.QueryRow(`
+	errUnread := database.DB.QueryRow(`
 		SELECT COUNT(*) FROM public.notifications WHERE user_id = $1 AND is_read = false
 	`, userID).Scan(&response.UnreadNotifications)
+	if errUnread != nil {
+		fmt.Println("Error fetching unread notifications:", errUnread)
+		http.Error(w, "Error fetching unread notifications", http.StatusInternalServerError)
+		return
+	}
 
 	// 6. Fetch Network Members
+	var errNetwork error
 	if userEmail != "" {
-		database.DB.QueryRow(`
+		errNetwork = database.DB.QueryRow(`
 			SELECT COUNT(*) FROM public.trusted_network 
 			WHERE status = 'accepted' AND (owner_id = $1 OR member_email ILIKE $2)
 		`, userID, userEmail).Scan(&response.NetworkMembers)
 	} else {
-		database.DB.QueryRow(`
+		errNetwork = database.DB.QueryRow(`
 			SELECT COUNT(*) FROM public.trusted_network 
 			WHERE status = 'accepted' AND owner_id = $1
 		`, userID).Scan(&response.NetworkMembers)
+	}
+	if errNetwork != nil {
+		fmt.Println("Error fetching network members:", errNetwork)
+		http.Error(w, "Error fetching network members", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

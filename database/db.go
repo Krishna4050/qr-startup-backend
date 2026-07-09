@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 	_ "github.com/lib/pq" // This underscore tells GO: load this behind the scenes so database/sql can use it
 )
 
@@ -27,6 +28,11 @@ func ConnectDB(){
 		log.Printf("Failed to open database: %v. Database will be disabled.\n", err)
 		return
 	}
+
+	// Configure connection pool to prevent exhausting Supabase connections
+	DB.SetMaxOpenConns(25)
+	DB.SetMaxIdleConns(25)
+	DB.SetConnMaxLifetime(5 * time.Minute)
 
 	// Ping the database to make sure the password and links are actualy correct
 	err = DB.Ping()
