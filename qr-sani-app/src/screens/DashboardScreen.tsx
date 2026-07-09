@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator, Alert, Image, TextInput, Modal } from 'react-native';
 import { Settings, ShieldCheck, Bell, AlertTriangle, BatteryMedium, Tag, User, Users, PlusCircle, PauseCircle, ShieldAlert, LayoutGrid, Globe, Wrench, Bike, Car, Bed, BusFront, Train, Plane, X, CheckCircle, Mail, KeyRound, Smartphone } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,7 +10,7 @@ import RefreshableScroll from '../components/RefreshableScroll';
 import WebFooter from '../components/WebFooter';
 import WebLink from '../components/WebLink';
 import { useAuth } from '../context/AuthContext';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
 import AuthForm from '../../components/AuthForm';
 import { messaging } from '../utils/firebase';
 import { getToken } from 'firebase/messaging';
