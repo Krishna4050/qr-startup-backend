@@ -126,6 +126,14 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
             setContact(data.user.phone);
             setIsPhone(true);
           }
+          // Fetch existing profile data if they partially completed
+          apiClient.get(`/api/profile?t=${Date.now()}`)
+            .then(res => {
+              if (res.data?.first_name) setFirstName(res.data.first_name);
+              if (res.data?.last_name) setLastName(res.data.last_name);
+              if (res.data?.username) setUsername(res.data.username);
+            })
+            .catch(err => console.error("Could not fetch profile for AuthForm", err));
         }
       });
     }
@@ -398,8 +406,8 @@ export default function AuthForm({ initialStep = 'contact', onSuccess, isModal =
         username: username.toLowerCase(),
         avatar_url: uploadedAvatarUrl,
       }), 10000, "Profile API timed out");
-
-      if (onSuccess) onSuccess();
+      // Move to terms step instead of finishing early
+      setStep('signup_terms');
     } catch (e: any) {
       setError(e.message || e.response?.data?.error || 'Failed to save profile');
     }

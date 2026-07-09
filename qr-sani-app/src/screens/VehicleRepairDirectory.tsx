@@ -266,8 +266,8 @@ export default function VehicleRepairDirectory() {
           <ActivityIndicator size="large" color="#4A00E0" />
         </View>
       ) : (
-        <RefreshableScroll onRefreshAction={fetchShops} style={styles.listContent} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-          <View style={{ flex: 1 }}>
+        <RefreshableScroll onRefreshAction={fetchShops} style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+          <View style={{ flex: 1, paddingHorizontal: CARD_MARGIN, paddingBottom: 40 }}>
             {filteredShops.length === 0 ? (
               <View style={styles.centerScreen}>
                 <Text style={styles.emptyText}>No {targetService.toLowerCase()} found.</Text>

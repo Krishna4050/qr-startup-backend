@@ -78,7 +78,7 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 1. Fetch Profile
-	database.DB.QueryRow(`
+	errProfile := database.DB.QueryRow(`
 		SELECT COALESCE(p.display_name, ''), COALESCE(p.username, ''), COALESCE(p.avatar_url, ''), COALESCE(p.first_name, ''), COALESCE(p.last_name, ''), 
 		       COALESCE(p.is_email_verified, false) OR (u.email_confirmed_at IS NOT NULL), 
 		       COALESCE(p.is_phone_verified, false) OR (u.phone_confirmed_at IS NOT NULL)
@@ -86,6 +86,10 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 		JOIN auth.users u ON p.id = u.id
 		WHERE p.id = $1
 	`, userID).Scan(&response.Profile.DisplayName, &response.Profile.Username, &response.Profile.AvatarURL, &response.Profile.FirstName, &response.Profile.LastName, &response.Profile.IsEmailVerified, &response.Profile.IsPhoneVerified)
+
+	if errProfile != nil {
+		fmt.Println("Error fetching profile for dashboard:", errProfile)
+	}
 
 	// 2. Fetch My Tags
 	rows, err := database.DB.Query(`

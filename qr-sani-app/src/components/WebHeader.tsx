@@ -208,7 +208,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
 
   useEffect(() => {
     if (user) {
-      apiClient.get('/api/dashboard')
+      apiClient.get(`/api/dashboard?t=${Date.now()}`)
         .then(res => setProfile(res.data?.profile || { avatar_url: user.user_metadata?.avatar_url || null }))
         .catch(() => setProfile({ avatar_url: user.user_metadata?.avatar_url || null }));
     }
@@ -565,7 +565,7 @@ export default function WebHeader({ defaultService = 'Vehicle Repair' }: { defau
     <View style={styles.headerContainer}>
       <View style={[styles.headerContent, { zIndex: 9999 }]}>
         {/* Left: Logo */}
-        <WebLink style={styles.logoSection} screen="Home">
+        <WebLink style={styles.logoSection} screen="Dashboard">
           <Image source={require('../../assets/icon.png')} style={{ width: 56, height: 56, borderRadius: 14 }} />
           <Text style={[styles.logoText, { fontSize: 28 }]}>Aicrett</Text>
         </WebLink>

@@ -28,6 +28,8 @@ const SCREEN_URL_MAP: Record<string, (params?: any) => string> = {
   TransitPass: () => '/transit',
   TrainSearch: () => '/trains',
   FlightSearch: () => '/flights',
+  FlightCheckout: () => '/flights/checkout',
+  FlightDetails: () => '/flights/details',
   ShopDetails: (p) => `/shop/${p?.id || ''}`,
   ChatScreen: (p) => `/chat/${p?.shopId || ''}/${p?.otherUserId || ''}`,
   HostDashboard: () => '/host',
@@ -38,6 +40,7 @@ const SCREEN_URL_MAP: Record<string, (params?: any) => string> = {
   HostMessages: () => '/host/messages',
   PartnerOnboardingIntro: () => '/partner/start',
   Settings: () => '/settings',
+  Pricing: () => '/pricing',
   Legal: (p) => `/legal/${p?.type || 'terms'}`,
 };
 
