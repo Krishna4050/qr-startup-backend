@@ -205,6 +205,7 @@ export default function ProfileScreen({ route }: any) {
         )}
 
         {renderMenus()}
+        </View>
 
       </RefreshableScroll>
     </View>
