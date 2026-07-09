@@ -34,7 +34,7 @@ export default function ProfileScreen({ route }: any) {
   const fetchProfileData = async () => {
     try {
       if (!user) return;
-      const { data } = await apiClient.get('/api/profile');
+      const { data } = await apiClient.get(`/api/profile?t=${Date.now()}`);
       if (!data.first_name || !data.last_name) {
         navigation.navigate('Dashboard');
         return;
@@ -180,7 +180,8 @@ export default function ProfileScreen({ route }: any) {
         <Text style={[styles.headerTitle, { color: theme.text }]}>Account</Text>
       </View>
 
-      <RefreshableScroll onRefreshAction={fetchProfileData} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <RefreshableScroll onRefreshAction={fetchProfileData} showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}>
+        <View style={{ flex: 1 }}>
         
         {/* DYNAMIC COMPLETION BANNER (Hides if 100%) */}
         {completionPercentage < 100 && (

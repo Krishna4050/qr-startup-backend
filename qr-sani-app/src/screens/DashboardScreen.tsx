@@ -188,7 +188,7 @@ export default function DashboardScreen() {
     const fetchPromise = async () => {
       console.log("[DEBUG] Fetching dashboard from Go backend using Interceptor...");
       
-      const res = await apiClient.get('/api/dashboard');
+      const res = await apiClient.get(`/api/dashboard?t=${Date.now()}`);
       const data = res.data;
 
       setProfile(data.profile || { display_name: user.user_metadata?.username });
@@ -607,7 +607,7 @@ export default function DashboardScreen() {
             {alerts.map((alert) => (
               <View key={`alert-${alert.id}`} style={[styles.alertCard, { borderLeftColor: alert.alert_type === 'low_battery' ? '#EF4444' : '#F59E0B' }, isMobileWeb && { width: '100%' }]}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={styles.alertCategory}>{alert.alert_type.replace('_', ' ').toUpperCase()}</Text>
+                  <Text style={styles.alertCategory}>{(alert.alert_type || 'SYSTEM_ALERT').replace('_', ' ').toUpperCase()}</Text>
                   {alert.alert_type === 'low_battery' ? <BatteryMedium color="#EF4444" size={16} /> : <AlertTriangle color="#F59E0B" size={16} />}
                 </View>
                 <Text style={styles.alertTitle}>{alert.title}</Text>

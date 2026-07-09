@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   filterText: { color: '#8892B0', fontSize: 14, fontWeight: '600' },
   activeFilterText: { color: '#0A192F', fontWeight: '800' },
 
-  listContent: { paddingHorizontal: CARD_MARGIN, paddingTop: 16 },
+  listContent: { flex: 1, paddingHorizontal: CARD_MARGIN, paddingTop: 16 },
   
   citySection: { marginBottom: 32 },
   citySectionTitle: { fontSize: 22, fontWeight: '800', color: '#0A192F', marginBottom: 16 },

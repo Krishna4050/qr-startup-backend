@@ -33,8 +33,10 @@ type DashboardTag struct {
 type DashboardAlert struct {
 	ID        string `json:"id"`
 	UserID    string `json:"user_id"`
-	TagID     string `json:"tag_id"`
-	Message   string `json:"message"`
+	TagID       string `json:"tag_id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	AlertType   string `json:"alert_type"`
 	CreatedAt string `json:"created_at"`
 }
 
@@ -138,7 +140,7 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 
 	// 4. Fetch Alerts (limit 5)
 	alertRows, err := database.DB.Query(`
-		SELECT id::text, user_id::text, COALESCE(tag_id::text, ''), COALESCE(title, '') as message, created_at::text
+		SELECT id::text, user_id::text, COALESCE(tag_id::text, ''), COALESCE(title, ''), created_at::text
 		FROM public.alerts
 		WHERE user_id = $1
 		ORDER BY created_at DESC LIMIT 5
@@ -147,8 +149,13 @@ func GetDashboardData(w http.ResponseWriter, r *http.Request) {
 		defer alertRows.Close()
 		for alertRows.Next() {
 			var alert DashboardAlert
-			if err := alertRows.Scan(&alert.ID, &alert.UserID, &alert.TagID, &alert.Message, &alert.CreatedAt); err == nil {
+			if err := alertRows.Scan(&alert.ID, &alert.UserID, &alert.TagID, &alert.Title, &alert.CreatedAt); err == nil {
+				// Fill missing fields that frontend expects
+				alert.Description = alert.Title
+				alert.AlertType = "SYSTEM_ALERT"
 				response.Alerts = append(response.Alerts, alert)
+			} else {
+				fmt.Println("Error scanning alert:", err)
 			}
 		}
 	} else {
