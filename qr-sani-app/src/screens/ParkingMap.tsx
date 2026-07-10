@@ -27,6 +27,9 @@ export default function ParkingMap() {
   const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedSpace, setSelectedSpace] = useState<ParkingSpace | null>(null);
   
   // Advanced Filter State
@@ -99,8 +102,50 @@ export default function ParkingMap() {
     }
   };
 
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    if (text.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(text)}&limit=5`);
+        const data = await response.json();
+        if (data && data.features) {
+          setSuggestions(data.features);
+          setShowSuggestions(true);
+        }
+      } catch (error) {
+        console.error("Photon API error:", error);
+      }
+    }, 500); // 500ms debounce
+  };
+
+  const handleSelectSuggestion = (feature: any) => {
+    const { coordinates } = feature.geometry;
+    const { name, city, country } = feature.properties;
+    
+    setSearchQuery(`${name || ''} ${city || ''}`.trim());
+    setShowSuggestions(false);
+    
+    if (coordinates && coordinates.length === 2) {
+      mapRef.current?.animateToRegion({
+        latitude: coordinates[1],
+        longitude: coordinates[0],
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      }, 1000);
+    }
+  };
+
   const handleSearch = async (customQuery?: string) => {
     const query = customQuery || searchQuery;
+    setShowSuggestions(false);
     if (!query.trim()) return;
     
     try {
@@ -232,7 +277,14 @@ export default function ParkingMap() {
             let iconColor = space.is_free ? '#166534' : '#1e3a8a';
             let label = space.is_free ? 'Free' : 'Pay';
             
-            if (isStreet) {
+            const isResidential = space.is_residential;
+            
+            if (isResidential) {
+              markerStyle = styles.markerResidential;
+              textStyle = styles.markerTextResidential;
+              iconColor = '#9a3412'; // Orange
+              label = 'Resident';
+            } else if (isStreet) {
               markerStyle = styles.markerStreet;
               textStyle = styles.markerTextStreet;
               iconColor = '#854d0e';
@@ -240,7 +292,7 @@ export default function ParkingMap() {
             } else if (isHelsinki) {
               markerStyle = styles.markerHelsinki;
               textStyle = styles.markerTextHelsinki;
-              iconColor = '#9a3412';
+              iconColor = '#1e40af';
               label = 'Hel';
             }
 
@@ -267,7 +319,7 @@ export default function ParkingMap() {
         </Map>
       )}
 
-      <View style={[styles.searchContainer, { top: Math.max(insets.top + 10, 20) }]} pointerEvents="box-none">
+      <View style={[styles.searchContainerOuter, { top: Math.max(insets.top + 10, 20) }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={styles.searchBar}>
           <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
           <TextInput 
@@ -275,17 +327,37 @@ export default function ParkingMap() {
             placeholder="Find parking in Finland..."
             placeholderTextColor="#94a3b8"
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearchChange}
             onSubmitEditing={() => handleSearch()}
+            onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
             returnKeyType="search"
           />
           <TouchableOpacity 
             style={[styles.filterButton, showFilters && styles.filterButtonActive]} 
-            onPress={() => setShowFilters(!showFilters)}
+            onPress={() => { setShowFilters(!showFilters); setShowSuggestions(false); }}
           >
             <Ionicons name="options-outline" size={18} color={showFilters ? "#fff" : "#000"} />
           </TouchableOpacity>
         </BlurView>
+
+        {showSuggestions && suggestions.length > 0 && (
+          <View style={styles.suggestionsContainer}>
+            {suggestions.map((s, idx) => (
+              <TouchableOpacity 
+                key={idx} 
+                style={styles.suggestionItem}
+                onPress={() => handleSelectSuggestion(s)}
+              >
+                <Text style={styles.suggestionName}>
+                  {s.properties.name || s.properties.street || s.properties.city}
+                </Text>
+                <Text style={styles.suggestionAddress}>
+                  {[s.properties.city, s.properties.state, s.properties.country].filter(Boolean).join(', ')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {showFilters && (
           <View style={styles.filterDropdown}>
@@ -372,7 +444,7 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontWeight: '500',
   },
-  searchContainer: {
+  searchContainerOuter: {
     position: 'absolute',
     left: 20,
     right: 20,
@@ -383,9 +455,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
+    borderColor: 'rgba(226,232,240,1)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -400,8 +472,44 @@ const styles = StyleSheet.create({
   searchText: {
     flex: 1,
     fontSize: 16,
-    color: '#94a3b8',
+    color: '#0f172a',
     fontWeight: '500',
+  },
+  searchButton: {
+    backgroundColor: '#0EA5E9',
+    padding: 8,
+    borderRadius: 8,
+  },
+  suggestionsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+    maxHeight: 250,
+    overflow: 'hidden',
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  },
+  suggestionItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  suggestionName: {
+    fontWeight: '600',
+    color: '#0A192F',
+    fontSize: 15,
+  },
+  suggestionAddress: {
+    color: '#64748B',
+    fontSize: 12,
+    marginTop: 2,
   },
   filterButton: {
     backgroundColor: '#fff',
@@ -556,7 +664,14 @@ const styles = StyleSheet.create({
   markerTextStreet: {
     color: '#854d0e',
   },
-  markerTextHelsinki: {
+  markerResidential: {
+    backgroundColor: '#ffedd5',
+    borderColor: '#fdba74',
+  },
+  markerTextResidential: {
     color: '#9a3412',
+  },
+  markerTextHelsinki: {
+    color: '#1e40af',
   },
 });

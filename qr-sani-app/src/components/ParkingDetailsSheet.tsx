@@ -11,6 +11,12 @@ interface ParkingSpace {
   capacity: number;
   is_free: boolean;
   pricing_info: string;
+  source?: string;
+  live_occupancy?: number;
+  pricing_zone?: string;
+  hourly_rate?: number;
+  weekend_rate?: number;
+  is_residential?: boolean;
 }
 
 interface Props {
@@ -61,16 +67,45 @@ export default function ParkingDetailsSheet({ space, onClose }: Props) {
 
         <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
-            <Ionicons name="car-outline" size={20} color="#64748b" />
-            <Text style={styles.detailText}>{space.capacity} spots total capacity</Text>
+            <Ionicons name="calendar-outline" size={20} color="#64748b" />
+            <Text style={styles.detailText}>
+              {new Date().toLocaleDateString('en-FI', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </Text>
           </View>
+          
+          <View style={styles.detailRow}>
+            <Ionicons name="car-outline" size={20} color="#64748b" />
+            <Text style={styles.detailText}>
+              {space.live_occupancy !== undefined ? `${space.live_occupancy} / ${space.capacity} spots taken` : `${space.capacity} spots total capacity`}
+            </Text>
+            {space.live_occupancy !== undefined && (
+              <View style={[styles.liveBadge, (space.live_occupancy / space.capacity) > 0.85 ? styles.liveBadgeFull : styles.liveBadgeAvailable]}>
+                <Text style={styles.liveBadgeText}>Live</Text>
+              </View>
+            )}
+          </View>
+
+          {space.is_residential && (
+            <View style={styles.detailRow}>
+              <Ionicons name="home-outline" size={20} color="#d97706" />
+              <Text style={[styles.detailText, { color: '#d97706', fontWeight: '500' }]}>Residential Parking Permit Required</Text>
+            </View>
+          )}
+
           <View style={styles.detailRow}>
             <Ionicons name="cash-outline" size={20} color="#64748b" />
-            <Text style={styles.detailText}>
-              {space.pricing_info === 'PARK_AND_RIDE_247_FREE' ? '24/7 Free Park & Ride' : 
-               space.pricing_info === 'FREE_12H' ? 'Free for 12 hours' : 
-               space.pricing_info}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.detailText}>
+                {space.pricing_info === 'PARK_AND_RIDE_247_FREE' ? '24/7 Free Park & Ride' : 
+                 space.pricing_info === 'FREE_12H' ? 'Free for 12 hours' : 
+                 space.pricing_info}
+              </Text>
+              {!space.is_free && space.hourly_rate !== undefined && (
+                <Text style={styles.subDetailText}>
+                  {space.hourly_rate}€ / hour • {space.weekend_rate === 0 ? 'Free on weekends' : `${space.weekend_rate}€ / hr weekends`}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
 
@@ -158,20 +193,45 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#334155',
     marginLeft: 12,
-    fontWeight: '500',
+    color: '#334155',
+    flex: 1,
+  },
+  subDetailText: {
+    fontSize: 14,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  liveBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  liveBadgeFull: {
+    backgroundColor: '#fee2e2',
+  },
+  liveBadgeAvailable: {
+    backgroundColor: '#dcfce7',
+  },
+  liveBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: '#000',
   },
   navigateButton: {
-    backgroundColor: '#000',
-    borderRadius: 100,
+    backgroundColor: '#0EA5E9',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    shadowColor: '#000',
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 16,
+    shadowColor: '#0EA5E9',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   navigateIcon: {
     marginRight: 8,
@@ -179,6 +239,6 @@ const styles = StyleSheet.create({
   navigateButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

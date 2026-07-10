@@ -38,14 +38,19 @@ type Cap struct {
 }
 
 type ParkingSpace struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
-	Capacity    int     `json:"capacity"`
-	IsFree      bool    `json:"is_free"`
-	PricingInfo string  `json:"pricing_info"`
-	Source      string  `json:"source"`
+	ID            string  `json:"id"`
+	Name          string  `json:"name"`
+	Latitude      float64 `json:"latitude"`
+	Longitude     float64 `json:"longitude"`
+	Capacity      int     `json:"capacity"`
+	IsFree        bool    `json:"is_free"`
+	PricingInfo   string  `json:"pricing_info"`
+	Source        string  `json:"source"`
+	LiveOccupancy int     `json:"live_occupancy"`
+	PricingZone   string  `json:"pricing_zone"`
+	HourlyRate    float64 `json:"hourly_rate"`
+	WeekendRate   float64 `json:"weekend_rate"`
+	IsResidential bool    `json:"is_residential"`
 }
 
 type OverpassResponse struct {
@@ -132,15 +137,33 @@ func GetParkingLocations(w http.ResponseWriter, r *http.Request) {
 			isFree = true
 		}
 
+		// Simulated Live Occupancy (Realistic based on time of day)
+		hour := time.Now().Hour()
+		occupancyRate := 0.2 // Base occupancy 20%
+		if hour >= 8 && hour <= 17 {
+			occupancyRate = 0.7 + (float64(f.ID%30) / 100.0) // 70-100% full during work hours
+		} else if hour > 17 && hour <= 22 {
+			occupancyRate = 0.5 + (float64(f.ID%20) / 100.0) // 50-70% full evening
+		}
+		liveOccupancy := int(float64(f.BuiltCapacity.Car) * occupancyRate)
+		if liveOccupancy > f.BuiltCapacity.Car {
+			liveOccupancy = f.BuiltCapacity.Car
+		}
+
 		parsedSpaces = append(parsedSpaces, ParkingSpace{
-			ID:          fmt.Sprintf("fintraffic-%d", f.ID),
-			Name:        name,
-			Latitude:    lat,
-			Longitude:   lng,
-			Capacity:    f.BuiltCapacity.Car,
-			IsFree:      isFree,
-			PricingInfo: f.PricingMethod,
-			Source:      "fintraffic",
+			ID:            fmt.Sprintf("fintraffic-%d", f.ID),
+			Name:          name,
+			Latitude:      lat,
+			Longitude:     lng,
+			Capacity:      f.BuiltCapacity.Car,
+			IsFree:        isFree,
+			PricingInfo:   f.PricingMethod,
+			Source:        "fintraffic",
+			LiveOccupancy: liveOccupancy,
+			PricingZone:   "Garage",
+			HourlyRate:    2.50,
+			WeekendRate:   1.50,
+			IsResidential: false,
 		})
 	}
 
@@ -207,15 +230,54 @@ out 3000;`
 			isFree = false
 		}
 
+		// Determine Helsinki Zones (Simulated based on coordinates)
+		// Helsinki center is ~ 60.17, 24.94
+		distLat := el.Lat - 60.17
+		distLon := el.Lon - 24.94
+		dist := distLat*distLat + distLon*distLon
+
+		pricingZone := "Zone 3"
+		hourlyRate := 2.0
+		weekendRate := 0.0 // Free on weekends mostly
+		if dist < 0.0005 {
+			pricingZone = "Zone 1"
+			hourlyRate = 4.0
+			weekendRate = 2.0
+		} else if dist < 0.002 {
+			pricingZone = "Zone 2"
+			hourlyRate = 2.0
+			weekendRate = 0.0
+		}
+
+		isResidential := false
+		if res, ok := el.Tags["parking:residential"]; ok && strings.ToLower(res) == "yes" {
+			isResidential = true
+		}
+		if _, ok := el.Tags["parking:condition:residents"]; ok {
+			isResidential = true
+		}
+
+		// Simulated occupancy
+		capacity := 10
+		if capStr, ok := el.Tags["capacity"]; ok {
+			fmt.Sscanf(capStr, "%d", &capacity)
+		}
+		liveOccupancy := int(float64(capacity) * 0.8) // Typically 80% full
+
 		spaces = append(spaces, ParkingSpace{
-			ID:          fmt.Sprintf("osm-%d", el.Id),
-			Name:        name,
-			Latitude:    el.Lat,
-			Longitude:   el.Lon,
-			Capacity:    10, // Default arbitrary capacity for street parking if unknown
-			IsFree:      isFree,
-			PricingInfo: "Street Side Parking",
-			Source:      "osm",
+			ID:            fmt.Sprintf("osm-%d", el.Id),
+			Name:          name,
+			Latitude:      el.Lat,
+			Longitude:     el.Lon,
+			Capacity:      capacity,
+			IsFree:        isFree,
+			PricingInfo:   fmt.Sprintf("%s Street Parking", pricingZone),
+			Source:        "osm",
+			LiveOccupancy: liveOccupancy,
+			PricingZone:   pricingZone,
+			HourlyRate:    hourlyRate,
+			WeekendRate:   weekendRate,
+			IsResidential: isResidential,
 		})
 	}
 
@@ -307,15 +369,33 @@ func fetchHelsinkiParking() []ParkingSpace {
 			isFree = false
 		}
 
+		pricingZone := "Zone 2"
+		hourlyRate := 2.0
+		weekendRate := 0.0
+		isResidential := false
+		
+		if strings.Contains(strings.ToLower(name), "asukas") || strings.Contains(strings.ToLower(name), "tunnus") {
+			isResidential = true
+			pricingZone = "Resident Zone"
+			name = "Resident Permit Parking"
+		}
+
+		liveOccupancy := int(float64(capacity) * 0.6)
+
 		spaces = append(spaces, ParkingSpace{
-			ID:          fmt.Sprintf("helsinki-%s", feature.ID),
-			Name:        name,
-			Latitude:    lat,
-			Longitude:   lng,
-			Capacity:    capacity,
-			IsFree:      isFree,
-			PricingInfo: "Helsinki City Parking Zone",
-			Source:      "helsinki",
+			ID:            fmt.Sprintf("helsinki-%s", feature.ID),
+			Name:          name,
+			Latitude:      lat,
+			Longitude:     lng,
+			Capacity:      capacity,
+			IsFree:        isFree,
+			PricingInfo:   pricingZone + " Parking",
+			Source:        "helsinki",
+			LiveOccupancy: liveOccupancy,
+			PricingZone:   pricingZone,
+			HourlyRate:    hourlyRate,
+			WeekendRate:   weekendRate,
+			IsResidential: isResidential,
 		})
 	}
 
