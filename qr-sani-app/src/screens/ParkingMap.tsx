@@ -55,6 +55,7 @@ export default function ParkingMap() {
   const [zoom, setZoom] = useState(13);
   const [bbox, setBBox] = useState<BBox>([24.7, 60.0, 25.1, 60.3]); // Default roughly Helsinki area
   const [clusters, setClusters] = useState<any[]>([]);
+  const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
 
   const filteredSpaces = spaces.filter(space => {
     let matchesType = false;
@@ -247,11 +248,15 @@ export default function ParkingMap() {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        alert('Permission to access location was denied');
+        alert('Browser blocked location access. Please enable location permissions in your browser settings (usually the lock icon next to the URL) and try again.');
         return;
       }
 
       let location = await Location.getCurrentPositionAsync({});
+      setUserLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude
+      });
       mapRef.current?.animateToRegion({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -397,6 +402,14 @@ export default function ParkingMap() {
               </MapMarker>
             );
           })}
+
+          {userLocation && (
+            <MapMarker coordinate={userLocation} zIndex={999} anchor={{x: 0.5, y: 0.5}}>
+              <View style={styles.userLocationDot}>
+                <View style={styles.userLocationDotInner} />
+              </View>
+            </MapMarker>
+          )}
         </Map>
       )}
 
@@ -869,6 +882,22 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
     zIndex: 10,
+  },
+  userLocationDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(59, 130, 246, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userLocationDotInner: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#3b82f6',
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   clusterMarker: {
     backgroundColor: '#0f172a',
