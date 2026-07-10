@@ -456,7 +456,7 @@ export default function ParkingMap() {
                 style={[styles.filterToggle, showPaidParking && styles.filterToggleActive]}
                 onPress={() => setShowPaidParking(!showPaidParking)}
               >
-                <Text style={[styles.filterToggleText, showPaidParking && styles.filterToggleTextActive]}>Commercial</Text>
+                <Text style={[styles.filterToggleText, showPaidParking && styles.filterToggleTextActive]}>Paid Parking</Text>
               </TouchableOpacity>
             </View>
 

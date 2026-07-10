@@ -382,7 +382,7 @@ func fetchHelsinkiParking() []ParkingSpace {
 		}
 		
 		isFree := true
-		if strings.Contains(strings.ToLower(name), "maksullinen") {
+		if strings.Contains(strings.ToLower(name), "maksullinen") || strings.Contains(strings.ToLower(name), "kertamaksu") {
 			isFree = false
 		}
 
