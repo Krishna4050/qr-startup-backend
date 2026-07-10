@@ -107,6 +107,13 @@ export default function ParkingDetailsSheet({ space, onClose }: Props) {
               )}
             </View>
           </View>
+          
+          {space.source === 'p2p' && (
+            <TouchableOpacity style={styles.reportButton} onPress={() => alert("Spot reported to admin for manual review.")}>
+              <Ionicons name="warning-outline" size={16} color="#ef4444" />
+              <Text style={styles.reportButtonText}>Report Fake/Invalid Spot</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <TouchableOpacity style={styles.navigateButton} onPress={handleNavigate}>
@@ -240,4 +247,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  reportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    marginTop: 16,
+    backgroundColor: '#fef2f2',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  reportButtonText: {
+    color: '#ef4444',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  }
 });

@@ -430,7 +430,7 @@ func fetchP2PParkingSpots() []ParkingSpace {
 	rows, err := database.DB.Query(`
 		SELECT id, name, latitude, longitude, capacity, hourly_rate, weekend_rate 
 		FROM p2p_parking_spots 
-		WHERE is_active = true
+		WHERE status = 'approved' AND is_active = true
 	`)
 	if err != nil {
 		fmt.Printf("Error fetching P2P spots: %v\n", err)
@@ -478,7 +478,17 @@ func CreateP2PParkingSpot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := database.DB.Exec(`
+	// Security: Require phone verification
+	var isPhoneVerified bool
+	var isEmailVerified bool
+	err := database.DB.QueryRow(`SELECT is_phone_verified, is_email_verified FROM public.profiles WHERE id = $1`, userID).Scan(&isPhoneVerified, &isEmailVerified)
+	if err != nil || (!isPhoneVerified && !isEmailVerified) {
+		http.Error(w, "You must verify your phone number or email before listing a spot.", http.StatusForbidden)
+		return
+	}
+
+	// Status defaults to 'pending' from the database schema
+	_, err = database.DB.Exec(`
 		INSERT INTO p2p_parking_spots (host_id, name, latitude, longitude, capacity, hourly_rate, weekend_rate, is_active)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, true)
 	`, userID, req.Name, req.Latitude, req.Longitude, req.Capacity, req.HourlyRate, req.WeekendRate)

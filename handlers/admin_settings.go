@@ -30,7 +30,7 @@ func AdminUpdateSettingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the frontend is sending valid setting keys
-	if req.SettingName != "twilio_sms_enabled" && req.SettingName != "twilio_call_enabled" {
+	if req.SettingName != "twilio_sms_enabled" && req.SettingName != "twilio_call_enabled" && req.SettingName != "p2p_parking_enabled" {
 		http.Error(w, "Invalid setting key", http.StatusBadRequest)
 		return
 	}

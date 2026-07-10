@@ -46,6 +46,7 @@ export default function ParkingMap() {
   const [showP2PModal, setShowP2PModal] = useState(false);
   const [p2pForm, setP2PForm] = useState({ name: '', capacity: '1', hourlyRate: '2', weekendRate: '2' });
   const [p2pSubmitting, setP2PSubmitting] = useState(false);
+  const [p2pFeatureEnabled, setP2PFeatureEnabled] = useState(false);
   const [filterCity, setFilterCity] = useState('');
   const [filterStreet, setFilterStreet] = useState('');
   const [filterZip, setFilterZip] = useState('');
@@ -110,7 +111,19 @@ export default function ParkingMap() {
 
   useEffect(() => {
     fetchParkingSpaces();
+    fetchSystemSettings();
   }, []);
+
+  const fetchSystemSettings = async () => {
+    try {
+      const resp = await apiClient.get('/api/admin/settings');
+      if (resp.data) {
+        setP2PFeatureEnabled(resp.data.p2p_parking_enabled === true);
+      }
+    } catch (e) {
+      console.error("Failed to fetch settings:", e);
+    }
+  };
 
   const fetchParkingSpaces = async () => {
     try {
@@ -455,12 +468,14 @@ export default function ParkingMap() {
                 <Text style={[styles.filterToggleText, showResidentialParking && styles.filterToggleTextActive]}>Residential</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity 
-                style={[styles.filterToggle, showP2PParking && styles.filterToggleActive]}
-                onPress={() => setShowP2PParking(!showP2PParking)}
-              >
-                <Text style={[styles.filterToggleText, showP2PParking && styles.filterToggleTextActive]}>Private (P2P)</Text>
-              </TouchableOpacity>
+              {p2pFeatureEnabled && (
+                <TouchableOpacity 
+                  style={[styles.filterToggle, showP2PParking && styles.filterToggleActive]}
+                  onPress={() => setShowP2PParking(!showP2PParking)}
+                >
+                  <Text style={[styles.filterToggleText, showP2PParking && styles.filterToggleTextActive]}>Private (P2P)</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             <TextInput 
@@ -505,19 +520,21 @@ export default function ParkingMap() {
         onClose={() => setSelectedSpace(null)} 
       />
       
-      <TouchableOpacity 
-        style={[styles.listSpotButton, { bottom: Math.max(insets.bottom + 20, 40) }]}
-        onPress={() => setShowP2PModal(true)}
-      >
-        <Ionicons name="home" size={24} color="#fff" />
-        <Text style={styles.listSpotText}>List My Spot</Text>
-      </TouchableOpacity>
+      {p2pFeatureEnabled && (
+        <TouchableOpacity 
+          style={[styles.listSpotButton, { bottom: Math.max(insets.bottom + 20, 40) }]}
+          onPress={() => setShowP2PModal(true)}
+        >
+          <Ionicons name="home" size={24} color="#fff" />
+          <Text style={styles.listSpotText}>List My Spot</Text>
+        </TouchableOpacity>
+      )}
 
       {showP2PModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>List Private Parking</Text>
-            <Text style={styles.modalDesc}>Earn money by renting out your driveway or private garage.</Text>
+            <Text style={styles.modalDesc}>Earn money by renting out your driveway. To ensure security, all spots require verification.</Text>
             
             <TextInput
               style={styles.modalInput}
@@ -542,12 +559,22 @@ export default function ParkingMap() {
               />
             </View>
 
+            <TouchableOpacity style={styles.uploadButton}>
+              <Ionicons name="camera-outline" size={20} color="#6366f1" />
+              <Text style={styles.uploadButtonText}>Upload Spot Photo</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.uploadButton}>
+              <Ionicons name="document-text-outline" size={20} color="#6366f1" />
+              <Text style={styles.uploadButtonText}>Upload Proof of Ownership</Text>
+            </TouchableOpacity>
+
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setShowP2PModal(false)}>
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSubmit} onPress={submitP2PSpot} disabled={p2pSubmitting}>
-                <Text style={styles.modalSubmitText}>{p2pSubmitting ? 'Submitting...' : 'List Spot'}</Text>
+                <Text style={styles.modalSubmitText}>{p2pSubmitting ? 'Submitting...' : 'Submit for Review'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -686,6 +713,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
     marginBottom: 20,
+    lineHeight: 20,
   },
   modalInput: {
     backgroundColor: '#f8fafc',
@@ -695,6 +723,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: 16,
     marginBottom: 12,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eef2ff',
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+    borderStyle: 'dashed',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 12,
+    gap: 8,
+  },
+  uploadButtonText: {
+    color: '#4f46e5',
+    fontWeight: '600',
+    fontSize: 15,
   },
   modalActions: {
     flexDirection: 'row',
