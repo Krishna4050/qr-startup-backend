@@ -133,6 +133,7 @@ func main(){
 	
 	// Parking Aggregator API
 	mux.HandleFunc("GET /api/parking", handlers.GetParkingLocations)
+	mux.HandleFunc("POST /api/parking/p2p", middleware.RequireAuth(handlers.CreateP2PParkingSpot))
 
 	// CORS config
 	// Tag Manage API

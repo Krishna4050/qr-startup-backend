@@ -41,6 +41,11 @@ export default function ParkingMap() {
   const [showFilters, setShowFilters] = useState(false);
   const [showFreeParking, setShowFreeParking] = useState(true);
   const [showPaidParking, setShowPaidParking] = useState(true);
+  const [showResidentialParking, setShowResidentialParking] = useState(true);
+  const [showP2PParking, setShowP2PParking] = useState(true);
+  const [showP2PModal, setShowP2PModal] = useState(false);
+  const [p2pForm, setP2PForm] = useState({ name: '', capacity: '1', hourlyRate: '2', weekendRate: '2' });
+  const [p2pSubmitting, setP2PSubmitting] = useState(false);
   const [filterCity, setFilterCity] = useState('');
   const [filterStreet, setFilterStreet] = useState('');
   const [filterZip, setFilterZip] = useState('');
@@ -51,10 +56,23 @@ export default function ParkingMap() {
   const [clusters, setClusters] = useState<any[]>([]);
 
   const filteredSpaces = spaces.filter(space => {
-    // We remove the text search filter here, because search now moves the map!
-    // We only filter by Free/Paid toggles.
-    if (!showFreeParking && space.is_free) return false;
-    if (!showPaidParking && !space.is_free) return false;
+    let matchesType = false;
+    
+    // Check specific categories first
+    if (space.is_residential) {
+      if (showResidentialParking) matchesType = true;
+    } else if (space.source === 'p2p') {
+      if (showP2PParking) matchesType = true;
+    } else {
+      // General free/paid for commercial and street parking
+      if (space.is_free && showFreeParking) matchesType = true;
+      if (!space.is_free && showPaidParking) matchesType = true;
+    }
+
+    if (!matchesType) return false;
+
+    if (filterCity && !space.name.toLowerCase().includes(filterCity.toLowerCase())) return false;
+    if (filterStreet && !space.name.toLowerCase().includes(filterStreet.toLowerCase())) return false;
     return true;
   });
 
@@ -148,28 +166,67 @@ export default function ParkingMap() {
     }
   };
 
-  const handleSearch = async (customQuery?: string) => {
-    const query = customQuery || searchQuery;
-    setShowSuggestions(false);
-    if (!query.trim()) return;
-    
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0];
+      const resp = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&lat=60.1699&lon=24.9384&limit=1`);
+      const data = await resp.json();
+      if (data.features && data.features.length > 0) {
+        const feature = data.features[0];
+        const [lon, lat] = feature.geometry.coordinates;
         mapRef.current?.animateToRegion({
-          latitude: parseFloat(lat),
-          longitude: parseFloat(lon),
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
-        }, 1000);
+          latitude: lat,
+          longitude: lon,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        });
+        setSearchQuery('');
+        setShowSuggestions(false);
+      }
+    } catch (error) {
+      console.error("Search failed:", error);
+    }
+  };
+
+  const submitP2PSpot = async () => {
+    if (!p2pForm.name) {
+      alert("Please enter an address or name for your spot");
+      return;
+    }
+    
+    // Default to map center if we don't have a way to pick on map yet for MVP
+    const lat = bbox[1] + (bbox[3] - bbox[1]) / 2;
+    const lon = bbox[0] + (bbox[2] - bbox[0]) / 2;
+
+    setP2PSubmitting(true);
+    try {
+      // Find the auth token from cookies or local storage if needed.
+      // We assume cookies are sent automatically for same-origin if running in browser
+      const response = await fetch('/api/parking/p2p', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: p2pForm.name,
+          latitude: lat,
+          longitude: lon,
+          capacity: parseInt(p2pForm.capacity) || 1,
+          hourly_rate: parseFloat(p2pForm.hourlyRate) || 2,
+          weekend_rate: parseFloat(p2pForm.weekendRate) || 2,
+        })
+      });
+      
+      if (response.ok) {
+        alert("Your spot has been listed successfully!");
+        setShowP2PModal(false);
+        fetchParkingSpaces(); // Refresh the map
       } else {
-        alert("Location not found. Please try a different search.");
+        alert("Failed to list spot. Please ensure you are logged in.");
       }
     } catch (e) {
       console.error(e);
-      alert("Failed to search location.");
+      alert("An error occurred.");
+    } finally {
+      setP2PSubmitting(false);
     }
   };
 
@@ -202,7 +259,7 @@ export default function ParkingMap() {
     if (filterZip) advancedQuery.push(filterZip);
     
     if (advancedQuery.length > 0) {
-      handleSearch(advancedQuery.join(', '));
+      handleSearch();
     }
   };
 
@@ -276,6 +333,7 @@ export default function ParkingMap() {
             const space = cluster.properties;
             const isStreet = space.source === 'osm';
             const isHelsinki = space.source === 'helsinki';
+            const isP2P = space.source === 'p2p';
             
             let markerStyle = space.is_free ? styles.markerFree : styles.markerPaid;
             let textStyle = space.is_free ? styles.markerTextFree : styles.markerTextPaid;
@@ -284,7 +342,12 @@ export default function ParkingMap() {
             
             const isResidential = space.is_residential;
             
-            if (isResidential) {
+            if (isP2P) {
+              markerStyle = styles.markerP2P;
+              textStyle = styles.markerTextP2P;
+              iconColor = '#6b21a8'; // Purple
+              label = 'Private';
+            } else if (isResidential) {
               markerStyle = styles.markerResidential;
               textStyle = styles.markerTextResidential;
               iconColor = '#9a3412'; // Orange
@@ -373,14 +436,30 @@ export default function ParkingMap() {
                 style={[styles.filterToggle, showFreeParking && styles.filterToggleActive]}
                 onPress={() => setShowFreeParking(!showFreeParking)}
               >
-                <Text style={[styles.filterToggleText, showFreeParking && styles.filterToggleTextActive]}>Free Parking</Text>
+                <Text style={[styles.filterToggleText, showFreeParking && styles.filterToggleTextActive]}>Free</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={[styles.filterToggle, showPaidParking && styles.filterToggleActive]}
                 onPress={() => setShowPaidParking(!showPaidParking)}
               >
-                <Text style={[styles.filterToggleText, showPaidParking && styles.filterToggleTextActive]}>Paid Parking</Text>
+                <Text style={[styles.filterToggleText, showPaidParking && styles.filterToggleTextActive]}>Commercial</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.filterRow}>
+              <TouchableOpacity 
+                style={[styles.filterToggle, showResidentialParking && styles.filterToggleActive]}
+                onPress={() => setShowResidentialParking(!showResidentialParking)}
+              >
+                <Text style={[styles.filterToggleText, showResidentialParking && styles.filterToggleTextActive]}>Residential</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.filterToggle, showP2PParking && styles.filterToggleActive]}
+                onPress={() => setShowP2PParking(!showP2PParking)}
+              >
+                <Text style={[styles.filterToggleText, showP2PParking && styles.filterToggleTextActive]}>Private (P2P)</Text>
               </TouchableOpacity>
             </View>
 
@@ -425,6 +504,55 @@ export default function ParkingMap() {
         space={selectedSpace} 
         onClose={() => setSelectedSpace(null)} 
       />
+      
+      <TouchableOpacity 
+        style={[styles.listSpotButton, { bottom: Math.max(insets.bottom + 20, 40) }]}
+        onPress={() => setShowP2PModal(true)}
+      >
+        <Ionicons name="home" size={24} color="#fff" />
+        <Text style={styles.listSpotText}>List My Spot</Text>
+      </TouchableOpacity>
+
+      {showP2PModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>List Private Parking</Text>
+            <Text style={styles.modalDesc}>Earn money by renting out your driveway or private garage.</Text>
+            
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Spot Name or Address"
+              value={p2pForm.name}
+              onChangeText={v => setP2PForm({...p2pForm, name: v})}
+            />
+            <View style={{flexDirection: 'row', gap: 10}}>
+              <TextInput
+                style={[styles.modalInput, {flex: 1}]}
+                placeholder="Hourly Rate (€)"
+                keyboardType="numeric"
+                value={p2pForm.hourlyRate}
+                onChangeText={v => setP2PForm({...p2pForm, hourlyRate: v})}
+              />
+              <TextInput
+                style={[styles.modalInput, {flex: 1}]}
+                placeholder="Capacity (cars)"
+                keyboardType="numeric"
+                value={p2pForm.capacity}
+                onChangeText={v => setP2PForm({...p2pForm, capacity: v})}
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowP2PModal(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSubmit} onPress={submitP2PSpot} disabled={p2pSubmitting}>
+                <Text style={styles.modalSubmitText}>{p2pSubmitting ? 'Submitting...' : 'List Spot'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -505,6 +633,95 @@ const styles = StyleSheet.create({
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
+  },
+  listSpotButton: {
+    position: 'absolute',
+    right: 20,
+    backgroundColor: '#9333ea',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 100,
+    shadowColor: '#9333ea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+    zIndex: 20,
+  },
+  listSpotText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 8,
+  },
+  modalDesc: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 20,
+  },
+  modalInput: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 14,
+    borderRadius: 12,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    gap: 12,
+  },
+  modalCancel: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  modalCancelText: {
+    color: '#64748b',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSubmit: {
+    backgroundColor: '#9333ea',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  modalSubmitText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   suggestionName: {
     fontWeight: '600',
@@ -655,6 +872,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffedd5',
     borderColor: '#fdba74',
   },
+  markerP2P: {
+    backgroundColor: '#f3e8ff',
+    borderColor: '#d8b4fe',
+  },
   markerText: {
     fontSize: 12,
     fontWeight: '700',
@@ -678,5 +899,8 @@ const styles = StyleSheet.create({
   },
   markerTextHelsinki: {
     color: '#1e40af',
+  },
+  markerTextP2P: {
+    color: '#6b21a8',
   },
 });

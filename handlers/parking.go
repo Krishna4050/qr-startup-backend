@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/Krishna4050/qr-startup-backend/database"
 )
 
 type FintrafficResponse struct {
@@ -174,6 +176,10 @@ func GetParkingLocations(w http.ResponseWriter, r *http.Request) {
 	// Fetch Helsinki City WFS Parking
 	helsinkiSpaces := fetchHelsinkiParking()
 	parsedSpaces = append(parsedSpaces, helsinkiSpaces...)
+
+	// Fetch P2P Parking spots
+	p2pSpaces := fetchP2PParkingSpots()
+	parsedSpaces = append(parsedSpaces, p2pSpaces...)
 
 	// Update cache
 	parkingCache = parsedSpaces
@@ -400,4 +406,72 @@ func fetchHelsinkiParking() []ParkingSpace {
 	}
 
 	return spaces
+}
+
+func fetchP2PParkingSpots() []ParkingSpace {
+	var spaces []ParkingSpace
+	rows, err := database.DB.Query(`
+		SELECT id, name, latitude, longitude, capacity, hourly_rate, weekend_rate 
+		FROM p2p_parking_spots 
+		WHERE is_active = true
+	`)
+	if err != nil {
+		fmt.Printf("Error fetching P2P spots: %v\n", err)
+		return spaces
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p ParkingSpace
+		err := rows.Scan(&p.ID, &p.Name, &p.Latitude, &p.Longitude, &p.Capacity, &p.HourlyRate, &p.WeekendRate)
+		if err != nil {
+			continue
+		}
+		p.IsFree = false
+		p.PricingInfo = "Private Host"
+		p.Source = "p2p"
+		p.PricingZone = "Private"
+		p.IsResidential = false
+		// Prefix ID so frontend knows it's p2p
+		p.ID = "p2p-" + p.ID
+		spaces = append(spaces, p)
+	}
+	return spaces
+}
+
+type CreateP2PRequest struct {
+	Name        string  `json:"name"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	Capacity    int     `json:"capacity"`
+	HourlyRate  float64 `json:"hourly_rate"`
+	WeekendRate float64 `json:"weekend_rate"`
+}
+
+func CreateP2PParkingSpot(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(string)
+	if !ok || userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req CreateP2PRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	_, err := database.DB.Exec(`
+		INSERT INTO p2p_parking_spots (host_id, name, latitude, longitude, capacity, hourly_rate, weekend_rate, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+	`, userID, req.Name, req.Latitude, req.Longitude, req.Capacity, req.HourlyRate, req.WeekendRate)
+
+	if err != nil {
+		fmt.Printf("Error creating P2P spot: %v\n", err)
+		http.Error(w, "Failed to create spot", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Spot listed successfully!"})
 }
