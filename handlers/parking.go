@@ -360,7 +360,18 @@ func fetchHelsinkiParking() []ParkingSpace {
 		// Determine Name / Type
 		name := "Helsinki City Parking"
 		if tyyppi, ok := feature.Properties["tyyppi"].(string); ok && tyyppi != "" {
+			if tyyppi == "Pysäköintikielto" {
+				continue // Skip "No Parking" zones
+			}
 			name = tyyppi
+		}
+
+		luokkaNimi := ""
+		if ln, ok := feature.Properties["luokka_nimi"].(string); ok {
+			luokkaNimi = ln
+			if name == "Helsinki City Parking" && ln != "" {
+				name = ln
+			}
 		}
 
 		capacity := 0
@@ -380,10 +391,16 @@ func fetchHelsinkiParking() []ParkingSpace {
 		weekendRate := 0.0
 		isResidential := false
 		
-		if strings.Contains(strings.ToLower(name), "asukas") || strings.Contains(strings.ToLower(name), "tunnus") {
+		// 1. Check explicitly for Resident Permit Identifier field in the API
+		if asukas, ok := feature.Properties["asukaspysakointitunnus"].(string); ok && asukas != "" {
+			isResidential = true
+			pricingZone = "Resident Zone " + asukas
+			name = "Resident Permit Parking (" + asukas + ")"
+		} else if strings.Contains(strings.ToLower(luokkaNimi), "asukas") || strings.Contains(strings.ToLower(luokkaNimi), "tunnus") {
+			// 2. Fallback checking the luokka_nimi
 			isResidential = true
 			pricingZone = "Resident Zone"
-			name = "Resident Permit Parking"
+			name = "Resident Permit Zone"
 		}
 
 		liveOccupancy := int(float64(capacity) * 0.6)
