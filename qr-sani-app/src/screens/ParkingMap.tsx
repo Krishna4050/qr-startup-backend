@@ -19,6 +19,11 @@ interface ParkingSpace {
   is_free: boolean;
   pricing_info: string;
   source?: string;
+  live_occupancy?: number;
+  pricing_zone?: string;
+  hourly_rate?: number;
+  weekend_rate?: number;
+  is_residential?: boolean;
 }
 
 export default function ParkingMap() {

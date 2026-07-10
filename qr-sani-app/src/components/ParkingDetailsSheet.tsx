@@ -193,7 +193,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#334155',
     marginLeft: 12,
-    color: '#334155',
     flex: 1,
   },
   subDetailText: {
