@@ -252,7 +252,20 @@ export default function ParkingMap() {
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
+      let location;
+      try {
+        location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+      } catch (err) {
+        console.warn("getCurrentPositionAsync failed, trying getLastKnownPositionAsync", err);
+        location = await Location.getLastKnownPositionAsync();
+      }
+
+      if (!location) {
+        throw new Error("Could not determine location.");
+      }
+
       setUserLocation({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude
@@ -265,7 +278,7 @@ export default function ParkingMap() {
       }, 1000);
     } catch (e) {
       console.error(e);
-      alert("Failed to get current location.");
+      alert("Failed to get current location. Please ensure Location Services are enabled in your Mac/Windows System Settings, not just the browser.");
     }
   };
 
